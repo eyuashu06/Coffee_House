@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: coffee_mysql_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-coffee_reserve_db}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_USER: ${MYSQL_USER:-coffee_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-coffeepassword}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: coffee_django_backend
+    restart: always
+    command: >
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py seed_data &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+      - media_data:/app/media
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-coffee_reserve_db}
+      - MYSQL_USER=${MYSQL_USER:-coffee_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-coffeepassword}
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+      - CHAPA_SECRET_KEY=${CHAPA_SECRET_KEY:-CHASECK_TEST-samplekey}
+      - CHAPA_WEBHOOK_SECRET=${CHAPA_WEBHOOK_SECRET:-chapa_webhook_secret_sample}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: coffee_next_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  media_data:
