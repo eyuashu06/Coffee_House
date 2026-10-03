@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -25,6 +26,7 @@ class CoffeeItem(models.Model):
     review_count = models.IntegerField(default=120)
     image_url = models.URLField(max_length=500)
     is_signature = models.BooleanField(default=False)
+    is_available = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -41,6 +43,7 @@ class Order(models.Model):
         ('CANCELLED', 'Cancelled'),
     )
 
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='api_orders')
     customer_name = models.CharField(max_length=100, default='Guest Coffee Enthusiast')
     customer_email = models.EmailField(blank=True, default='guest@artisanalcoffee.com')
     total_amount = models.DecimalField(max_digits=8, decimal_places=2)
