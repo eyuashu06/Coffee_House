@@ -8,9 +8,17 @@
     min-height: 100vh;
     margin: 0;
     padding: 0;
-    background-color: #131313;
-    color: #e5e2e1;
-    font-family: 'Manrope', sans-serif;
+    background-color: #1b1212;
+    color: #d5c2c3;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Old Standard TT', serif;
+  }
+  .font-body {
+    font-family: 'Crimson Text', serif;
   }
 }
 
