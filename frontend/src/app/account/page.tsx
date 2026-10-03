@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Header from '../../components/Header';
-import PaymentModal from '../../components/PaymentModal';
 import OrderTracker from '../../components/OrderTracker';
 import ReceiptModal from '../../components/ReceiptModal';
 import Link from 'next/link';
@@ -46,12 +45,11 @@ interface Banner {
 }
 
 export default function AccountPage() {
-  const { user, loading, checkAuth } = useAuth();
+  const { user, loading, checkAuth, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'orders' | 'addresses' | 'profile'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
-  const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<Order | null>(null);
   const [banner, setBanner] = useState<Banner | null>(null);
 
@@ -108,74 +106,6 @@ export default function AccountPage() {
     }
   }, [user, fetchOrders, fetchAddresses]);
 
-  // ── Handle Chapa return URL ─────────────────────────────────────────────
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const txRef = urlParams.get('tx_ref');
-    const paymentStatus = urlParams.get('payment_status');
-    const orderNum = urlParams.get('order');
-
-    if (txRef) {
-      // Clean the URL so refresh doesn't re-trigger
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, '', cleanUrl);
-
-      verifyPayment(txRef, orderNum);
-    } else if (paymentStatus === 'success' || paymentStatus === 'completed') {
-      setBanner({ type: 'success', message: `Payment successful! Order #${orderNum || ''} has been placed.` });
-      fetchOrders();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const verifyPayment = async (txRef: string, orderNum?: string | null) => {
-    setBanner({ type: 'info', message: 'Verifying your payment with Chapa, please wait...' });
-    try {
-      const res = await fetch(`/api/v1/payments/verify/${txRef}/`, {
-        credentials: 'include',
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const payStatus = data.payment?.status;
-        const orderStatus = data.order_status;
-
-        if (payStatus === 'SUCCESS' || orderStatus === 'PLACED') {
-          setBanner({
-            type: 'success',
-            message: `✅ Payment verified! Order #${orderNum || ''} has been placed successfully.`,
-          });
-        } else if (payStatus === 'FAILED') {
-          setBanner({
-            type: 'error',
-            message: `❌ Payment failed for Order #${orderNum || ''}. Please try again from My Orders.`,
-          });
-        } else if (payStatus === 'ABANDONED') {
-          setBanner({
-            type: 'error',
-            message: `⚠️ Payment was cancelled for Order #${orderNum || ''}. You can retry from My Orders.`,
-          });
-        } else {
-          // Still PENDING after verification
-          setBanner({
-            type: 'info',
-            message: `⏳ Payment is being processed for Order #${orderNum || ''}. Refresh in a moment to see the update.`,
-          });
-        }
-
-        // Always refresh orders after any verification attempt
-        await fetchOrders();
-      } else {
-        setBanner({ type: 'error', message: 'Could not verify payment. Please refresh the page.' });
-      }
-    } catch (e) {
-      console.error('Payment verification error:', e);
-      setBanner({ type: 'error', message: 'Network error during payment verification.' });
-    }
-  };
-
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddrMsg(null);
@@ -198,11 +128,9 @@ export default function AccountPage() {
         fetchAddresses();
       } else {
         const errorData = await res.json().catch(() => ({}));
-        console.error('Add address error:', errorData);
         setAddrMsg(`Failed to add address: ${JSON.stringify(errorData)}`);
       }
     } catch (err) {
-      console.error('Failed to add address exception:', err);
       setAddrMsg('Failed to add address due to a network error.');
     }
   };
@@ -230,432 +158,230 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-tertiary border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#131313] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#f7b5be] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background text-on-surface flex flex-col justify-between">
-        <Header cartCount={0} onOpenCart={() => {}} onOpenSommelier={() => {}} />
-        <main className="max-w-md mx-auto my-auto p-6 text-center space-y-4">
-          <span className="material-symbols-outlined text-5xl text-tertiary">lock</span>
-          <h2 className="font-headline text-2xl font-bold text-white">Sign In Required</h2>
-          <p className="text-sm text-on-surface-variant">Please sign in to view your orders and manage your profile.</p>
-          <Link href="/" className="inline-block px-6 py-2.5 rounded-full bg-tertiary text-on-tertiary font-bold text-xs">
-            Return to Home
-          </Link>
-        </main>
+      <div className="min-h-screen bg-[#131313] text-[#e5e2e1] flex flex-col items-center justify-center font-body">
+        <span className="material-symbols-outlined text-5xl text-[#f7b5be] mb-4">lock</span>
+        <h2 className="font-display text-[26px] font-bold">Sign In Required</h2>
+        <p className="text-[#d5c2c3] mt-2 mb-6 text-[15px]">Please sign in to view your orders and manage your profile.</p>
+        <Link href="/" className="h-10 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold flex items-center hover:bg-[#ffd9dd] transition-colors">
+          Return to Home
+        </Link>
       </div>
     );
   }
 
-  const handleDownloadReceipt = (order: Order) => {
-    const text = `====================================
-        ARTISANAL RESERVE CAFE
-====================================
-Receipt Ref: #${order.order_number}
-Date: ${new Date(order.created_at).toLocaleString()}
-Type: ${order.order_type}
-Customer: ${order.contact_name} (${order.contact_phone})
-------------------------------------
-ITEMS:
-${order.items.map(i => `${i.quantity}x ${i.item_name} ${i.variant_name ? `(${i.variant_name})` : ''} - ${i.subtotal_etb} ETB`).join('\n')}
-------------------------------------
-TOTAL AMOUNT: ${order.total_amount_etb} ETB
-Status: ${order.status}
-====================================
-Thank you for dining with us!
-`;
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Receipt_${order.order_number}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const getStatusColor = (s: string) => {
-    switch (s) {
-      case 'SUCCESS':
-      case 'PLACED':
-      case 'COMPLETED':
-        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-      case 'PREPARING':
-      case 'READY':
-      case 'OUT_FOR_DELIVERY':
-        return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
-      case 'CANCELLED':
-      case 'REJECTED':
-      case 'FAILED':
-        return 'bg-rose-500/20 text-rose-400 border-rose-500/30';
-      default:
-        return 'bg-tertiary/20 text-tertiary border-tertiary/30';
-    }
-  };
-
-  const bannerColors = {
-    success: 'bg-emerald-950/80 border-emerald-500/40 text-emerald-200',
-    error: 'bg-red-950/80 border-red-500/40 text-red-200',
-    info: 'bg-blue-950/80 border-blue-500/40 text-blue-200',
-  };
+  const pendingOrders = orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING' || o.status === 'READY' || o.status === 'OUT_FOR_DELIVERY');
+  const pastOrders = orders.filter(o => o.status === 'COMPLETED' || o.status === 'DELIVERED' || o.status === 'CANCELLED');
 
   return (
-    <div className="min-h-screen bg-background text-on-surface flex flex-col">
-      <Header cartCount={0} onOpenCart={() => {}} onOpenSommelier={() => {}} />
-
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 pt-24 pb-12 space-y-6">
-        {/* Payment Status Banner */}
-        {banner && (
-          <div className={`p-4 rounded-xl border text-sm font-medium flex items-start gap-3 ${bannerColors[banner.type]}`}>
-            <span className="material-symbols-outlined text-lg mt-0.5 shrink-0">
-              {banner.type === 'success' ? 'check_circle' : banner.type === 'error' ? 'error' : 'info'}
-            </span>
-            <span className="flex-1 leading-relaxed">{banner.message}</span>
-            <button
-              onClick={() => setBanner(null)}
-              className="opacity-60 hover:opacity-100 text-xs shrink-0"
-            >
-              <span className="material-symbols-outlined text-base">close</span>
-            </button>
-          </div>
-        )}
-
-        {/* User Card Header */}
-        <div className="p-6 rounded-2xl bg-primary-container/90 border border-tertiary/30 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-tertiary/20 border border-tertiary/50 text-tertiary flex items-center justify-center font-bold text-2xl font-headline">
-              {user.username[0].toUpperCase()}
-            </div>
-            <div>
-              <h1 className="font-headline text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-                <span>{user.first_name ? `${user.first_name} ${user.last_name}` : user.username}</span>
-                <span className="px-2 py-0.5 text-[10px] rounded bg-tertiary text-on-tertiary font-bold uppercase tracking-wider">
-                  {user.role}
-                </span>
-              </h1>
-              <p className="text-xs text-on-surface-variant">{user.email} • {user.phone || 'No phone set'}</p>
-            </div>
-          </div>
-
-          <Link href="/" className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-tertiary text-xs font-semibold flex items-center gap-1.5 transition-all">
-            <span className="material-symbols-outlined text-base">arrow_back</span>
-            <span>Back to Menu</span>
+    <div className="bg-[#131313] text-[#e5e2e1] font-body min-h-screen pb-24">
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 bg-[#131313]/90 backdrop-blur-sm border-b border-[#514345]/60">
+        <div className="flex items-center justify-between px-6 h-14">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <span className="w-8 h-8 rounded-full bg-[#3b141c] border border-[#683941] flex items-center justify-center text-[#f7b5be] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
+            <span className="font-display text-[21px] tracking-wide">Buna Hub</span>
           </Link>
+          <div className="flex items-center gap-4">
+            <span className="text-[#d5c2c3] text-[15px] hidden sm:block">Hello, {user.first_name || user.username}</span>
+            <button onClick={logout} className="h-8 px-4 rounded-full border border-[#514345] text-[#d5c2c3] text-[14px] flex items-center hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">Sign Out</button>
+          </div>
+        </div>
+      </header>
+
+      {/* BANNER */}
+      {banner && (
+        <div className={`mx-4 mt-6 p-4 rounded-[14px] flex items-start gap-3 border ${
+          banner.type === 'success' ? 'bg-[#3b141c] border-[#683941] text-[#f7b5be]' :
+          banner.type === 'error' ? 'bg-red-950 border-red-900 text-red-200' :
+          'bg-[#1c1b1b] border-[#514345] text-[#e5e2e1]'
+        }`}>
+          <i className={`ph ${banner.type === 'success' ? 'ph-check-circle' : banner.type === 'error' ? 'ph-warning-circle' : 'ph-info'} text-xl mt-0.5`}></i>
+          <span className="text-[15px]">{banner.message}</span>
+          <button onClick={() => setBanner(null)} className="ml-auto hover:opacity-70"><i className="ph ph-x"></i></button>
+        </div>
+      )}
+
+      {/* MAIN CONTENT */}
+      <main className="max-w-4xl mx-auto px-4 mt-8">
+        <h1 className="font-display text-[40px] leading-none mb-8">Your Account</h1>
+        
+        {/* TABS */}
+        <div className="flex flex-wrap gap-2 mb-8 border-b border-[#514345] pb-4">
+          <button onClick={() => setActiveTab('orders')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'orders' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>My Orders</button>
+          <button onClick={() => setActiveTab('addresses')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'addresses' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>Delivery Addresses</button>
+          <button onClick={() => setActiveTab('profile')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'profile' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>Profile Settings</button>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex border-b border-white/10 gap-4">
-          {[
-            { id: 'orders', label: 'My Orders', icon: 'receipt_long' },
-            { id: 'addresses', label: 'Delivery Addresses', icon: 'location_on' },
-            { id: 'profile', label: 'Profile Details', icon: 'person' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`pb-3 px-2 font-semibold text-sm flex items-center gap-2 border-b-2 transition-all ${
-                activeTab === tab.id
-                  ? 'border-tertiary text-tertiary'
-                  : 'border-transparent text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-base">{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* ── Tab 1: Orders ── */}
+        {/* TAB: ORDERS */}
         {activeTab === 'orders' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-headline text-base font-bold text-white">
-                Order History {orders.length > 0 && <span className="text-tertiary">({orders.length})</span>}
-              </h2>
-              <button
-                onClick={fetchOrders}
-                className="text-xs text-on-surface-variant hover:text-tertiary flex items-center gap-1 transition-colors"
-              >
-                <span className="material-symbols-outlined text-sm">refresh</span>
-                Refresh
-              </button>
-            </div>
-
+          <div className="space-y-10 animate-fade-in">
             {isLoadingOrders ? (
-              <div className="text-center py-12 text-on-surface-variant">
-                <div className="w-6 h-6 border-2 border-tertiary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                <p className="text-xs">Loading your order history...</p>
-              </div>
+              <div className="py-12 flex justify-center text-[#9e8d8e]">Loading orders...</div>
             ) : orders.length === 0 ? (
-              <div className="text-center py-12 p-8 rounded-2xl bg-surface-container/60 border border-white/5 space-y-3">
-                <span className="material-symbols-outlined text-4xl text-tertiary/60">coffee</span>
-                <h3 className="font-headline text-lg font-bold text-white">No Orders Yet</h3>
-                <p className="text-xs text-on-surface-variant">You haven't placed any artisanal coffee or food orders yet.</p>
-                <Link href="/" className="inline-block px-5 py-2 rounded-full bg-tertiary text-on-tertiary text-xs font-bold">
-                  Browse Menu & Order
-                </Link>
+              <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-10 text-center">
+                <i className="ph ph-receipt text-4xl text-[#514345] mb-4"></i>
+                <h3 className="font-display text-[22px] mb-2">No orders yet</h3>
+                <p className="text-[#d5c2c3] text-[15.5px] mb-6">Looks like you haven't tasted our buna yet.</p>
+                <Link href="/#menu" className="h-10 px-6 rounded-full inline-flex items-center bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">Browse Menu</Link>
               </div>
             ) : (
-              orders.map((ord) => (
-                <div key={ord.id} className="p-5 rounded-2xl bg-surface-container-high/60 border border-white/10 space-y-4 shadow-md">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
-                    <div>
-                      <span className="font-headline font-bold text-white text-base">#{ord.order_number}</span>
-                      <span className="text-xs text-on-surface-variant block">
-                        Placed on {new Date(ord.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      {(ord.status === 'PENDING_PAYMENT' || ord.status === 'UNPAID') && (
-                        <button
-                          onClick={() => setPaymentOrder(ord)}
-                          className="px-3 py-1 rounded-full bg-tertiary text-on-tertiary font-bold text-xs hover:brightness-110 flex items-center gap-1 shadow-md transition-all active:scale-95"
-                        >
-                          <span className="material-symbols-outlined text-sm">payments</span>
-                          <span>Pay Now</span>
-                        </button>
-                      )}
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${getStatusColor(ord.status)}`}>
-                        {ord.status.replace(/_/g, ' ')}
-                      </span>
-                      <span className="font-headline font-bold text-tertiary text-lg">ETB {ord.total_amount_etb}</span>
-                    </div>
-                  </div>
-
-                  {/* Compact Receipt Card Box */}
-                  <div className="bg-[#1a1415] border border-tertiary/30 rounded-xl p-4 font-mono text-xs text-amber-100 max-w-md shadow-inner space-y-2">
-                    <div className="flex items-center justify-between border-b border-dashed border-amber-500/30 pb-2">
-                      <div>
-                        <p className="font-bold text-tertiary text-sm font-headline">ARTISANAL RESERVE CAFE</p>
-                        <p className="text-[10px] text-amber-200/60">Receipt Ref: #{ord.order_number}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setSelectedReceiptOrder(ord)}
-                          className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg flex items-center gap-1 text-[11px] font-sans font-bold transition-all"
-                          title="Open Receipt Card Modal"
-                        >
-                          <span className="material-symbols-outlined text-base text-tertiary">print</span>
-                          <span>Receipt</span>
-                        </button>
-                        <button
-                          onClick={() => handleDownloadReceipt(ord)}
-                          className="px-2.5 py-1 bg-tertiary/20 hover:bg-tertiary/30 text-tertiary rounded-lg flex items-center gap-1 text-[11px] font-sans font-bold transition-all"
-                          title="Download Receipt"
-                        >
-                          <span className="material-symbols-outlined text-base">download</span>
-                          <span>Download</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="text-[11px] text-amber-200/80 space-y-0.5">
-                      <p>Type: <span className="font-bold text-white">{ord.order_type}</span></p>
-                      <p>Date: {new Date(ord.created_at).toLocaleString()}</p>
-                    </div>
-                    <div className="border-t border-dashed border-amber-500/30 pt-2 space-y-1">
-                      {ord.items?.map((item, i) => (
-                        <div key={i} className="flex justify-between text-[11px]">
-                          <span>{item.quantity}x {item.item_name} {item.variant_name && `(${item.variant_name})`}</span>
-                          <span className="font-bold text-tertiary">{item.subtotal_etb} ETB</span>
+              <>
+                {/* Active Orders Section */}
+                {pendingOrders.length > 0 && (
+                  <div>
+                    <h3 className="font-display text-[24px] mb-4 flex items-center gap-2"><i className="ph ph-hourglass text-[#f7b5be]"></i> Active Orders</h3>
+                    <div className="space-y-4">
+                      {pendingOrders.map(order => (
+                        <div key={order.id} className="bg-[#1c1b1b] border border-[#683941] rounded-[18px] p-5">
+                          <OrderTracker status={order.status} />
+                          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-[#514345] pt-4">
+                            <div>
+                              <p className="text-[13px] text-[#9e8d8e] uppercase tracking-wider">Order #{order.order_number}</p>
+                              <p className="text-[16px] font-semibold mt-0.5">{order.total_amount_etb} Br</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[#514345] text-[#d5c2c3] text-[14px] hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">View Receipt</button>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
-                    <div className="border-t border-dashed border-amber-500/30 pt-2 flex justify-between font-bold text-sm text-tertiary">
-                      <span>TOTAL:</span>
-                      <span>{ord.total_amount_etb} ETB</span>
+                  </div>
+                )}
+
+                {/* Past Orders Section */}
+                {pastOrders.length > 0 && (
+                  <div>
+                    <h3 className="font-display text-[24px] mb-4 flex items-center gap-2"><i className="ph ph-clock-counter-clockwise text-[#9e8d8e]"></i> Order History</h3>
+                    <div className="space-y-4">
+                      {pastOrders.map(order => (
+                        <div key={order.id} className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-[#9e8d8e] transition-colors">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="font-semibold text-[16px]">#{order.order_number}</span>
+                              <span className="px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-[#3b141c] text-[#f7b5be] border border-[#683941]">{order.status}</span>
+                            </div>
+                            <p className="text-[14.5px] text-[#d5c2c3] mb-1">{new Date(order.created_at).toLocaleDateString()} • {order.items.length} items</p>
+                            <p className="text-[16px] font-bold text-[#e5e2e1]">{order.total_amount_etb} Br</p>
+                          </div>
+                          <div>
+                            <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[#514345] text-[#d5c2c3] text-[14px] hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors w-full sm:w-auto">View Receipt</button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-
-                  {/* Order Tracker Component */}
-                  <OrderTracker status={ord.status} />
-                </div>
-              ))
+                )}
+              </>
             )}
           </div>
         )}
 
-        {/* Receipt Popup Modal */}
-        <ReceiptModal
-          order={selectedReceiptOrder}
-          onClose={() => setSelectedReceiptOrder(null)}
-        />
-
-        {/* ── Tab 2: Delivery Addresses ── */}
+        {/* TAB: ADDRESSES */}
         {activeTab === 'addresses' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Add Address Form */}
-            <div className="p-5 rounded-2xl bg-surface-container-high/60 border border-white/10 space-y-4">
-              <h3 className="font-headline text-base font-bold text-tertiary flex items-center gap-2">
-                <span className="material-symbols-outlined text-lg">add_location</span>
-                Add New Delivery Address
-              </h3>
-
-              {addrMsg && (
-                <div className={`p-2.5 rounded-lg border text-xs ${
-                  addrMsg.includes('success')
-                    ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200'
-                    : 'bg-red-950/60 border-red-500/40 text-red-200'
-                }`}>
-                  {addrMsg}
-                </div>
-              )}
-
-              <form onSubmit={handleAddAddress} className="space-y-3">
+          <div className="space-y-8 animate-fade-in">
+            <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6">
+              <h3 className="font-display text-[24px] mb-5">Add New Address</h3>
+              {addrMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${addrMsg.includes('success') ? 'bg-[#3b141c] text-[#f7b5be]' : 'bg-red-950 text-red-200'}`}>{addrMsg}</div>}
+              <form onSubmit={handleAddAddress} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant uppercase mb-1">
-                    Street Address / House No.
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={streetAddress}
-                    onChange={(e) => setStreetAddress(e.target.value)}
-                    placeholder="e.g. Bole Atlas, House No. 452"
-                    className="w-full px-3.5 py-2 rounded-lg bg-surface-container border border-white/10 text-xs text-on-surface focus:border-tertiary focus:outline-none"
-                  />
+                  <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">Street Address</label>
+                  <input type="text" required value={streetAddress} onChange={e => setStreetAddress(e.target.value)} className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole Road, House 123" />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant uppercase mb-1">
-                    Subcity / Zone
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={subcityOrZone}
-                    onChange={(e) => setSubcityOrZone(e.target.value)}
-                    placeholder="e.g. Bole, Kazanchis, Kirkos"
-                    className="w-full px-3.5 py-2 rounded-lg bg-surface-container border border-white/10 text-xs text-on-surface focus:border-tertiary focus:outline-none"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">City</label>
+                    <input type="text" value="Addis Ababa" disabled className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#9e8d8e] cursor-not-allowed opacity-70" />
+                  </div>
+                  <div>
+                    <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">Subcity / Zone</label>
+                    <input type="text" value={subcityOrZone} onChange={e => setSubcityOrZone(e.target.value)} className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole, Arada, etc." />
+                  </div>
                 </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <input
-                    type="checkbox"
-                    id="is_default"
-                    checked={isDefaultAddr}
-                    onChange={(e) => setIsDefaultAddr(e.target.checked)}
-                    className="rounded text-tertiary accent-tertiary"
-                  />
-                  <label htmlFor="is_default" className="text-xs text-on-surface-variant">Set as default delivery address</label>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 rounded-xl bg-tertiary text-on-tertiary font-bold text-xs hover:brightness-110 transition-all"
-                >
-                  Save Address
-                </button>
+                <label className="flex items-center gap-2 cursor-pointer mt-2 w-max">
+                  <input type="checkbox" checked={isDefaultAddr} onChange={e => setIsDefaultAddr(e.target.checked)} className="rounded border-[#514345] bg-[#131313] text-[#f7b5be] focus:ring-[#f7b5be]" />
+                  <span className="text-[14.5px] text-[#d5c2c3]">Set as default delivery address</span>
+                </label>
+                <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">Save Address</button>
               </form>
             </div>
 
-            {/* Address List */}
-            <div className="space-y-3">
-              <h3 className="font-headline text-base font-bold text-white">Saved Addresses</h3>
+            <div className="space-y-4">
+              <h3 className="font-display text-[24px] mb-4">Saved Addresses</h3>
               {addresses.length === 0 ? (
-                <p className="text-xs text-on-surface-variant">No saved addresses yet.</p>
+                <p className="text-[#9e8d8e] text-[15px]">No saved addresses yet.</p>
               ) : (
-                addresses.map((addr) => (
-                  <div key={addr.id} className="p-4 rounded-xl bg-surface-container/60 border border-white/10 flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-white text-xs">{addr.street_address}</p>
-                      <p className="text-[11px] text-on-surface-variant">{addr.subcity_or_zone}, {addr.city}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {addresses.map(addr => (
+                    <div key={addr.id} className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-5 relative group">
+                      {addr.is_default && (
+                        <span className="absolute top-4 right-4 text-[10px] uppercase font-bold tracking-wider bg-[#3b141c] text-[#f7b5be] px-2 py-0.5 rounded">Default</span>
+                      )}
+                      <div className="flex items-start gap-3 mt-1">
+                        <i className="ph ph-map-pin text-[20px] text-[#9e8d8e] mt-0.5"></i>
+                        <div>
+                          <p className="text-[#e5e2e1] font-semibold text-[15.5px] mb-1">{addr.street_address}</p>
+                          <p className="text-[#d5c2c3] text-[14px]">{addr.subcity_or_zone ? `${addr.subcity_or_zone}, ` : ''}{addr.city}</p>
+                        </div>
+                      </div>
                     </div>
-                    {addr.is_default && (
-                      <span className="px-2 py-0.5 text-[9px] rounded bg-tertiary/20 text-tertiary font-bold uppercase">Default</span>
-                    )}
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
           </div>
         )}
 
-        {/* ── Tab 3: Profile Details ── */}
+        {/* TAB: PROFILE */}
         {activeTab === 'profile' && (
-          <div className="max-w-md p-6 rounded-2xl bg-surface-container-high/60 border border-white/10 space-y-4">
-            <h3 className="font-headline text-base font-bold text-tertiary flex items-center gap-2">
-              <span className="material-symbols-outlined text-lg">manage_accounts</span>
-              Edit Profile Information
-            </h3>
-
-            {profileMsg && (
-              <div className={`p-2.5 rounded-lg border text-xs ${
-                profileMsg.includes('success')
-                  ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200'
-                  : 'bg-red-950/60 border-red-500/40 text-red-200'
-              }`}>
-                {profileMsg}
+          <div className="animate-fade-in max-w-2xl">
+            <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6">
+              <h3 className="font-display text-[24px] mb-5">Personal Details</h3>
+              {profileMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${profileMsg.includes('success') ? 'bg-[#3b141c] text-[#f7b5be]' : 'bg-red-950 text-red-200'}`}>{profileMsg}</div>}
+              
+              <div className="mb-6">
+                <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">Username / Email</label>
+                <div className="h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 flex items-center text-[#9e8d8e] opacity-70">
+                  {user.email || user.username}
+                </div>
+                <p className="text-[#514345] text-xs mt-1">Username/email cannot be changed here.</p>
               </div>
-            )}
 
-            <form onSubmit={handleUpdateProfile} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant uppercase mb-1">First Name</label>
-                  <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-lg bg-surface-container border border-white/10 text-xs text-on-surface focus:border-tertiary focus:outline-none"
-                  />
+              <form onSubmit={handleUpdateProfile} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">First Name</label>
+                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" />
+                  </div>
+                  <div>
+                    <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">Last Name</label>
+                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant uppercase mb-1">Last Name</label>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-lg bg-surface-container border border-white/10 text-xs text-on-surface focus:border-tertiary focus:outline-none"
-                  />
+                  <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">Phone Number</label>
+                  <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="+251 911 234567" />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-on-surface-variant uppercase mb-1">Ethiopian Phone Number</label>
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+251911223344"
-                  className="w-full px-3.5 py-2 rounded-lg bg-surface-container border border-white/10 text-xs text-on-surface focus:border-tertiary focus:outline-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-tertiary text-on-tertiary font-bold text-xs hover:brightness-110 transition-all"
-              >
-                Update Profile
-              </button>
-            </form>
+                <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">Update Profile</button>
+              </form>
+            </div>
           </div>
         )}
       </main>
 
-      {/* Chapa Payment Modal for Unpaid Orders */}
-      {paymentOrder && (
-        <PaymentModal
-          isOpen={Boolean(paymentOrder)}
-          onClose={() => setPaymentOrder(null)}
-          orderId={paymentOrder.id}
-          orderNumber={paymentOrder.order_number}
-          totalAmountEtb={paymentOrder.total_amount_etb}
-          onPaymentComplete={(payStatus, txRef, message) => {
-            setPaymentOrder(null);
-            if (payStatus === 'SUCCESS') {
-              setBanner({ type: 'success', message: `✅ ${message}` });
-            } else if (payStatus === 'PENDING') {
-              setBanner({ type: 'info', message: `⏳ ${message}` });
-            }
-            fetchOrders();
-          }}
+      {/* RECEIPT MODAL */}
+      {selectedReceiptOrder && (
+        <ReceiptModal
+          onClose={() => setSelectedReceiptOrder(null)}
+          order={selectedReceiptOrder as any}
         />
       )}
     </div>
