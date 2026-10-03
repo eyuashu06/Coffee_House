@@ -138,16 +138,16 @@ export default function CartDrawer({
         />
 
         {/* Slide-over Drawer Panel */}
-        <div className="relative w-full max-w-md bg-surface-container h-full shadow-2xl flex flex-col justify-between z-10 border-l border-white/10">
+        <div className="relative w-full max-w-md bg-[#131313]-container h-full shadow-2xl flex flex-col justify-between z-10 border-l border-[#514345]">
           {/* Header */}
-          <div className="p-5 bg-primary-container border-b border-primary/20 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-tertiary">
+          <div className="p-5 bg-[#1c1b1b] border-b border-[#514345] flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[#f7b5be]">
               <span className="material-symbols-outlined text-xl">shopping_bag</span>
-              <h3 className="font-headline text-lg font-bold text-white">{t('Your Cart')}</h3>
+              <h3 className="font-display text-lg font-bold text-white">{t('Your Cart')}</h3>
             </div>
             <button 
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-full bg-[#2c2b2a] hover:bg-white/20 text-white flex items-center justify-center transition-colors"
             >
               <span className="material-symbols-outlined text-base">close</span>
             </button>
@@ -160,18 +160,18 @@ export default function CartDrawer({
                 <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/40">
                   <span className="material-symbols-outlined text-3xl">check</span>
                 </div>
-                <h4 className="font-headline text-xl text-white font-bold">Order Placed!</h4>
-                <p className="text-sm text-on-surface-variant leading-relaxed">{orderSuccess}</p>
+                <h4 className="font-display text-xl text-white font-bold">Order Placed!</h4>
+                <p className="text-sm text-[#9e8d8e] leading-relaxed">{orderSuccess}</p>
                 <div className="flex flex-col gap-2">
                   <button
                     onClick={() => { setOrderSuccess(null); onClose(); }}
-                    className="py-2.5 px-6 rounded-full bg-tertiary text-on-tertiary font-bold text-xs uppercase tracking-wider shadow-md hover:brightness-110"
+                    className="py-2.5 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-bold text-xs uppercase tracking-wider shadow-md hover:brightness-110"
                   >
                     Back to Menu
                   </button>
                   <a
                     href="/account"
-                    className="py-2 px-6 rounded-full border border-tertiary/40 text-tertiary font-semibold text-xs text-center hover:bg-tertiary/10 transition-all"
+                    className="py-2 px-6 rounded-full border border-[#683941] text-[#f7b5be] font-semibold text-xs text-center hover:bg-[#f7b5be]/10 transition-all"
                   >
                     View My Orders
                   </a>
@@ -185,54 +185,54 @@ export default function CartDrawer({
                 </div>
                 <button
                   onClick={() => setOrderError(null)}
-                  className="w-full py-2.5 rounded-xl bg-white/10 text-on-surface text-xs font-semibold hover:bg-white/20 transition-all"
+                  className="w-full py-3 px-6 rounded-full border border-[#514345] text-[#9e8d8e] font-bold text-xs uppercase tracking-wider hover:bg-outline-variant/10 transition-all"
                 >
                   Try Again
                 </button>
                 <a
                   href="/account"
-                  className="block w-full py-2.5 rounded-xl border border-tertiary/40 text-tertiary text-xs font-semibold text-center hover:bg-tertiary/10 transition-all"
+                  className="block w-full py-3 px-6 rounded-full border border-[#683941] text-[#f7b5be] font-bold text-xs uppercase tracking-wider text-center hover:bg-[#f7b5be]/10 transition-all"
                 >
                   View My Account & Retry Payment
                 </a>
               </div>
             ) : cartItems.length === 0 ? (
               <div className="text-center py-16 text-outline space-y-3">
-                <span className="material-symbols-outlined text-5xl text-tertiary/60">local_cafe</span>
+                <span className="material-symbols-outlined text-5xl text-[#f7b5be]/60">local_cafe</span>
                 <p className="text-sm">{t('Cart is Empty')}</p>
                 <button
                   onClick={onClose}
-                  className="py-2 px-6 rounded-full bg-primary-container text-tertiary text-xs font-semibold border border-tertiary/30"
+                  className="py-3 px-8 rounded-full border border-[#514345] text-[#9e8d8e] font-bold text-xs uppercase tracking-wider hover:bg-outline-variant/10 transition-all"
                 >
                   Browse Menu
                 </button>
               </div>
             ) : (
               cartItems.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-surface-container-high/60 border border-white/5">
+                <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-[#131313]-container-high/60 border border-[#514345]/50">
                   <img
                     src={item.coffee.image_url}
                     alt={item.coffee.name}
                     className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-headline text-sm font-semibold text-white truncate">{item.coffee.name}</h4>
-                    <span className="text-[11px] text-tertiary block font-semibold">ETB {Number(item.coffee.price).toFixed(2)}</span>
+                    <h4 className="font-display text-sm font-semibold text-white truncate">{item.coffee.name}</h4>
+                    <span className="text-[11px] text-[#f7b5be] block font-semibold">ETB {Number(item.coffee.price).toFixed(2)}</span>
                     <span className="text-[10px] text-outline block">{item.temperature} • {item.milk}</span>
                   </div>
 
                   {/* Quantity Controller */}
-                  <div className="flex items-center gap-2 bg-surface-container px-2 py-1 rounded-lg border border-white/5">
+                  <div className="flex items-center gap-2 bg-[#131313]-container px-2 py-1 rounded-lg border border-[#514345]/50">
                     <button 
                       onClick={() => onUpdateQty(idx, -1)}
-                      className="w-5 h-5 rounded bg-surface-bright flex items-center justify-center text-xs font-bold hover:text-tertiary text-on-surface"
+                      className="w-5 h-5 rounded bg-[#131313]-bright flex items-center justify-center text-xs font-bold hover:text-[#f7b5be] text-[#e5e2e1]"
                     >
                       -
                     </button>
                     <span className="text-xs font-bold text-white min-w-[14px] text-center">{item.quantity}</span>
                     <button 
                       onClick={() => onUpdateQty(idx, 1)}
-                      className="w-5 h-5 rounded bg-surface-bright flex items-center justify-center text-xs font-bold hover:text-tertiary text-on-surface"
+                      className="w-5 h-5 rounded bg-[#131313]-bright flex items-center justify-center text-xs font-bold hover:text-[#f7b5be] text-[#e5e2e1]"
                     >
                       +
                     </button>
@@ -252,16 +252,16 @@ export default function CartDrawer({
 
           {/* Footer Checkout */}
           {cartItems.length > 0 && !orderSuccess && (
-            <div className="p-5 bg-surface-container-lowest border-t border-white/10 space-y-4">
+            <div className="p-5 bg-[#131313]-container-lowest border-t border-[#514345] space-y-4">
               <div className="flex items-center justify-between text-base font-bold">
-                <span className="text-on-surface">{t('Subtotal')}:</span>
-                <span className="text-tertiary text-xl font-headline">ETB {totalAmount.toFixed(2)}</span>
+                <span className="text-[#e5e2e1]">{t('Subtotal')}:</span>
+                <span className="text-[#f7b5be] text-xl font-display">ETB {totalAmount.toFixed(2)}</span>
               </div>
 
               <button
                 onClick={handleCheckoutClick}
                 disabled={isSubmitting}
-                className="w-full py-3.5 px-6 rounded-full bg-tertiary hover:brightness-110 text-on-tertiary font-bold text-sm uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                className="w-full py-3.5 px-6 rounded-full bg-[#f7b5be] hover:brightness-110 text-[#4e232b] font-bold text-sm uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
               >
                 <span>{isSubmitting ? 'Processing Order...' : t('Pay with Chapa')}</span>
                 <span className="material-symbols-outlined text-base">east</span>
