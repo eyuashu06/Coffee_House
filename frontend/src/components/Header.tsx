@@ -14,7 +14,7 @@ interface HeaderProps {
 }
 
 export default function Header({ cartCount, onOpenCart, onOpenSommelier }: HeaderProps) {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const { language, toggleLanguage, t } = useLanguage();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
@@ -73,7 +73,9 @@ export default function Header({ cartCount, onOpenCart, onOpenSommelier }: Heade
             <NotificationsDropdown />
 
             {/* Auth Button / User Dropdown */}
-            {user ? (
+            {loading ? (
+              <div className="w-[88px] h-[32px] bg-white/10 animate-pulse rounded-full" />
+            ) : user ? (
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
