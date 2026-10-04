@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import ReceiptModal from '../../components/ReceiptModal';
+import NotificationsDropdown from '../../components/NotificationsDropdown';
 
 interface OrderItem {
   id: number;
@@ -40,14 +41,25 @@ interface MenuItem {
   variants?: { id: number; name: string; price_etb: string }[];
 }
 
+interface TableReservation {
+  id: number;
+  name: string;
+  date_time: string;
+  party_size: number;
+  contact_phone: string;
+  status: string;
+  created_at: string;
+}
+
 export default function ManagerDashboard() {
   const { user, loading, logout } = useAuth();
   
   const [orders, setOrders] = useState<Order[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [reservations, setReservations] = useState<TableReservation[]>([]);
   const [analytics, setAnalytics] = useState({ daily_revenue: 0, monthly_revenue: 0, daily_orders_count: 0, monthly_orders_count: 0 });
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'reservations'>('dashboard');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [isOpen, setIsOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,10 +71,12 @@ export default function ManagerDashboard() {
     fetchStoreStatus();
     fetchMenuItems();
     fetchAnalytics();
+    fetchReservations();
 
     const interval = setInterval(() => {
       fetchOrders();
       fetchAnalytics();
+      fetchReservations();
     }, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -90,6 +104,18 @@ export default function ManagerDashboard() {
       if (res.ok) {
         const data = await res.json();
         setMenuItems(Array.isArray(data) ? data : data.results || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchReservations = async () => {
+    try {
+      const res = await fetch('/api/v1/reservations/', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setReservations(Array.isArray(data) ? data : data.results || []);
       }
     } catch (e) {
       console.error(e);
@@ -181,6 +207,30 @@ export default function ManagerDashboard() {
     }
   };
 
+  const handleUpdateReservationStatus = async (reservationId: number, newStatus: string) => {
+    setActionMsg(null);
+    try {
+      const res = await fetch(`/api/v1/reservations/${reservationId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (res.ok) {
+        const updatedRes = await res.json();
+        setReservations(prev => prev.map(r => r.id === reservationId ? { ...r, status: updatedRes.status } : r));
+        setActionMsg(`Reservation status updated to: ${newStatus}`);
+        setTimeout(() => setActionMsg(null), 3000);
+      } else {
+        const err = await res.json();
+        setActionMsg(err.error || 'Failed to update reservation status.');
+      }
+    } catch (e) {
+      setActionMsg('Error updating reservation status.');
+    }
+  };
+
   if (loading || isLoading) {
     return (
       <div className="min-h-screen bg-[#131313] flex items-center justify-center">
@@ -227,6 +277,12 @@ export default function ManagerDashboard() {
           <button onClick={() => setActiveTab('menu')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'menu' ? 'bg-[#3b141c] text-[#f7b5be] font-bold' : 'text-[#d5c2c3] hover:bg-[#514345]/30'}`}>
             <i className="ph ph-list-dashes text-xl"></i> Menu Management
           </button>
+          <button onClick={() => setActiveTab('reservations')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'reservations' ? 'bg-[#3b141c] text-[#f7b5be] font-bold' : 'text-[#d5c2c3] hover:bg-[#514345]/30'}`}>
+            <i className="ph ph-calendar-blank text-xl"></i> Table Reservations
+            {reservations.filter(r => r.status === 'PENDING').length > 0 && (
+              <span className="ml-auto bg-blue-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">{reservations.filter(r => r.status === 'PENDING').length}</span>
+            )}
+          </button>
         </nav>
         <div className="p-4 border-t border-[#514345] hidden md:block">
           <div className="flex items-center gap-3 mb-4 px-2">
@@ -252,6 +308,9 @@ export default function ManagerDashboard() {
             <p className="text-[#9e8d8e] text-[14.5px]">Manage incoming orders and store status.</p>
           </div>
           <div className="flex items-center gap-4">
+            <div className="relative flex items-center">
+              <NotificationsDropdown />
+            </div>
             <div className="flex items-center gap-2">
               <span className={`w-3 h-3 rounded-full ${isOpen ? 'bg-green-500' : 'bg-red-500'}`}></span>
               <span className="text-[15.5px] font-semibold">{isOpen ? 'STORE OPEN' : 'STORE CLOSED'}</span>
@@ -396,7 +455,7 @@ export default function ManagerDashboard() {
                   <div>
                     <h4 className="font-display text-[20px] text-[#e5e2e1] mb-1 leading-tight">{item.name}</h4>
                     <span className="text-[12px] uppercase text-[#9e8d8e] tracking-wider font-bold">{item.category_name}</span>
-                    <div className="text-[16px] text-[#f7b5be] font-semibold mt-2">{parseFloat(item.price || '0')} Br</div>
+                    <div className="text-[16px] text-[#f7b5be] font-semibold mt-2">{Number(item.price || 0).toFixed(2)} Br</div>
                   </div>
                   <button 
                     onClick={() => toggleMenuItemAvailability(item)}
@@ -406,6 +465,59 @@ export default function ManagerDashboard() {
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* RESERVATIONS TAB */}
+        {activeTab === 'reservations' && (
+          <div className="animate-fade-in space-y-6">
+            <h2 className="font-display text-[24px] text-white mb-6">Table Reservations</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {reservations.length === 0 ? (
+                <div className="col-span-full py-12 text-center text-[#9e8d8e] bg-[#1c1b1b] border border-[#514345] rounded-[18px]">
+                  No table reservations found.
+                </div>
+              ) : (
+                reservations.map(reservation => (
+                  <div key={reservation.id} className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <span className="text-[20px] font-display font-bold text-white">{reservation.name}</span>
+                          <span className="block text-[12px] text-[#9e8d8e] mt-1">Booked on {new Date(reservation.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <span className={`px-2 py-1 rounded text-[11px] font-bold uppercase ${
+                          reservation.status === 'PENDING' ? 'bg-yellow-900/50 text-yellow-500' :
+                          reservation.status === 'CONFIRMED' ? 'bg-blue-900/50 text-blue-400' :
+                          reservation.status === 'COMPLETED' ? 'bg-green-900/50 text-green-400' :
+                          'bg-[#514345] text-[#d5c2c3]'
+                        }`}>
+                          {reservation.status}
+                        </span>
+                      </div>
+                      
+                      <div className="text-[14px] text-[#d5c2c3] mb-4 space-y-1">
+                        <p><strong className="text-[#e5e2e1]">Date & Time:</strong> {new Date(reservation.date_time).toLocaleString()}</p>
+                        <p><strong className="text-[#e5e2e1]">Party Size:</strong> {reservation.party_size} people</p>
+                        <p><strong className="text-[#e5e2e1]">Phone:</strong> {reservation.contact_phone || 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 mt-auto">
+                      {reservation.status === 'PENDING' && (
+                        <div className="flex gap-2">
+                          <button onClick={() => handleUpdateReservationStatus(reservation.id, 'CONFIRMED')} className="flex-1 h-10 rounded-[12px] bg-[#3b141c] text-[#f7b5be] font-bold text-[13px] hover:brightness-110">Confirm</button>
+                          <button onClick={() => handleUpdateReservationStatus(reservation.id, 'CANCELLED')} className="flex-1 h-10 rounded-[12px] border border-red-900 text-red-400 font-bold text-[13px] hover:bg-red-950">Cancel</button>
+                        </div>
+                      )}
+                      {reservation.status === 'CONFIRMED' && (
+                        <button onClick={() => handleUpdateReservationStatus(reservation.id, 'COMPLETED')} className="w-full h-10 rounded-[12px] bg-green-900/40 border border-green-800 text-green-300 font-bold text-[13px] hover:bg-green-900/60">Mark Completed</button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
