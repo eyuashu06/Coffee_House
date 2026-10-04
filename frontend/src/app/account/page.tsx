@@ -39,6 +39,15 @@ interface Address {
   is_default: boolean;
 }
 
+interface Reservation {
+  id: number;
+  name: string;
+  date_time: string;
+  party_size: number;
+  contact_phone: string;
+  status: string;
+}
+
 interface Banner {
   type: 'success' | 'error' | 'info';
   message: string;
@@ -46,10 +55,12 @@ interface Banner {
 
 export default function AccountPage() {
   const { user, loading, checkAuth, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'orders' | 'addresses' | 'profile'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'reservations' | 'addresses' | 'profile'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  const [isLoadingReservations, setIsLoadingReservations] = useState(false);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<Order | null>(null);
   const [banner, setBanner] = useState<Banner | null>(null);
 
@@ -96,6 +107,25 @@ export default function AccountPage() {
     }
   }, []);
 
+  const fetchReservations = useCallback(async () => {
+    setIsLoadingReservations(true);
+    try {
+      const res = await fetch('/api/v1/reservations/', {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : (data.results || []);
+        setReservations(list);
+      }
+    } catch (e) {
+      console.error('Failed to fetch reservations:', e);
+    } finally {
+      setIsLoadingReservations(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (user) {
       setFirstName(user.first_name || '');
@@ -103,8 +133,9 @@ export default function AccountPage() {
       setPhone(user.phone || '');
       fetchOrders();
       fetchAddresses();
+      fetchReservations();
     }
-  }, [user, fetchOrders, fetchAddresses]);
+  }, [user, fetchOrders, fetchAddresses, fetchReservations]);
 
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,6 +247,7 @@ export default function AccountPage() {
         {/* TABS */}
         <div className="flex flex-wrap gap-2 mb-8 border-b border-[#514345] pb-4">
           <button onClick={() => setActiveTab('orders')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'orders' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>My Orders</button>
+          <button onClick={() => setActiveTab('reservations')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'reservations' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>Table Reservations</button>
           <button onClick={() => setActiveTab('addresses')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'addresses' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>Delivery Addresses</button>
           <button onClick={() => setActiveTab('profile')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'profile' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>Profile Settings</button>
         </div>
@@ -281,6 +313,43 @@ export default function AccountPage() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+        )}
+
+        {/* TAB: RESERVATIONS */}
+        {activeTab === 'reservations' && (
+          <div className="space-y-10 animate-fade-in">
+            {isLoadingReservations ? (
+              <div className="py-12 flex justify-center text-[#9e8d8e]">Loading reservations...</div>
+            ) : reservations.length === 0 ? (
+              <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-10 text-center">
+                <i className="ph ph-calendar text-4xl text-[#514345] mb-4"></i>
+                <h3 className="font-display text-[22px] mb-2">No reservations yet</h3>
+                <p className="text-[#d5c2c3] text-[15.5px] mb-6">You haven't booked any tables with us.</p>
+                <Link href="/#book" className="h-10 px-6 rounded-full inline-flex items-center bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">Book a Table</Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {reservations.map(res => (
+                  <div key={res.id} className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-5 flex flex-wrap gap-4 items-center justify-between">
+                    <div>
+                      <p className="text-[14px] text-[#9e8d8e] mb-1">Reservation for {res.name}</p>
+                      <p className="text-[16px] font-semibold">{new Date(res.date_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                      <p className="text-[14px] text-[#d5c2c3] mt-1">{res.party_size} People • {res.contact_phone}</p>
+                    </div>
+                    <div>
+                      <span className={`px-3 py-1 rounded-full text-[12px] font-semibold tracking-wide uppercase ${
+                        res.status === 'CONFIRMED' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' :
+                        res.status === 'CANCELLED' ? 'bg-red-950 text-red-300 border border-red-900' :
+                        'bg-yellow-950 text-yellow-300 border border-yellow-900'
+                      }`}>
+                        {res.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
