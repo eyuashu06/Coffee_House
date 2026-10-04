@@ -30,8 +30,16 @@ export default function Home() {
     const [initialAuthMode, setInitialAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [activeCat, setActiveCat] = useState('all');
+    const [bookingData, setBookingData] = useState({ name: '', date_time: '', party_size: 2, contact_phone: '' });
+    const [bookingStatus, setBookingStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
+    const [minDateTime, setMinDateTime] = useState('');
 
     useEffect(() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        tomorrow.setMinutes(tomorrow.getMinutes() - tomorrow.getTimezoneOffset());
+        setMinDateTime(tomorrow.toISOString().slice(0, 16));
         async function fetchMenu() {
             try {
                 const res = await fetch('/api/v1/coffees/');
@@ -45,6 +53,33 @@ export default function Home() {
         }
         fetchMenu();
     }, []);
+
+    const handleBookingSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) {
+            setAuthMode('LOGIN');
+            setIsAuthModalOpen(true);
+            return;
+        }
+
+        setBookingStatus('LOADING');
+        try {
+            const res = await fetch('/api/v1/reservations/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(bookingData),
+            });
+            if (res.ok) {
+                setBookingStatus('SUCCESS');
+                setBookingData({ name: '', date_time: '', party_size: 2, contact_phone: '' });
+            } else {
+                setBookingStatus('ERROR');
+            }
+        } catch (error) {
+            setBookingStatus('ERROR');
+        }
+    };
 
     const handleOpenItemModal = (item: MenuItem) => {
         setSelectedItem(item);
@@ -381,22 +416,30 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
           <div className="bg-[#131313] px-12 py-10">
             <h2 className="font-display text-[36px] leading-tight">Book a table</h2>
             <p className="mt-2 text-[16.5px] text-[#d5c2c3] max-w-[52ch]">Three fields and you're in. We confirm every request by phone within the hour — for parties over eight, call us instead.</p>
-            <form id="booking-form" className="mt-8 grid grid-cols-2 gap-x-5 gap-y-6 max-w-[560px]">
+            <form id="booking-form" onSubmit={handleBookingSubmit} className="mt-8 grid grid-cols-2 gap-x-5 gap-y-6 max-w-[560px]">
               <div className="col-span-2">
                 <label htmlFor="bk-name" className="block text-[15px] text-[#d5c2c3] mb-2">Name</label>
-                <input id="bk-name" type="text" placeholder="Aster Kebede" className="field w-full h-12 px-5 text-[16px]"/>
+                <input id="bk-name" type="text" required value={bookingData.name} onChange={(e) => setBookingData({...bookingData, name: e.target.value})} placeholder="Aster Kebede" className="field w-full h-12 px-5 text-[16px]"/>
               </div>
               <div>
-                <label htmlFor="bk-date" className="block text-[15px] text-[#d5c2c3] mb-2">Date &amp; time</label>
-                <input id="bk-date" type="text" placeholder="Fri 9 Oct, 19:00" className="field w-full h-12 px-5 text-[16px]"/>
+                <label htmlFor="bk-phone" className="block text-[15px] text-[#d5c2c3] mb-2">Phone</label>
+                <input id="bk-phone" type="text" required value={bookingData.contact_phone} onChange={(e) => setBookingData({...bookingData, contact_phone: e.target.value})} placeholder="+251 911..." className="field w-full h-12 px-5 text-[16px]"/>
               </div>
               <div>
                 <label htmlFor="bk-party" className="block text-[15px] text-[#d5c2c3] mb-2">Party size</label>
-                <input id="bk-party" type="text" placeholder="2 guests" className="field w-full h-12 px-5 text-[16px]"/>
+                <input id="bk-party" type="number" min="1" required value={bookingData.party_size} onChange={(e) => setBookingData({...bookingData, party_size: parseInt(e.target.value)})} placeholder="2 guests" className="field w-full h-12 px-5 text-[16px]"/>
               </div>
-              <div className="col-span-2 flex items-center gap-5 pt-1">
-                <button id="bk-btn" type="submit" className="h-12 px-8 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[16px] font-semibold hover:bg-[#ffd9dd] transition-colors flex items-center gap-2">Book a table</button>
-                <p id="bk-note" className="text-[14px] italic text-[#9e8d8e]">No deposit — we hold your table for 20 minutes.</p>
+              <div className="col-span-2">
+                <label htmlFor="bk-date" className="block text-[15px] text-[#d5c2c3] mb-2">Date &amp; time</label>
+                <input id="bk-date" type="datetime-local" min={minDateTime} required value={bookingData.date_time} onChange={(e) => setBookingData({...bookingData, date_time: e.target.value})} className="field w-full h-12 px-5 text-[16px] [color-scheme:dark]"/>
+              </div>
+              <div className="col-span-2 flex flex-col gap-3 pt-1">
+                <div className="flex items-center gap-5">
+                  <button id="bk-btn" type="submit" disabled={bookingStatus === 'LOADING'} className="h-12 px-8 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[16px] font-semibold hover:bg-[#ffd9dd] transition-colors flex items-center gap-2 disabled:opacity-50">Book a table</button>
+                  <p id="bk-note" className="text-[14px] italic text-[#9e8d8e]">No deposit — we hold your table for 20 minutes.</p>
+                </div>
+                {bookingStatus === 'SUCCESS' && <p className="text-[#f7b5be] font-semibold text-sm">Your table is booked! We'll call you shortly to confirm.</p>}
+                {bookingStatus === 'ERROR' && <p className="text-red-400 text-sm">There was an error booking your table. Please try again.</p>}
               </div>
             </form>
           </div>
