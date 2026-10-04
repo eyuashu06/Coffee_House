@@ -38,7 +38,9 @@ class CoffeeItem(models.Model):
 class Order(models.Model):
     STATUS_CHOICES = (
         ('PENDING', 'Pending'),
-        ('BREWING', 'Brewing in Progress'),
+        ('PREPARING', 'Preparing'),
+        ('READY', 'Ready'),
+        ('OUT_FOR_DELIVERY', 'Out for Delivery'),
         ('COMPLETED', 'Completed'),
         ('CANCELLED', 'Cancelled'),
     )
@@ -47,7 +49,7 @@ class Order(models.Model):
     customer_name = models.CharField(max_length=100, default='Guest Coffee Enthusiast')
     customer_email = models.EmailField(blank=True, default='guest@artisanalcoffee.com')
     total_amount = models.DecimalField(max_digits=8, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='BREWING')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -63,6 +65,28 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity}x {self.coffee_item.name if self.coffee_item else 'Coffee'} ({self.temperature})"
+
+class TableReservation(models.Model):
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('CONFIRMED', 'Confirmed'),
+        ('COMPLETED', 'Completed'),
+        ('CANCELLED', 'Cancelled'),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='reservations')
+    name = models.CharField(max_length=150)
+    date_time = models.DateTimeField()
+    party_size = models.PositiveIntegerField()
+    contact_phone = models.CharField(max_length=50, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.date_time.strftime('%Y-%m-%d %H:%M')} (Party of {self.party_size})"
+
+    class Meta:
+        ordering = ['-date_time']
 
 class KnowledgeBase(models.Model):
     title = models.CharField(max_length=200)
@@ -91,6 +115,24 @@ def create_new_menu_item_notification(sender, instance, created, **kwargs):
                 title="New Menu Item!",
                 message=f"{instance.name} is now available on our menu. Try it out!"
             ) for user in users
+        ]
+        if notifications:
+            Notification.objects.bulk_create(notifications)
+
+@receiver(post_save, sender=TableReservation)
+def create_table_reservation_notification(sender, instance, created, **kwargs):
+    if created:
+        User = get_user_model()
+        from apps.accounts.models import Notification
+        
+        managers_and_admins = User.objects.filter(role__in=['MANAGER', 'ADMIN'])
+        notifications = [
+            Notification(
+                user=user,
+                title="New Table Reservation",
+                message=f"{instance.name} has reserved a table for {instance.party_size} on {instance.date_time.strftime('%Y-%m-%d %H:%M')}.",
+                link="/manager"
+            ) for user in managers_and_admins
         ]
         if notifications:
             Notification.objects.bulk_create(notifications)
