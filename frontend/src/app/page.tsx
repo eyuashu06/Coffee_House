@@ -57,7 +57,7 @@ export default function Home() {
     const handleBookingSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) {
-            setAuthMode('LOGIN');
+            setInitialAuthMode('LOGIN');
             setIsAuthModalOpen(true);
             return;
         }
