@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, CoffeeItem, Order, OrderItem, KnowledgeBase
+from .models import Category, CoffeeItem, Order, OrderItem, KnowledgeBase, TableReservation
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,3 +39,10 @@ class KnowledgeBaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = KnowledgeBase
         fields = '__all__'
+
+class TableReservationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TableReservation
+        fields = '__all__'
+        read_only_fields = ['user', 'created_at']
+
