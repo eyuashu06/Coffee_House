@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import CategoryViewSet, CoffeeItemViewSet, OrderViewSet, SommelierRAGView, AnalyticsAPIView
+from .views import CategoryViewSet, CoffeeItemViewSet, OrderViewSet, SommelierRAGView, AnalyticsAPIView, TableReservationViewSet
 
 class OptionalSlashRouter(DefaultRouter):
     def __init__(self, *args, **kwargs):
@@ -11,6 +11,7 @@ router = OptionalSlashRouter()
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'coffees', CoffeeItemViewSet, basename='coffee')
 router.register(r'orders', OrderViewSet, basename='order')
+router.register(r'reservations', TableReservationViewSet, basename='reservation')
 
 urlpatterns = [
     path('', include(router.urls)),
