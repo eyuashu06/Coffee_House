@@ -5,8 +5,8 @@ from rest_framework.decorators import action
 from django.db import models
 from django.db.models import Sum
 from datetime import date
-from .models import Category, CoffeeItem, Order, KnowledgeBase
-from .serializers import CategorySerializer, CoffeeItemSerializer, OrderSerializer, KnowledgeBaseSerializer
+from .models import Category, CoffeeItem, Order, KnowledgeBase, TableReservation
+from .serializers import CategorySerializer, CoffeeItemSerializer, OrderSerializer, KnowledgeBaseSerializer, TableReservationSerializer
 from .rag_engine import CoffeeSommelierRAG
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -87,3 +87,26 @@ class AnalyticsAPIView(APIView):
             'daily_orders_count': daily_orders.count(),
             'monthly_orders_count': monthly_orders.count()
         })
+
+class TableReservationViewSet(viewsets.ModelViewSet):
+    serializer_class = TableReservationSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated:
+            if user.role in ['MANAGER', 'ADMIN'] or user.is_superuser:
+                return TableReservation.objects.all().order_by('-created_at')
+            return TableReservation.objects.filter(user=user).order_by('-created_at')
+        return TableReservation.objects.none()
+
+    def get_permissions(self):
+        from rest_framework import permissions
+        if self.action == 'create':
+            return [permissions.IsAuthenticated()] # Only auth users can book now as requested
+        return [permissions.IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        if self.request.user.is_authenticated:
+            serializer.save(user=self.request.user)
+        else:
+            serializer.save()
