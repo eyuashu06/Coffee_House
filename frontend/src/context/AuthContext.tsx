@@ -56,7 +56,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (res.ok) {
         const userData = await parseResponseData(res);
-        setUser(userData);
+        if (userData.authenticated === false) {
+          setUser(null);
+        } else {
+          setUser(userData);
+        }
       } else {
         setUser(null);
       }
