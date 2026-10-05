@@ -11,6 +11,24 @@
     background-color: #1b1212;
     color: #d5c2c3;
   }
+
+  /* Placeholder text must stay readable on the dark inputs (Tailwind's default is
+     60%-opacity gray, which all but disappears on #131313). */
+  input::placeholder,
+  textarea::placeholder {
+    color: #b3a3a4 !important;
+    opacity: 1 !important;
+    font-style: italic;
+  }
+
+  /* Keep autofilled values visible too */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #e5e2e1;
+    -webkit-box-shadow: 0 0 0 1000px #1c1b1b inset;
+    transition: background-color 9999s ease-in-out 0s;
+  }
 }
 
 @layer utilities {

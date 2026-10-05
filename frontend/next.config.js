@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Don't bounce /api/... calls through a 308 just to drop the trailing slash —
+  // Django serves both variants and the extra hop only adds latency.
+  skipTrailingSlashRedirect: true,
   images: {
     remotePatterns: [
       {
