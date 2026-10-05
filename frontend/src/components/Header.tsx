@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import AuthModal from './AuthModal';
 import NotificationsDropdown from './NotificationsDropdown';
+import LanguageToggle from './LanguageToggle';
 import Link from 'next/link';
 
 interface HeaderProps {
@@ -15,7 +16,7 @@ interface HeaderProps {
 
 export default function Header({ cartCount, onOpenCart, onOpenSommelier }: HeaderProps) {
   const { user, loading, logout } = useAuth();
-  const { language, toggleLanguage, t } = useLanguage();
+  const { t } = useLanguage();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -25,7 +26,7 @@ export default function Header({ cartCount, onOpenCart, onOpenSommelier }: Heade
       <header className="fixed top-0 w-full z-50 pt-safe bg-[#1c1b1b]/90 backdrop-blur-xl border-b border-[#514345] shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
         <div className="max-w-7xl mx-auto h-16 px-4 sm:px-6 flex items-center justify-between gap-4">
           {/* Brand Emblem */}
-          <Link href="/" className="flex items-center gap-3 min-w-0 cursor-pointer group">
+          <Link href="/?welcome=1" className="flex items-center gap-3 min-w-0 cursor-pointer group">
             <div className="w-9 h-9 rounded-full bg-[#2b1b1e] flex items-center justify-center border border-[#683941] group-hover:scale-105 transition-transform">
               <span className="material-symbols-outlined text-[#f7b5be] text-xl">local_cafe</span>
             </div>
@@ -37,15 +38,8 @@ export default function Header({ cartCount, onOpenCart, onOpenSommelier }: Heade
 
           {/* Action Controls */}
           <div className="flex items-center gap-2">
-            {/* Language Switcher Button */}
-            <button
-              onClick={toggleLanguage}
-              title="Switch Language / ቋንቋ ቀይር"
-              className="px-2.5 py-1.5 rounded-full bg-[#131313]-container-high/80 hover:bg-[#2b1b1e] text-[#f7b5be] border border-[#683941] text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
-            >
-              <span className="material-symbols-outlined text-base">translate</span>
-              <span>{language === 'en' ? '🇪🇹 አማ' : '🇬🇧 EN'}</span>
-            </button>
+            {/* Language Switcher */}
+            <LanguageToggle className="px-2.5 py-1.5 rounded-full bg-[#131313]-container-high/80 hover:bg-[#2b1b1e] text-[#f7b5be] border border-[#683941] text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm" />
 
             {/* AI Sommelier Button */}
             <button
