@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import CartDrawer, { CartItem } from '../components/CartDrawer';
 import AuthModal from '../components/AuthModal';
 import ItemModal from '../components/ItemModal';
+import AssistantChat from '../components/AssistantChat';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageToggle from '../components/LanguageToggle';
+import { apiFetch } from '../lib/api';
 import Link from 'next/link';
 
 export interface MenuItem {
@@ -14,14 +18,19 @@ export interface MenuItem {
     category_slug: string;
     category_name: string;
     price: string;
+    base_price_etb?: string;
     description: string;
     image_url: string;
     is_signature: boolean;
+    is_available?: boolean;
+    variants?: { id: number; name: string; price_modifier_etb: string }[];
+    add_ons?: { id: number; name: string; price_etb: string }[];
 }
 
 export default function Home() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
+    const { t, language, tCategory, tItem } = useLanguage();
     const [items, setItems] = useState<MenuItem[]>([]);
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
@@ -29,10 +38,33 @@ export default function Home() {
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
     const [initialAuthMode, setInitialAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [postLoginRedirect, setPostLoginRedirect] = useState<string | null>(null);
     const [activeCat, setActiveCat] = useState('all');
     const [bookingData, setBookingData] = useState({ name: '', date_time: '', party_size: 2, contact_phone: '' });
     const [bookingStatus, setBookingStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
     const [minDateTime, setMinDateTime] = useState('');
+
+    // Middleware sends signed-out visitors here with ?auth=login&redirect=/account —
+    // honour it so the sign-in form actually opens (and remember where to go after).
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const auth = params.get('auth');
+        const redirect = params.get('redirect');
+        if (redirect) setPostLoginRedirect(redirect);
+        if (auth === 'login' || auth === 'register') {
+            setInitialAuthMode(auth === 'register' ? 'REGISTER' : 'LOGIN');
+            setIsAuthModalOpen(true);
+        }
+    }, []);
+
+    useEffect(() => {
+        // Staff never get dumped on the customer welcome page - they go to the dashboard.
+        // (?welcome=1 means they clicked "Return to home" on purpose, so let them stay.)
+        const wantsWelcomePage = new URLSearchParams(window.location.search).has('welcome');
+        if (!authLoading && user && !wantsWelcomePage && (user.role === 'ADMIN' || user.role === 'MANAGER')) {
+            router.replace('/manager');
+        }
+    }, [user, authLoading, router]);
 
     useEffect(() => {
         const tomorrow = new Date();
@@ -42,10 +74,11 @@ export default function Home() {
         setMinDateTime(tomorrow.toISOString().slice(0, 16));
         async function fetchMenu() {
             try {
-                const res = await fetch('/api/v1/coffees/');
+                const res = await fetch('/api/v1/menu/items/?page_size=200');
                 if (res.ok) {
                     const data = await res.json();
-                    setItems(Array.isArray(data) ? data : data.results || []);
+                    const list: MenuItem[] = Array.isArray(data) ? data : data.results || [];
+                    setItems(list.filter(item => item.is_available !== false));
                 }
             } catch (e) {
                 console.error(e);
@@ -64,20 +97,22 @@ export default function Home() {
 
         setBookingStatus('LOADING');
         try {
-            const res = await fetch('/api/v1/reservations/', {
+            const res = await apiFetch('/api/v1/reservations/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
                 body: JSON.stringify(bookingData),
             });
             if (res.ok) {
                 setBookingStatus('SUCCESS');
                 setBookingData({ name: '', date_time: '', party_size: 2, contact_phone: '' });
+                setTimeout(() => setBookingStatus('IDLE'), 5000);
             } else {
                 setBookingStatus('ERROR');
+                setTimeout(() => setBookingStatus('IDLE'), 5000);
             }
         } catch (error) {
             setBookingStatus('ERROR');
+            setTimeout(() => setBookingStatus('IDLE'), 5000);
         }
     };
 
@@ -86,27 +121,44 @@ export default function Home() {
         setIsItemModalOpen(true);
     };
 
-    const handleConfirmAddToCart = (item: MenuItem, quantity: number, temperature: string, milk: string) => {
+    const handleConfirmAddToCart = (
+        item: MenuItem,
+        quantity: number,
+        temperature: string,
+        milk: string,
+        variant?: { id: number; name: string; price_modifier_etb: string } | null,
+        addOns: { id: number; name: string; price_etb: string }[] = []
+    ) => {
         setCartItems(prev => {
-            const existingIdx = prev.findIndex(i => i.coffee.id === item.id && i.temperature === temperature && i.milk === milk);
+            // Same item + same options = merge quantities, otherwise add a new line
+            const sameLine = (i: (typeof prev)[number]) =>
+                i.coffee.id === item.id &&
+                i.temperature === temperature &&
+                i.milk === milk &&
+                (i.variant?.id ?? null) === (variant?.id ?? null) &&
+                i.addOns.map(a => a.name).sort().join('|') === addOns.map(a => a.name).sort().join('|');
+
+            const existingIdx = prev.findIndex(sameLine);
             if (existingIdx > -1) {
                 const updated = [...prev];
                 updated[existingIdx].quantity += quantity;
                 return updated;
             }
-            return [...prev, { 
+            return [...prev, {
                 coffee: {
                     id: item.id,
                     name: item.name,
-                    price: parseFloat(item.price),
+                    price: parseFloat(item.base_price_etb ?? item.price),
                     image_url: item.image_url,
                     category_slug: item.category_slug,
                     description: item.description,
                     is_signature: item.is_signature
-                } as any, 
-                quantity, 
-                temperature, 
-                milk 
+                } as any,
+                quantity,
+                temperature,
+                milk,
+                variant: variant ?? null,
+                addOns
             }];
         });
         setIsItemModalOpen(false);
@@ -193,21 +245,22 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
         <span className="font-display text-[21px] tracking-wide">Buna Hub</span>
       </a>
       <nav className="flex items-center gap-8 text-[15px] text-[#d5c2c3]">
-        <a className="hover:text-[#f7b5be] transition-colors" href="#menu">Menu</a>
-        <a className="hover:text-[#f7b5be] transition-colors" href="#story">Story</a>
-        <a className="hover:text-[#f7b5be] transition-colors" href="#gallery">Gallery</a>
-        <a className="hover:text-[#f7b5be] transition-colors" href="#visit">Visit us</a>
+        <a className="hover:text-[#f7b5be] transition-colors" href="#menu">{t('Menu', 'ሜኑ')}</a>
+        <a className="hover:text-[#f7b5be] transition-colors" href="#story">{t('Story', 'ታሪክ')}</a>
+        <a className="hover:text-[#f7b5be] transition-colors" href="#gallery">{t('Gallery', 'ፎቶዎች')}</a>
+        <a className="hover:text-[#f7b5be] transition-colors" href="#visit">{t('Visit us', 'ይገኙን')}</a>
       </nav>
       <div className="flex items-center gap-3">
+        <LanguageToggle />
         {user ? (
-            <Link href="/account" className="h-9 px-5 rounded-[28px] border border-[#514345] text-[#d5c2c3] text-[14.5px] flex items-center hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">Account</Link>
+            <Link href="/account" className="h-9 px-5 rounded-[28px] border border-[#514345] text-[#d5c2c3] text-[14.5px] flex items-center hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">{t('Account', 'መለያ')}</Link>
         ) : (
           <>
-            <button onClick={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }} className="h-9 px-5 rounded-[28px] border border-[#514345] text-[#d5c2c3] text-[14.5px] flex items-center hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">Sign In</button>
-            <button onClick={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }} className="h-9 px-5 rounded-[28px] bg-[#f7b5be] text-[#4e232b] font-semibold text-[14.5px] flex items-center hover:bg-[#ffd9dd] transition-colors">Sign Up</button>
+            <button onClick={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }} className="h-9 px-5 rounded-[28px] border border-[#514345] text-[#d5c2c3] text-[14.5px] flex items-center hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">{t('Sign In', 'ግቡ')}</button>
+            <button onClick={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }} className="h-9 px-5 rounded-[28px] bg-[#f7b5be] text-[#4e232b] font-semibold text-[14.5px] flex items-center hover:bg-[#ffd9dd] transition-colors">{t('Sign Up', 'ተዝጥር')}</button>
           </>
         )}
-        <button onClick={() => setIsCartOpen(true)} className="h-9 px-5 rounded-[28px] border border-[#9e8d8e] text-[14.5px] flex items-center hover:border-[#e5e2e1] transition-colors">Cart ({totalCartCount})</button>
+        <button onClick={() => setIsCartOpen(true)} className="h-9 px-5 rounded-[28px] border border-[#9e8d8e] text-[14.5px] flex items-center hover:border-[#e5e2e1] transition-colors">{t('Cart', 'የግዢ ሳጥን')}{language === 'am' ? '' : ` (${totalCartCount})`}</button>
       </div>
     </div>
   </header>
@@ -223,17 +276,17 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 
       <div className="absolute top-6 right-8 flex items-center gap-2 text-[14px] text-[#d5c2c3]">
         <span className="w-1.5 h-1.5 rounded-full bg-[#fbbb50]"></span>
-        Open today · 7:00 – 22:00 · Piassa, Addis Ababa
+        {t('Open today')} · 7:00 – 22:00 · Piassa, {t('Addis Ababa')}
       </div>
 
       <div className="hero-copy absolute left-12 bottom-[104px] max-w-[620px]">
         <h1 className="font-display text-[96px] leading-[0.95] text-[#e5e2e1]">Buna Hub</h1>
-        <p className="mt-4 text-[21px] leading-snug text-[#d5c2c3] max-w-[46ch]">Three rounds from one jebena — coffee poured the slow way, in the city that invented it.</p>
+        <p className="mt-4 text-[21px] leading-snug text-[#d5c2c3] max-w-[46ch]">{t('Three rounds from one jebena — coffee poured the slow way, in the city that invented it.')}</p>
         <div className="mt-8 flex items-center gap-4">
-          <a href="#menu" className="h-12 px-7 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[16.5px] font-semibold flex items-center gap-2 hover:bg-[#ffd9dd] transition-colors">View the Menu <i className="ph ph-arrow-down text-[15px]"></i></a>
-          <Link href="/account" className="h-12 px-7 rounded-[28px] border border-[#9e8d8e] text-[#e5e2e1] text-[16.5px] flex items-center hover:border-[#e5e2e1] hover:bg-[#20201f] transition-colors">Order Buna</Link>
+          <a href="#menu" className="h-12 px-7 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[16.5px] font-semibold flex items-center gap-2 hover:bg-[#ffd9dd] transition-colors">{t('View the Menu')} <i className="ph ph-arrow-down text-[15px]"></i></a>
+          <Link href="/account" className="h-12 px-7 rounded-[28px] border border-[#9e8d8e] text-[#e5e2e1] text-[16.5px] flex items-center hover:border-[#e5e2e1] hover:bg-[#20201f] transition-colors">{t('Order Buna')}</Link>
         </div>
-        <Link href="/account" className="mt-5 inline-flex items-center gap-1.5 text-[14.5px] text-[#9e8d8e] hover:text-[#f7b5be] transition-colors">Track your order <i className="ph ph-arrow-right text-[13px]"></i></Link>
+        <Link href="/account" className="mt-5 inline-flex items-center gap-1.5 text-[14.5px] text-[#9e8d8e] hover:text-[#f7b5be] transition-colors">{t('Track your order')} <i className="ph ph-arrow-right text-[13px]"></i></Link>
       </div>
 
       {/* tibeb path-draw strip */}
@@ -246,23 +299,23 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
     <div className="flex gap-2 mt-2">
       <Link href="/account" className="flex-1 h-16 rounded-[14px] bg-[#1c1b1b] border border-[#514345] flex items-center gap-3 px-4 hover:border-[#9e8d8e] transition-colors">
         <span className="text-[#f7b5be] text-[22px]"><i className="ph ph-coffee-bean"></i></span>
-        <span><span className="block text-[16px] font-semibold leading-tight">Order</span><span className="block text-[12.5px] italic text-[#9e8d8e]">pickup &amp; delivery</span></span>
+        <span><span className="block text-[16px] font-semibold leading-tight">{t('Order')}</span><span className="block text-[12.5px] italic text-[#9e8d8e]">{t('pickup & delivery')}</span></span>
       </Link>
       <a href="#visit" className="flex-1 h-16 rounded-[14px] bg-[#1c1b1b] border border-[#514345] flex items-center gap-3 px-4 hover:border-[#9e8d8e] transition-colors">
         <span className="text-[#f7b5be] text-[22px]"><i className="ph ph-calendar-check"></i></span>
-        <span><span className="block text-[16px] font-semibold leading-tight">Book</span><span className="block text-[12.5px] italic text-[#9e8d8e]">save a stool</span></span>
+        <span><span className="block text-[16px] font-semibold leading-tight">{t('Book')}</span><span className="block text-[12.5px] italic text-[#9e8d8e]">{t('save a stool')}</span></span>
       </a>
       <a href="#menu" className="flex-1 h-16 rounded-[14px] bg-[#1c1b1b] border border-[#514345] flex items-center gap-3 px-4 hover:border-[#9e8d8e] transition-colors">
         <span className="text-[#f7b5be] text-[22px]"><i className="ph ph-book-open"></i></span>
-        <span><span className="block text-[16px] font-semibold leading-tight">Menu</span><span className="block text-[12.5px] italic text-[#9e8d8e]">buna, teas &amp; bites</span></span>
+        <span><span className="block text-[16px] font-semibold leading-tight">{t('Menu')}</span><span className="block text-[12.5px] italic text-[#9e8d8e]">{t('buna, teas & bites')}</span></span>
       </a>
       <a href="#story" className="flex-1 h-16 rounded-[14px] bg-[#1c1b1b] border border-[#514345] flex items-center gap-3 px-4 hover:border-[#9e8d8e] transition-colors">
         <span className="text-[#f7b5be] text-[22px]"><i className="ph ph-scroll"></i></span>
-        <span><span className="block text-[16px] font-semibold leading-tight">Story</span><span className="block text-[12.5px] italic text-[#9e8d8e]">from Kaldi's hills</span></span>
+        <span><span className="block text-[16px] font-semibold leading-tight">{t('Story')}</span><span className="block text-[12.5px] italic text-[#9e8d8e]">{t("from Kaldi's hills")}</span></span>
       </a>
       <Link href="/account" className="flex-1 h-16 rounded-[14px] bg-[#1c1b1b] border border-[#514345] flex items-center gap-3 px-4 hover:border-[#9e8d8e] transition-colors">
         <span className="text-[#f7b5be] text-[22px]"><i className="ph ph-map-pin"></i></span>
-        <span><span className="block text-[16px] font-semibold leading-tight">Track</span><span className="block text-[12.5px] italic text-[#9e8d8e]">order status</span></span>
+        <span><span className="block text-[16px] font-semibold leading-tight">{t('Track', 'አንበት')}</span><span className="block text-[12.5px] italic text-[#9e8d8e]">{t('order status')}</span></span>
       </Link>
     </div>
   </div>
@@ -271,13 +324,13 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
     {/* ======================= MENU (pinboard) ======================= */}
     <section id="menu" className="scroll-mt-20 px-10 pt-24">
       <div className="max-w-[1360px] mx-auto">
-        <h2 className="font-display text-[44px] leading-tight">Laid out like dishes on the table</h2>
-        <p className="mt-2 text-[18px] text-[#d5c2c3] max-w-[62ch]">Everything is roasted, brewed or baked in-house. Prices in birr, taxes included — the ceremony is always on the house when you stay for all three rounds.</p>
+        <h2 className="font-display text-[44px] leading-tight">{t('Laid out like dishes on the table')}</h2>
+        <p className="mt-2 text-[18px] text-[#d5c2c3] max-w-[62ch]">{t('Everything is roasted, brewed or baked in-house. Prices in birr, taxes included — the ceremony is always on the house when you stay for all three rounds.')}</p>
 
         <div className="mt-8 flex flex-wrap items-center gap-2.5">
-          <button onClick={() => setActiveCat('all')} className={`chip h-10 px-5 rounded-full text-[15px] transition-colors ${activeCat === 'all' ? 'chip-active' : ''}`} >All</button>
+          <button onClick={() => setActiveCat('all')} className={`chip h-10 px-5 rounded-full text-[15px] transition-colors ${activeCat === 'all' ? 'chip-active' : ''}`} >{t('All')}</button>
           {categories.map((cat, idx) => cat && (
-            <button key={cat.slug || idx} onClick={() => setActiveCat(cat.slug)} className={`chip h-10 px-5 rounded-full text-[15px] transition-colors ${activeCat === cat.slug ? 'chip-active' : ''}`} >{cat.name}</button>
+            <button key={cat.slug || idx} onClick={() => setActiveCat(cat.slug)} className={`chip h-10 px-5 rounded-full text-[15px] transition-colors ${activeCat === cat.slug ? 'chip-active' : ''}`} >{tCategory(cat.name)}</button>
           ))}
         </div>
 
@@ -285,8 +338,8 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
         <div className="mt-12 flex flex-wrap items-start justify-center gap-x-8 gap-y-12 pb-8">
           {filteredItems.length === 0 ? (
              <div className="text-center text-[#d5c2c3] py-12 w-full">
-                <p className="text-[20px] font-display">No menu items found.</p>
-                <p className="mt-2 text-[15px]">Please ensure your Django backend is running on port 8000 so the menu can be loaded!</p>
+<p className="text-[20px] font-display">{t('No menu items found.')}</p>
+                 <p className="mt-2 text-[15px]">{t('Please ensure your Django backend is running on port 8000 so the menu can be loaded!')}</p>
              </div>
           ) : (
              filteredItems.map((item, idx) => {
@@ -295,15 +348,15 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
                  <div key={item.id} className="dish-slot w-[280px] mt-4" style={{transform: `rotate(${rotation}deg)`}}>
                    <div className={`dish-card p-5 ${item.is_signature ? 'dish-card-signature' : ''}`}>
                      <div className="dish-well w-full aspect-square rounded-full overflow-hidden border border-[#514345]">
-                       <img src={item.image_url || 'https://images.pexels.com/photos/37756986/pexels-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80'} alt={item.name} className="w-full h-full object-cover" />
-                     </div>
-                     <h3 className="mt-5 font-display text-[23px] leading-tight text-[#e5e2e1]">
-                       {item.name} <span className="italic font-body text-[16px] text-[#ffb86e] whitespace-nowrap">{parseFloat(item.price)} Br</span>
-                     </h3>
-                     <p className="mt-1.5 text-[15px] leading-snug text-[#d5c2c3]">{item.description}</p>
-                     <button onClick={() => handleOpenItemModal(item)} className="mt-4 w-full h-10 rounded-full border border-[#9e8d8e] text-[#e5e2e1] text-[14.5px] hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">
-                       Add to Cart
-                     </button>
+<img src={item.image_url || 'https://images.pexels.com/photos/37756986/pexels-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80'} alt={tItem(item.name)} className="w-full h-full object-cover" />
+                      </div>
+                      <h3 className="mt-5 font-display text-[23px] leading-tight text-[#e5e2e1]">
+                        {tItem(item.name)} <span className="italic font-body text-[16px] text-[#ffb86e] whitespace-nowrap">{parseFloat(item.price)} {language === 'am' ? 'ብር' : 'Br'}</span>
+                      </h3>
+                      <p className="mt-1.5 text-[15px] leading-snug text-[#d5c2c3]">{item.description}</p>
+                      <button onClick={() => handleOpenItemModal(item)} className="mt-4 w-full h-10 rounded-full border border-[#9e8d8e] text-[#e5e2e1] text-[14.5px] hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">
+                        {t('Add to Cart')}
+                      </button>
                    </div>
                  </div>
                );
@@ -317,73 +370,73 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
     {/* ======================= STORY (full-bleed editorial) ======================= */}
     <section id="story" className="scroll-mt-20 pt-32 pb-8">
       <div className="max-w-xl mx-auto px-6">
-        <h2 className="font-display text-[44px] leading-[1.08] text-[#e5e2e1]">Roasted in the room,<br/>poured three times.</h2>
-        <p className="mt-7 text-[19px] leading-[1.75] text-[#d5c2c3]">Coffee began here — not in a roastery with a logo, but in the highlands of Kaffa, where a goat herder named Kaldi noticed his flock dancing. Centuries later, the drink is still made the unhurried way across Ethiopia: green beans washed by hand, roasted over charcoal in a flat pan, ground with a mortar, and brewed in a black clay jebena.</p>
-        <p className="mt-5 text-[19px] leading-[1.75] text-[#d5c2c3]">At Buna Hub we kept the whole ceremony indoors. Every afternoon the pan comes out, the room fills with smoke and frankincense, and whoever is seated nearby gets the first cup.</p>
+        <h2 className="font-display text-[44px] leading-[1.08] text-[#e5e2e1]">{t('Roasted in the room,')}<br/>{t('poured three times.')}</h2>
+        <p className="mt-7 text-[19px] leading-[1.75] text-[#d5c2c3]">{t('Coffee began here — not in a roastery with a logo, but in the highlands of Kaffa, where a goat herder named Kaldi noticed his flock dancing. Centuries later, the drink is still made the unhurried way across Ethiopia: green beans washed by hand, roasted over charcoal in a flat pan, ground with a mortar, and brewed in a black clay jebena.')}</p>
+        <p className="mt-5 text-[19px] leading-[1.75] text-[#d5c2c3]">{t('At Buna Hub we kept the whole ceremony indoors. Every afternoon the pan comes out, the room fills with smoke and frankincense, and whoever is seated nearby gets the first cup.')}</p>
       </div>
 
       <figure className="my-16">
         <img src="https://images.pexels.com/photos/6742970/pexels-photo-6742970.jpeg?auto=compress&cs=tinysrgb&w=1800&q=80" alt="Woman preparing coffee over charcoal in the traditional way — photo by Lan Yao on Pexels" decoding="async" loading="lazy" className="w-full h-[58vh] object-cover" style={{filter: 'brightness(.78) sepia(.15)'}}/>
-        <figcaption className="max-w-xl mx-auto px-6 mt-3 text-[14px] italic text-[#9e8d8e]">The morning roast, done where everyone can smell it.</figcaption>
+        <figcaption className="max-w-xl mx-auto px-6 mt-3 text-[14px] italic text-[#9e8d8e]">{t('The morning roast, done where everyone can smell it.')}</figcaption>
       </figure>
 
       <div className="max-w-xl mx-auto px-6">
-        <p className="text-[19px] leading-[1.75] text-[#d5c2c3]">The pour matters as much as the roast. The jebena is lifted high so the stream falls thin and steady into small handleless cups — sini — and the coffee arrives in three rounds, each weaker and sweeter than the last: abol, tona, and baraka, the blessing. Leaving before the third is bad manners; staying for it is how strangers become regulars.</p>
+        <p className="text-[19px] leading-[1.75] text-[#d5c2c3]">{t('The pour matters as much as the roast. The jebena is lifted high so the stream falls thin and steady into small handleless cups — sini — and the coffee arrives in three rounds, each weaker and sweeter than the last: abol, tona, and baraka, the blessing. Leaving before the third is bad manners; staying for it is how strangers become regulars.')}</p>
 
         <blockquote className="linen-sheet relative mt-12 bg-[#1c1b1b] border border-[#514345] px-9 py-9 overflow-hidden">
           <img src="https://kombai-assets.b-cdn.net/generated_assets/533c69694ca847a7a8de3493df7110e2.jpg" alt="" aria-hidden="true" decoding="async" loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-[0.16]" style={{filter: 'invert(.92) sepia(.2) brightness(.8) saturate(.8)', mixBlendMode: 'screen'}}/>
-          <p className="relative font-display italic text-[27px] leading-[1.35] text-[#e5e2e1]">“Buna dabo naw”<span className="block mt-3 not-italic font-body text-[15.5px] text-[#d5c2c3]">— “Coffee is our bread.” The first thing a guest is offered, the last thing they are rushed through.</span></p>
+          <p className="relative font-display italic text-[27px] leading-[1.35] text-[#e5e2e1]">“{t('Buna dabo naw')}”<span className="block mt-3 not-italic font-body text-[15.5px] text-[#d5c2c3]">{t('— “Coffee is our bread.” The first thing a guest is offered, the last thing they are rushed through.')}</span></p>
         </blockquote>
 
-        <p className="mt-12 text-[19px] leading-[1.75] text-[#d5c2c3]">Our own roastery sits behind the counter — a small drum that turns out eight kilos at a time, mostly Yirgacheffe and Guji lots we buy through two family exporters. The burger grill and the pizza oven came later, because a ceremony that lasts three hours makes people hungry.</p>
+        <p className="mt-12 text-[19px] leading-[1.75] text-[#d5c2c3]">{t('Our own roastery sits behind the counter — a small drum that turns out eight kilos at a time, mostly Yirgacheffe and Guji lots we buy through two family exporters. The burger grill and the pizza oven came later, because a ceremony that lasts three hours makes people hungry.')}</p>
       </div>
     </section>
 
     {/* ======================= GALLERY (staggered + parallax lag) ======================= */}
     <section id="gallery" className="gallery-sec scroll-mt-20 pt-28 pb-32 px-10">
       <div className="max-w-[1360px] mx-auto">
-        <h2 className="font-display text-[40px] leading-tight">The room, the smoke, the regulars</h2>
-        <p className="mt-2 text-[18px] text-[#d5c2c3] max-w-[60ch]">Shot over one slow week — mornings at the roast pan, evenings under the lamps.</p>
+        <h2 className="font-display text-[40px] leading-tight">{t('The room, the smoke, the regulars')}</h2>
+        <p className="mt-2 text-[18px] text-[#d5c2c3] max-w-[60ch]">{t('Shot over one slow week — mornings at the roast pan, evenings under the lamps.')}</p>
 
         <div className="mt-14 grid grid-cols-4 gap-6 items-start">
           <div className="gcol-1 flex flex-col gap-6 mt-0">
             <figure className="grain bg-[#1c1b1b] border border-[#514345] rounded-[14px] p-2.5">
               <img src="https://images.pexels.com/photos/38519871/pexels-photo-38519871.jpeg?auto=compress&cs=tinysrgb&w=720&q=80" alt="Young woman in traditional dress pouring buna — photo by LekePOV on Pexels" decoding="async" loading="lazy" className="w-full aspect-[3/4] object-cover rounded-[9px]"/>
-              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">The high pour, Friday ceremony</figcaption>
+              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">{t('The high pour, Friday ceremony')}</figcaption>
             </figure>
             <figure className="grain bg-[#1c1b1b] border border-[#514345] rounded-[14px] p-2.5">
               <img src="https://images.unsplash.com/photo-1582298538104-fe2e74c27f59?auto=format&w=720&q=80&fit=crop" alt="Friends laughing together in a cafe — photo by Toa Heftiba on Unsplash" decoding="async" loading="lazy" className="w-full aspect-[4/3] object-cover rounded-[9px]"/>
-              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">Third-round laughter</figcaption>
+              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">{t('Third-round laughter')}</figcaption>
             </figure>
           </div>
           <div className="gcol-2 flex flex-col gap-6 mt-12">
             <figure className="grain bg-[#1c1b1b] border border-[#514345] rounded-[14px] p-2.5">
               <img src="https://images.unsplash.com/photo-1574781475422-a8b327766703?auto=format&w=720&q=80&fit=crop" alt="Guests sitting by the cafe window — photo by Spencer Davis on Unsplash" decoding="async" loading="lazy" className="w-full aspect-[4/5] object-cover rounded-[9px]"/>
-              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">Slow Tuesday at the window</figcaption>
+              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">{t('Slow Tuesday at the window')}</figcaption>
             </figure>
             <figure className="grain bg-[#1c1b1b] border border-[#514345] rounded-[14px] p-2.5">
               <img src="https://images.pexels.com/photos/9452515/pexels-photo-9452515.jpeg?auto=compress&cs=tinysrgb&w=720&q=80" alt="Steaming clay jebena pot — photo by Yosef Futsum on Pexels" decoding="async" loading="lazy" className="w-full aspect-square object-cover rounded-[9px]"/>
-              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">Jebena resting on the coals</figcaption>
+              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">{t('Jebena resting on the coals')}</figcaption>
             </figure>
           </div>
           <div className="gcol-3 flex flex-col gap-6 mt-24">
             <figure className="grain bg-[#1c1b1b] border border-[#514345] rounded-[14px] p-2.5">
               <video src="https://videos.pexels.com/video-files/5540803/5540803-sd_960_540_24fps.mp4" poster="https://images.pexels.com/videos/5540803/pexels-photo-5540803.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200" autoPlay muted loop playsInline preload="metadata" aria-label="Espresso brewing into a cup — video by Phillip Dillow on Pexels" className="w-full aspect-[4/5] object-cover rounded-[9px]"></video>
-              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">The machine, for the impatient</figcaption>
+              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">{t('The machine, for the impatient')}</figcaption>
             </figure>
             <figure className="grain bg-[#1c1b1b] border border-[#514345] rounded-[14px] p-2.5">
               <img src="https://images.pexels.com/photos/29692583/pexels-photo-29692583.jpeg?auto=compress&cs=tinysrgb&w=720&q=80" alt="Inviting cafe interior with pendant lights — photo by Valeria Boltneva on Pexels" decoding="async" loading="lazy" className="w-full aspect-square object-cover rounded-[9px]"/>
-              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">Lamps on, rain outside</figcaption>
+              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">{t('Lamps on, rain outside')}</figcaption>
             </figure>
           </div>
           <div className="gcol-4 flex flex-col gap-6 mt-6">
             <figure className="grain bg-[#1c1b1b] border border-[#514345] rounded-[14px] p-2.5">
               <img src="https://images.pexels.com/photos/3794811/pexels-photo-3794811.jpeg?auto=compress&cs=tinysrgb&w=720&q=80" alt="Freshly roasted coffee beans in the pan, seen from above — photo by K on Pexels" decoding="async" loading="lazy" className="w-full aspect-[3/4] object-cover rounded-[9px]"/>
-              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">Tuesday's Guji lot, cooling</figcaption>
+              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">{t("Tuesday's Guji lot, cooling")}</figcaption>
             </figure>
             <figure className="grain bg-[#1c1b1b] border border-[#514345] rounded-[14px] p-2.5">
               <img src="https://images.pexels.com/photos/38519890/pexels-photo-38519890.jpeg?auto=compress&cs=tinysrgb&w=720&q=80" alt="Woman performing the coffee ceremony in traditional dress — photo by LekePOV on Pexels" decoding="async" loading="lazy" className="w-full aspect-[4/3] object-cover rounded-[9px]"/>
-              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">Aster at the mesob</figcaption>
+              <figcaption className="px-1.5 pt-2.5 pb-1 text-[13.5px] italic text-[#9e8d8e]">{t('Aster at the mesob')}</figcaption>
             </figure>
           </div>
         </div>
@@ -396,50 +449,52 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
         <div className="grid grid-cols-[250px_1fr_420px] rounded-[18px] overflow-hidden border border-[#514345]">
           <aside className="bg-[#0e0e0e] px-7 py-9 border-r border-[#514345]">
             <div className="flex items-center gap-2 text-[14px] text-[#fbbb50]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#fbbb50]"></span> Open now · kitchen till 22:00
+              <span className="w-1.5 h-1.5 rounded-full bg-[#fbbb50]"></span> {t('Open now')} · {t('kitchen till 22:00', 'ኩሽና እስከ 22:00')}
             </div>
-            <h2 className="mt-6 font-display text-[28px] leading-tight">Hours</h2>
+            <h2 className="mt-6 font-display text-[28px] leading-tight">{t('Hours')}</h2>
             <dl className="mt-4 space-y-2.5 text-[15.5px]">
-              <div className="flex justify-between gap-3"><dt className="text-[#d5c2c3]">Mon – Thu</dt><dd>7:00–22:00</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-[#d5c2c3]">Friday</dt><dd>7:00–23:00</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-[#d5c2c3]">Saturday</dt><dd>8:00–23:00</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-[#d5c2c3]">Sunday</dt><dd>8:00–21:00</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-[#d5c2c3]">{t('Mon – Thu')}</dt><dd>7:00–22:00</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-[#d5c2c3]">{t('Friday')}</dt><dd>7:00–23:00</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-[#d5c2c3]">{t('Saturday')}</dt><dd>8:00–23:00</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-[#d5c2c3]">{t('Sunday')}</dt><dd>8:00–21:00</dd></div>
             </dl>
-            <p className="mt-5 text-[14px] italic text-[#9e8d8e]">Full ceremony every afternoon from 15:00 — no booking needed, just be near the roast pan.</p>
+            <p className="mt-5 text-[14px] italic text-[#9e8d8e]">{t('Full ceremony every afternoon from 15:00 — no booking needed, just be near the roast pan.')}</p>
             <div className="mt-8 pt-7 border-t border-[#514345]">
-              <p className="text-[15.5px] leading-relaxed text-[#d5c2c3]">Gulele Road 14, Piassa<br/>Addis Ababa</p>
+              <p className="text-[15.5px] leading-relaxed text-[#d5c2c3]">{t('Gulele Road 14, Piassa')}<br/>{t('Addis Ababa')}</p>
               <p className="mt-3 text-[15.5px]">+251 11 555 0148</p>
               <p className="text-[15.5px] text-[#d5c2c3]">selam@bunahub.et</p>
             </div>
           </aside>
 
           <div className="bg-[#131313] px-12 py-10">
-            <h2 className="font-display text-[36px] leading-tight">Book a table</h2>
-            <p className="mt-2 text-[16.5px] text-[#d5c2c3] max-w-[52ch]">Three fields and you're in. We confirm every request by phone within the hour — for parties over eight, call us instead.</p>
+            <h2 className="font-display text-[36px] leading-tight">{t('Book a table')}</h2>
+            <p className="mt-2 text-[16.5px] text-[#d5c2c3] max-w-[52ch]">{t("Three fields and you're in. We confirm every request by phone within the hour — for parties over eight, call us instead.")}</p>
             <form id="booking-form" onSubmit={handleBookingSubmit} className="mt-8 grid grid-cols-2 gap-x-5 gap-y-6 max-w-[560px]">
               <div className="col-span-2">
-                <label htmlFor="bk-name" className="block text-[15px] text-[#d5c2c3] mb-2">Name</label>
+                <label htmlFor="bk-name" className="block text-[15px] text-[#d5c2c3] mb-2">{t('Name')}</label>
                 <input id="bk-name" type="text" required value={bookingData.name} onChange={(e) => setBookingData({...bookingData, name: e.target.value})} placeholder="Aster Kebede" className="field w-full h-12 px-5 text-[16px]"/>
               </div>
               <div>
-                <label htmlFor="bk-phone" className="block text-[15px] text-[#d5c2c3] mb-2">Phone</label>
+                <label htmlFor="bk-phone" className="block text-[15px] text-[#d5c2c3] mb-2">{t('Phone')}</label>
                 <input id="bk-phone" type="text" required value={bookingData.contact_phone} onChange={(e) => setBookingData({...bookingData, contact_phone: e.target.value})} placeholder="+251 911..." className="field w-full h-12 px-5 text-[16px]"/>
               </div>
               <div>
-                <label htmlFor="bk-party" className="block text-[15px] text-[#d5c2c3] mb-2">Party size</label>
+                <label htmlFor="bk-party" className="block text-[15px] text-[#d5c2c3] mb-2">{t('Party size')}</label>
                 <input id="bk-party" type="number" min="1" required value={bookingData.party_size} onChange={(e) => setBookingData({...bookingData, party_size: parseInt(e.target.value)})} placeholder="2 guests" className="field w-full h-12 px-5 text-[16px]"/>
               </div>
               <div className="col-span-2">
-                <label htmlFor="bk-date" className="block text-[15px] text-[#d5c2c3] mb-2">Date &amp; time</label>
+                <label htmlFor="bk-date" className="block text-[15px] text-[#d5c2c3] mb-2">{t('Date & time')}</label>
                 <input id="bk-date" type="datetime-local" min={minDateTime} required value={bookingData.date_time} onChange={(e) => setBookingData({...bookingData, date_time: e.target.value})} className="field w-full h-12 px-5 text-[16px] [color-scheme:dark]"/>
               </div>
               <div className="col-span-2 flex flex-col gap-3 pt-1">
                 <div className="flex items-center gap-5">
-                  <button id="bk-btn" type="submit" disabled={bookingStatus === 'LOADING'} className="h-12 px-8 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[16px] font-semibold hover:bg-[#ffd9dd] transition-colors flex items-center gap-2 disabled:opacity-50">Book a table</button>
-                  <p id="bk-note" className="text-[14px] italic text-[#9e8d8e]">No deposit — we hold your table for 20 minutes.</p>
+                  <button id="bk-btn" type="submit" disabled={bookingStatus === 'LOADING'} className="h-12 px-8 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[16px] font-semibold hover:bg-[#ffd9dd] transition-colors flex items-center gap-2 disabled:opacity-50">
+                    {user ? t('Book a table') : t('Sign in to book')}
+                  </button>
+                  <p id="bk-note" className="text-[14px] italic text-[#9e8d8e]">{t('No deposit — we hold your table for 20 minutes.')}</p>
                 </div>
-                {bookingStatus === 'SUCCESS' && <p className="text-[#f7b5be] font-semibold text-sm">Your table is booked! We'll call you shortly to confirm.</p>}
-                {bookingStatus === 'ERROR' && <p className="text-red-400 text-sm">There was an error booking your table. Please try again.</p>}
+                {bookingStatus === 'SUCCESS' && <p className="text-[#f7b5be] font-semibold text-sm">{t('Your table is booked! We\'ll call you shortly to confirm.')}</p>}
+                {bookingStatus === 'ERROR' && <p className="text-red-400 text-sm">{t('There was an error booking your table. Please try again.')}</p>}
               </div>
             </form>
           </div>
@@ -461,7 +516,7 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
             <span className="w-8 h-8 rounded-full bg-[#3b141c] border border-[#683941] flex items-center justify-center text-[#f7b5be] text-[16px]"><i className="ph ph-coffee-bean"></i></span>
             <span className="font-display text-[24px]">Buna Hub</span>
           </div>
-          <p className="mt-4 text-[15.5px] leading-relaxed text-[#d5c2c3] max-w-[34ch]">An Ethiopian coffee house in Piassa — ceremony buna, slow teas, and a kitchen that stays open late.</p>
+          <p className="mt-4 text-[15.5px] leading-relaxed text-[#d5c2c3] max-w-[34ch]">{t('An Ethiopian coffee house in Piassa — ceremony buna, slow teas, and a kitchen that stays open late.')}</p>
           <div className="mt-5 flex items-center gap-3 text-[#d5c2c3]">
             <a href="#" aria-label="Instagram" className="w-9 h-9 rounded-full border border-[#514345] flex items-center justify-center text-[17px] hover:border-[#9e8d8e] hover:text-[#f7b5be] transition-colors"><i className="ph ph-instagram-logo"></i></a>
             <a href="#" aria-label="Telegram" className="w-9 h-9 rounded-full border border-[#514345] flex items-center justify-center text-[17px] hover:border-[#9e8d8e] hover:text-[#f7b5be] transition-colors"><i className="ph ph-telegram-logo"></i></a>
@@ -470,35 +525,35 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
           </div>
         </div>
         <div>
-          <h3 className="font-display text-[20px]">Hours</h3>
+          <h3 className="font-display text-[20px]">{t('Hours')}</h3>
           <ul className="mt-4 space-y-2 text-[15px] text-[#d5c2c3]">
-            <li className="flex justify-between gap-4"><span>Mon – Thu</span><span className="text-[#e5e2e1]">7:00–22:00</span></li>
-            <li className="flex justify-between gap-4"><span>Fri</span><span className="text-[#e5e2e1]">7:00–23:00</span></li>
-            <li className="flex justify-between gap-4"><span>Sat</span><span className="text-[#e5e2e1]">8:00–23:00</span></li>
-            <li className="flex justify-between gap-4"><span>Sun</span><span className="text-[#e5e2e1]">8:00–21:00</span></li>
+            <li className="flex justify-between gap-4"><span>{t('Mon – Thu')}</span><span className="text-[#e5e2e1]">7:00–22:00</span></li>
+            <li className="flex justify-between gap-4"><span>{t('Fri', 'ዓርብ')}</span><span className="text-[#e5e2e1]">7:00–23:00</span></li>
+            <li className="flex justify-between gap-4"><span>{t('Sat', 'ቅዳሜ')}</span><span className="text-[#e5e2e1]">8:00–23:00</span></li>
+            <li className="flex justify-between gap-4"><span>{t('Sun', 'እሁድ')}</span><span className="text-[#e5e2e1]">8:00–21:00</span></li>
           </ul>
         </div>
         <div>
-          <h3 className="font-display text-[20px]">Find us</h3>
+          <h3 className="font-display text-[20px]">{t('Find us')}</h3>
           <ul className="mt-4 space-y-3 text-[15px] text-[#d5c2c3]">
-            <li className="flex gap-2.5"><i className="ph ph-map-pin text-[16px] mt-0.5 text-[#9e8d8e]"></i><span>Gulele Road 14, Piassa<br/>Addis Ababa</span></li>
+            <li className="flex gap-2.5"><i className="ph ph-map-pin text-[16px] mt-0.5 text-[#9e8d8e]"></i><span>{t('Gulele Road 14, Piassa')}<br/>{t('Addis Ababa')}</span></li>
             <li className="flex gap-2.5 items-center"><i className="ph ph-phone text-[16px] text-[#9e8d8e]"></i>+251 11 555 0148</li>
             <li className="flex gap-2.5 items-center"><i className="ph ph-envelope text-[16px] text-[#9e8d8e]"></i>selam@bunahub.et</li>
           </ul>
         </div>
         <div>
-          <h3 className="font-display text-[20px]"><Link href="/account" className="inline-flex items-center gap-1.5 text-[14.5px] text-[#9e8d8e] hover:text-[#f7b5be] transition-colors">Track your order</Link></h3>
-          <p className="mt-4 text-[14.5px] text-[#d5c2c3]">Order pickup by phone — +251 11 555 0148. Already ordered? The code on your receipt starts with BH.</p>
+          <h3 className="font-display text-[20px]"><Link href="/account" className="inline-flex items-center gap-1.5 text-[14.5px] text-[#9e8d8e] hover:text-[#f7b5be] transition-colors">{t('Track your order')}</Link></h3>
+          <p className="mt-4 text-[14.5px] text-[#d5c2c3]">{t('Order pickup by phone — +251 11 555 0148. Already ordered? The code on your receipt starts with BH.')}</p>
           <form id="track-form" className="mt-3 flex gap-2.5">
             <input type="text" placeholder="BH-1024" aria-label="Order code" className="field flex-1 h-11 px-4 text-[15px] min-w-0"/>
-            <button type="submit" className="h-11 px-5 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[15px] font-semibold hover:bg-[#ffd9dd] transition-colors shrink-0">Check</button>
+            <button type="submit" className="h-11 px-5 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[15px] font-semibold hover:bg-[#ffd9dd] transition-colors shrink-0">{t('Check')}</button>
           </form>
-          <p id="track-result" className="mt-4 hidden items-center gap-2 text-[14.5px] text-[#fbbb50]"><span className="w-1.5 h-1.5 rounded-full bg-[#fbbb50]"></span> BH-1024 · Ready for pickup — ask at the counter</p>
+          <p id="track-result" className="mt-4 hidden items-center gap-2 text-[14.5px] text-[#fbbb50]"><span className="w-1.5 h-1.5 rounded-full bg-[#fbbb50]"></span> BH-1024 · {t('Ready for pickup — ask at the counter')}</p>
         </div>
       </div>
       <div className="mt-14 pt-6 border-t border-[#514345] flex items-center justify-between text-[13.5px] text-[#9e8d8e]">
-        <span>© 2026 Buna Hub · Buna tetu — come, drink coffee</span>
-        <span>Photography: Pexels &amp; Unsplash contributors</span>
+        <span>{t('© 2026 Buna Hub · Buna tetu — come, drink coffee')}</span>
+        <span>{t('Photography: Pexels & Unsplash contributors')}</span>
       </div>
     </div>
   </footer>
@@ -512,6 +567,7 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
                 isOpen={isAuthModalOpen}
                 onClose={() => setIsAuthModalOpen(false)}
                 initialMode={initialAuthMode}
+                postLoginRedirect={postLoginRedirect}
             />
             <ItemModal
                 isOpen={isItemModalOpen}
@@ -519,6 +575,9 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
                 item={selectedItem}
                 onAddToCart={handleConfirmAddToCart}
             />
+            {/* Bilingual AI assistant (RAG, grounded in the live menu database) */}
+            <AssistantChat />
+
             <CartDrawer
                 isOpen={isCartOpen}
                 onClose={() => setIsCartOpen(false)}

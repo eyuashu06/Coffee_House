@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../lib/api';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Notification {
   id: string;
@@ -15,6 +17,7 @@ interface Notification {
 
 export default function NotificationsDropdown() {
   const { user } = useAuth();
+  const { t, locale } = useLanguage();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -23,8 +26,7 @@ export default function NotificationsDropdown() {
   const fetchNotifications = async () => {
     if (!user) return;
     try {
-      const response = await fetch('/api/v1/auth/notifications/', {
-        credentials: 'include',
+      const response = await apiFetch('/api/v1/auth/notifications/', {
         headers: { 'Cache-Control': 'no-cache' },
       });
       if (response.ok) {
@@ -57,9 +59,8 @@ export default function NotificationsDropdown() {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch('/api/v1/auth/notifications/mark_all_read/', {
+      const response = await apiFetch('/api/v1/auth/notifications/mark_all_read/', {
         method: 'POST',
-        credentials: 'include',
       });
       if (response.ok) {
         setNotifications(notifications.map(n => ({ ...n, is_read: true })));
@@ -71,9 +72,8 @@ export default function NotificationsDropdown() {
 
   const markOneAsRead = async (id: string) => {
     try {
-      await fetch(`/api/v1/auth/notifications/${id}/mark_read/`, {
+      await apiFetch(`/api/v1/auth/notifications/${id}/mark_read/`, {
         method: 'POST',
-        credentials: 'include',
       });
     } catch (err) {
       // Non-critical: just update local state
@@ -110,7 +110,7 @@ export default function NotificationsDropdown() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        aria-label="Notifications"
+        aria-label={t('Notifications')}
         className="relative w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:text-tertiary transition-colors bg-surface-container/60 border border-white/5"
       >
         <span className="material-symbols-outlined text-[22px]">notifications</span>
@@ -126,7 +126,7 @@ export default function NotificationsDropdown() {
           {/* Header */}
           <div className="px-4 py-2.5 border-b border-white/10 flex justify-between items-center sticky top-0 bg-primary-container/95 backdrop-blur-sm z-10">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-on-surface text-sm">Notifications</h3>
+              <h3 className="font-semibold text-on-surface text-sm">{t('Notifications')}</h3>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
                   {unreadCount}
@@ -135,7 +135,7 @@ export default function NotificationsDropdown() {
             </div>
             {unreadCount > 0 && (
               <button onClick={markAllAsRead} className="text-xs text-tertiary hover:underline">
-                Mark all read
+                {t('Mark all read')}
               </button>
             )}
           </div>
@@ -144,7 +144,7 @@ export default function NotificationsDropdown() {
             {notifications.length === 0 ? (
               <div className="px-4 py-8 text-center space-y-2">
                 <span className="material-symbols-outlined text-3xl text-on-surface-variant/40">notifications_none</span>
-                <p className="text-on-surface-variant text-xs">No notifications yet.</p>
+                <p className="text-on-surface-variant text-xs">{t('No notifications yet')}.</p>
               </div>
             ) : (
               notifications.map(notification => (
@@ -174,7 +174,7 @@ export default function NotificationsDropdown() {
                         {notification.title}
                       </h4>
                       <span className="text-[10px] text-on-surface-variant shrink-0">
-                        {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(notification.created_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                     <p className="text-xs text-on-surface-variant line-clamp-2 leading-relaxed">
@@ -183,7 +183,7 @@ export default function NotificationsDropdown() {
                     {notification.link && (
                       <span className="text-[10px] text-tertiary/60 mt-0.5 flex items-center gap-0.5">
                         <span className="material-symbols-outlined text-[10px]">arrow_forward</span>
-                        {notification.link.includes('/manager') ? 'View in Dashboard' : 'View My Orders'}
+                        {notification.link.includes('/manager') ? t('View in Dashboard') : t('View My Orders')}
                       </span>
                     )}
                   </div>
