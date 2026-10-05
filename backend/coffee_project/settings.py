@@ -31,8 +31,20 @@ INSTALLED_APPS = [
     'apps.cart',
     'apps.orders',
     'apps.payments',
+    'apps.assistant',
     'api',
 ]
+
+# ── AI Assistant (RAG) ──────────────────────────────────────────────────
+# Optional: only needed for optional wording polish. The assistant answers from
+# the database with no API key at all, so it never depends on an LLM.
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', os.environ.get('GOOGLE_API_KEY', ''))
+ASSISTANT_USE_LLM = os.environ.get('ASSISTANT_USE_LLM', 'False').lower() in ('1', 'true', 'yes')
+
+# Reservation rules used by the assistant's availability check
+ASSISTANT_RESERVATION_TABLES = int(os.environ.get('ASSISTANT_RESERVATION_TABLES', '4'))
+ASSISTANT_RESERVATION_MAX_GUESTS = int(os.environ.get('ASSISTANT_RESERVATION_MAX_GUESTS', '10'))
+ASSISTANT_RESERVATION_SLOT_MINUTES = int(os.environ.get('ASSISTANT_RESERVATION_SLOT_MINUTES', '90'))
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -142,6 +154,11 @@ CHAPA_SECRET_KEY = os.environ.get('CHAPA_SECRET_KEY', 'CHASECK_TEST-UMHsYkPPXIFH
 CHAPA_PUBLIC_KEY = os.environ.get('CHAPA_PUBLIC_KEY', 'CHAPUBK_TEST-GYDsYiZ6dmnDWjiYLCbe7JMIm6R52LYD')
 CHAPA_ENCRYPTION_KEY = os.environ.get('CHAPA_ENCRYPTION_KEY', 'NkU1iFiDH7h9MB7mhOclw4cN')
 CHAPA_API_URL = os.environ.get('CHAPA_API_URL', 'https://api.chapa.co/v1')
+# Receipt address used only when the customer's own email domain has no mail
+# infrastructure (Chapa refuses to initialize hosted checkout for those).
+CHAPA_FALLBACK_EMAIL = os.environ.get('CHAPA_FALLBACK_EMAIL', 'customer@gmail.com')
+# Reject signups whose email domain cannot receive mail (sendgrid/chapa need it).
+REQUIRE_EMAIL_MX = os.environ.get('REQUIRE_EMAIL_MX', 'True').lower() in ('1', 'true', 'yes')
 
 # Console Email for local development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -191,7 +208,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'api.pagination.StandardPagination',
     'PAGE_SIZE': 12,
 }
 
