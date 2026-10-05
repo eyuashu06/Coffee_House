@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db import models
 from django.db.models import Sum
-from datetime import date
+from datetime import date, timedelta
 from .models import Category, CoffeeItem, Order, KnowledgeBase, TableReservation
 from .serializers import CategorySerializer, CoffeeItemSerializer, OrderSerializer, KnowledgeBaseSerializer, TableReservationSerializer
 from .rag_engine import CoffeeSommelierRAG
@@ -68,24 +68,98 @@ class SommelierRAGView(APIView):
         return Response(result, status=status.HTTP_200_OK)
 
 class AnalyticsAPIView(APIView):
+    """Live revenue/throughput figures for the manager dashboard."""
+
+    # Money counts only for orders that were actually paid for.
+    PAID_STATUSES = ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED']
+    CLOSED_STATUSES = ['COMPLETED', 'CANCELLED', 'REJECTED']
+
     def get(self, request):
-        if not request.user.is_authenticated or request.user.role not in ['MANAGER', 'ADMIN']:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
-        
-        today = date.today()
+        # Distinguish "we don't know who you are" from "we know, and you may not
+        # see this". Conflating them made an expired access cookie look like a
+        # permissions bug and stopped the frontend from ever attempting a token
+        # refresh -- 401 is the signal the client retries on, 403 is terminal.
+        if not request.user.is_authenticated:
+            return Response(
+                {'detail': 'Authentication credentials were not provided.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if not request.user.is_manager_or_admin():
+            return Response({'error': 'Manager permission required.'}, status=status.HTTP_403_FORBIDDEN)
+
+        from django.db.models import Avg, Count
+        from django.db.models.functions import TruncDate
+        from django.utils import timezone as dj_timezone
+        from apps.orders.models import Order as AppOrder
+
+        now = dj_timezone.localtime()
+        today = now.date()
         month_start = today.replace(day=1)
-        
-        daily_orders = Order.objects.filter(status='COMPLETED', created_at__date=today)
-        monthly_orders = Order.objects.filter(status='COMPLETED', created_at__date__gte=month_start)
-        
-        daily_revenue = daily_orders.aggregate(total=Sum('total_amount'))['total'] or 0
-        monthly_revenue = monthly_orders.aggregate(total=Sum('total_amount'))['total'] or 0
-        
+
+        paid_qs = AppOrder.objects.filter(status__in=self.PAID_STATUSES)
+
+        daily_orders = paid_qs.filter(created_at__date=today)
+        monthly_orders = paid_qs.filter(created_at__date__gte=month_start)
+
+        daily_revenue = daily_orders.aggregate(total=Sum('total_amount_etb'))['total'] or 0
+        monthly_revenue = monthly_orders.aggregate(total=Sum('total_amount_etb'))['total'] or 0
+
+        avg_ticket = monthly_orders.aggregate(avg=Avg('total_amount_etb'))['avg'] or 0
+
+        # Orders currently being worked on (not finished, not cancelled)
+        live_orders = AppOrder.objects.exclude(status__in=self.CLOSED_STATUSES)
+        in_kitchen = AppOrder.objects.filter(status__in=['ACCEPTED', 'PREPARING'])
+        awaiting_payment = AppOrder.objects.filter(status='PENDING_PAYMENT').count()
+
+        # Revenue for the last 7 days (oldest first) for the dashboard sparkline
+        week_start = today - timedelta(days=6)
+        weekly_rows = (
+            paid_qs.filter(created_at__date__gte=week_start)
+            .annotate(day=TruncDate('created_at'))
+            .values('day')
+            .annotate(revenue=Sum('total_amount_etb'), orders=Count('id'))
+            .order_by('day')
+        )
+        weekly_map = {row['day']: row for row in weekly_rows}
+        weekly = []
+        for offset in range(7):
+            day = week_start + timedelta(days=offset)
+            row = weekly_map.get(day)
+            weekly.append({
+                'day': day.isoformat(),
+                'revenue': float(row['revenue']) if row else 0.0,
+                'orders': row['orders'] if row else 0,
+            })
+
+        # Revenue by payment method actually collected (settled payments only)
+        from django.db.models import F
+        from apps.payments.models import Payment
+        method_rows = (
+            Payment.objects.filter(status='SUCCESS')
+            .values('payment_method')
+            .annotate(revenue=Sum('amount_etb'), payments=Count('id'))
+            .order_by('-revenue')
+        )
+
         return Response({
+            'generated_at': now.isoformat(),
             'daily_revenue': float(daily_revenue),
             'monthly_revenue': float(monthly_revenue),
             'daily_orders_count': daily_orders.count(),
-            'monthly_orders_count': monthly_orders.count()
+            'monthly_orders_count': monthly_orders.count(),
+            'average_order_value': float(avg_ticket),
+            'live_orders_count': live_orders.count(),
+            'in_kitchen_count': in_kitchen.count(),
+            'awaiting_payment_count': awaiting_payment,
+            'weekly': weekly,
+            'by_payment_method': [
+                {
+                    'method': row['payment_method'],
+                    'revenue': float(row['revenue']),
+                    'payments': row['payments'],
+                }
+                for row in method_rows
+            ],
         })
 
 class TableReservationViewSet(viewsets.ModelViewSet):
