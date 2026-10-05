@@ -11,7 +11,15 @@ interface AuthModalProps {
   initialMode?: 'LOGIN' | 'REGISTER';
   promptMessage?: string | null;
   onSuccessCallback?: () => void;
+  /** Where to send the user after a successful sign-in (e.g. /account). */
+  postLoginRedirect?: string | null;
 }
+
+const DEMO_ACCOUNTS = [
+  { label: 'Administrator', role: 'Admin', email: 'admin@gmail.com', password: 'AdminPassword123!' },
+  { label: 'Manager / Staff', role: 'Manager', email: 'manager@gmail.com', password: 'ManagerPassword123!' },
+  { label: 'Customer', role: 'Customer', email: 'customer@gmail.com', password: 'CustomerPassword123!' },
+];
 
 export default function AuthModal({
   isOpen,
@@ -19,9 +27,10 @@ export default function AuthModal({
   initialMode = 'LOGIN',
   promptMessage = null,
   onSuccessCallback,
+  postLoginRedirect = null,
 }: AuthModalProps) {
   const { login, register } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const router = useRouter();
   const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD'>(initialMode);
   const [error, setError] = useState<string | null>(null);
@@ -50,16 +59,52 @@ export default function AuthModal({
     return cleaned;
   };
 
+  // Reject placeholder / undeliverable domains client-side (we email receipts there,
+  // and the payment gateway refuses domains without mail infrastructure).
+  const validateSignupEmail = (value: string): string | null => {
+    const emailValue = value.trim();
+    if (!emailValue) return t('Email address is required.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailValue)) {
+      return t('Enter a valid email address, e.g. name@gmail.com.');
+    }
+    const domain = emailValue.split('@')[1].toLowerCase();
+    const blocked = ['example.com', 'example.net', 'example.org', 'test.com', 'localhost',
+                     'artisanalreserve.com', 'artisanalcoffee.com', 'bunahub.et', 'mailinator.com'];
+    if (blocked.includes(domain)) {
+      return language === 'am'
+        ? `«${domain}» መልእክት ሊቀበል አይችልም። በእውነት የራስዎ የሆነ አድራሻ ይጠቀሙ።`
+        : `'${domain}' cannot receive email. Please use an address you actually control.`;
+    }
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+
+    if (mode === 'REGISTER') {
+      const emailError = validateSignupEmail(email);
+      if (emailError) {
+        setError(emailError);
+        return;
+      }
+      if (!username.trim() || username.trim().length < 3) {
+        setError(t('Username must be at least 3 characters long.'));
+        return;
+      }
+      if (!password || password.length < 6) {
+        setError(t('Password must be at least 6 characters long.'));
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
       if (mode === 'LOGIN') {
         await login(usernameOrEmail, password);
-        setSuccess('Logged in successfully!');
+        setSuccess(t('Logged in successfully!'));
         setTimeout(() => {
           onClose();
           fetch('/api/v1/auth/me/', { credentials: 'include' })
@@ -67,6 +112,8 @@ export default function AuthModal({
             .then(userData => {
               if (userData?.role === 'MANAGER' || userData?.role === 'ADMIN') {
                 router.push('/manager');
+              } else if (postLoginRedirect) {
+                router.push(postLoginRedirect);
               } else if (onSuccessCallback) {
                 onSuccessCallback();
               }
@@ -83,7 +130,7 @@ export default function AuthModal({
           first_name: firstName,
           last_name: lastName,
         });
-        setSuccess('Account created successfully!');
+        setSuccess(t('Account created successfully!'));
         setTimeout(() => {
           onClose();
           if (onSuccessCallback) onSuccessCallback();
@@ -125,7 +172,7 @@ export default function AuthModal({
               {mode === 'LOGIN' ? 'login' : mode === 'REGISTER' ? 'person_add' : 'lock_reset'}
             </span>
             <h3 className="font-display text-lg sm:text-xl font-bold text-[#f7b5be]">
-              {mode === 'LOGIN' ? t('Welcome Back') : mode === 'REGISTER' ? t('Join Artisanal Reserve') : 'Reset Password'}
+              {mode === 'LOGIN' ? t('Welcome Back') : mode === 'REGISTER' ? t('Join Artisanal Reserve') : t('Reset Password')}
             </h3>
           </div>
           <button
@@ -169,11 +216,13 @@ export default function AuthModal({
                 </label>
                 <input
                   type="text"
+                  name="username"
+                  autoComplete="username"
                   required
                   value={usernameOrEmail}
                   onChange={(e) => setUsernameOrEmail(e.target.value)}
-                  placeholder="e.g. Abebe or abebe@example.com"
-                  className="w-full px-3.5 py-2.5 rounded-lg bg-[#131313]-container/80 border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be] transition-colors"
+                  placeholder={language === 'am' ? 'abebe@gmail.com ወይም አበበ' : 'abebe@gmail.com or Abebe'}
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be] transition-colors"
                 />
               </div>
 
@@ -187,8 +236,8 @@ export default function AuthModal({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 rounded-lg bg-[#131313]-container/80 border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be] transition-colors"
+                  placeholder={t('Enter your password')}
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be] transition-colors"
                 />
               </div>
 
@@ -200,6 +249,33 @@ export default function AuthModal({
                 >
                   {t('Forgot password?')}
                 </button>
+              </div>
+
+              {/* Demo accounts - tap to fill, then Sign in */}
+              <div className="rounded-xl border border-[#514345] bg-[#131313]/70 p-3">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[#9e8d8e] mb-2">
+                  {t('Demo accounts — tap to fill')}
+                </p>
+                <div className="grid gap-1.5">
+                  {DEMO_ACCOUNTS.map(acct => (
+                    <button
+                      key={acct.email}
+                      type="button"
+                      onClick={() => {
+                        setUsernameOrEmail(acct.email);
+                        setPassword(acct.password);
+                        setError(null);
+                      }}
+                      className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-[#1c1b1b] border border-[#514345]/70 hover:border-[#f7b5be] transition-colors text-left"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-[12.5px] text-[#e5e2e1] truncate">{t(acct.label)}</span>
+                        <span className="block text-[11px] text-[#9e8d8e] truncate">{acct.email} · {acct.password}</span>
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#f7b5be] shrink-0">{t(acct.role)}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}
@@ -213,10 +289,12 @@ export default function AuthModal({
                   </label>
                   <input
                     type="text"
+                    name="given-name"
+                    autoComplete="given-name"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="e.g. Abebe"
-                    className="w-full px-3 py-2 rounded-lg bg-[#131313]-container/80 border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+                    placeholder={language === 'am' ? 'ለምሳሌ አበበ' : 'e.g. Abebe'}
+                    className="w-full px-3 py-2 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
                   />
                 </div>
                 <div>
@@ -225,10 +303,12 @@ export default function AuthModal({
                   </label>
                   <input
                     type="text"
+                    name="family-name"
+                    autoComplete="family-name"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    placeholder="e.g. Bikila"
-                    className="w-full px-3 py-2 rounded-lg bg-[#131313]-container/80 border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+                    placeholder={language === 'am' ? 'ለምሳሌ ብክል' : 'e.g. Bikila'}
+                    className="w-full px-3 py-2 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
                   />
                 </div>
               </div>
@@ -237,13 +317,15 @@ export default function AuthModal({
                 <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
                   Username
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Choose a unique username"
-                  className="w-full px-3.5 py-2 rounded-lg bg-[#131313]-container/80 border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+<input
+                    type="text"
+                    name="username"
+                    autoComplete="username"
+                    required
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder={language === 'am' ? 'ልዩ የተጠቃሚ ስም ይምረጡ' : 'Choose a unique username'}
+                  className="w-full px-3.5 py-2 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
                 />
               </div>
 
@@ -253,19 +335,24 @@ export default function AuthModal({
                 </label>
                 <input
                   type="email"
+                  name="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="abebe@example.com"
-                  className="w-full px-3.5 py-2 rounded-lg bg-[#131313]-container/80 border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+                  placeholder="abebe@gmail.com"
+                  autoComplete="email"
+                  className="w-full px-3.5 py-2 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
                 />
+                <p className="text-[10.5px] text-[#9e8d8e] mt-1 leading-relaxed">
+                  {t('Use an email you can open — your receipt and payment confirmation are sent there.')}
+                </p>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
                   {t('Phone Number')}
                 </label>
-                <div className="flex items-center rounded-lg bg-[#131313]-container/80 border border-[#514345] focus-within:border-tertiary overflow-hidden">
+                <div className="flex items-center rounded-lg bg-[#1c1b1b] border border-[#514345] focus-within:border-tertiary overflow-hidden">
                   <span className="px-3 py-2 bg-[#20201f] border-r border-[#514345] text-[#f7b5be] font-bold text-xs shrink-0 select-none flex items-center gap-1">
                     🇪🇹 +251
                   </span>
@@ -290,8 +377,8 @@ export default function AuthModal({
                   minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3.5 py-2 rounded-lg bg-[#131313]-container/80 border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+                  placeholder={t('Enter your password')}
+                  className="w-full px-3.5 py-2 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
                 />
               </div>
             </>
@@ -304,11 +391,13 @@ export default function AuthModal({
               </label>
               <input
                 type="email"
+                name="email"
+                autoComplete="email"
                 required
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
-                placeholder="Enter your account email"
-                className="w-full px-3.5 py-2.5 rounded-lg bg-[#131313]-container/80 border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+                placeholder={t('Enter your account email')}
+                className="w-full px-3.5 py-2.5 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
               />
             </div>
           )}
@@ -324,7 +413,7 @@ export default function AuthModal({
             ) : (
               <>
                 <span>
-                  {mode === 'LOGIN' ? t('Sign In') : mode === 'REGISTER' ? t('Create Account') : 'Send Reset Link'}
+                  {mode === 'LOGIN' ? t('Sign In') : mode === 'REGISTER' ? t('Create Account') : t('Send Reset Link')}
                 </span>
                 <span className="material-symbols-outlined text-base">arrow_forward</span>
               </>
@@ -342,7 +431,7 @@ export default function AuthModal({
                 onClick={() => { setError(null); setSuccess(null); setMode('REGISTER'); }}
                 className="text-[#f7b5be] font-semibold hover:underline ml-1"
               >
-                Sign Up
+                {t('Sign Up')}
               </button>
             </p>
           ) : (
@@ -353,7 +442,7 @@ export default function AuthModal({
                 onClick={() => { setError(null); setSuccess(null); setMode('LOGIN'); }}
                 className="text-[#f7b5be] font-semibold hover:underline ml-1"
               >
-                Sign In
+                {t('Sign In')}
               </button>
             </p>
           )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -19,10 +20,12 @@ export default function PaymentModal({
   totalAmountEtb,
   onPaymentComplete,
 }: PaymentModalProps) {
+  const { t, language } = useLanguage();
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'telebirr' | 'cbebirr' | 'mpesa' | 'awashbirr' | 'ebirr' | 'cash'>('card');
   const [phone, setPhone] = useState('251900000000');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const birr = language === 'am' ? 'ብር' : 'ETB';
 
   if (!isOpen) return null;
 
@@ -50,7 +53,7 @@ export default function PaymentModal({
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || data.detail || 'Payment initialization failed.');
+        throw new Error(data.error || data.detail || t('Payment initialization failed.'));
       }
 
       const payment = data.payment;
@@ -58,28 +61,32 @@ export default function PaymentModal({
       const mode = data.mode;
 
       if (payment.status === 'SUCCESS') {
-        onPaymentComplete('SUCCESS', payment.tx_ref, `Payment of ETB ${totalAmountEtb} via ${paymentMethod.toUpperCase()} successful!`);
+        onPaymentComplete(
+          'SUCCESS',
+          payment.tx_ref,
+          `${t('Payment of')} ${birr} ${totalAmountEtb} ${t('via')} ${t(paymentMethod.toUpperCase())} — ${t('successful!')}`
+        );
       } else if (payment.status === 'FAILED') {
-        setError(`Payment Failed: ${payment.failure_reason || 'INSUFFICIENT_FUNDS or processing error.'}`);
+        setError(`${t('Payment Failed:')} ${payment.failure_reason || t('INSUFFICIENT_FUNDS or processing error.')}`);
       } else if (payment.status === 'ABANDONED') {
-        setError(`Payment Cancelled: ${payment.failure_reason || 'USER_CANCELLED.'}`);
+        setError(`${t('Payment Cancelled:')} ${payment.failure_reason || t('USER_CANCELLED.')}`);
       } else {
         // PENDING status or fallback mode
         if (checkoutUrl && checkoutUrl.startsWith('http')) {
           // For fallback mode, give user a moment to read the message then redirect
           if (mode === 'fallback') {
-            setError('⚠️ ' + (data.message || 'Payment gateway is temporarily unavailable. Redirecting to your orders...'));
+            setError('⚠️ ' + (data.message || t('Payment gateway is temporarily unavailable. Redirecting to your orders...')));
             setTimeout(() => { window.location.href = checkoutUrl; }, 2500);
           } else {
             // Real Chapa checkout — redirect immediately
             window.location.href = checkoutUrl;
           }
         } else {
-          onPaymentComplete('PENDING', payment.tx_ref, `Payment initialized. Please complete payment via Chapa gateway.`);
+          onPaymentComplete('PENDING', payment.tx_ref, t('Payment initialized. Please complete payment via Chapa gateway.'));
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Payment processing error.');
+      setError(err.message || t('Payment processing error.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -93,7 +100,7 @@ export default function PaymentModal({
           <div className="flex items-center gap-2.5">
             <span className="material-symbols-outlined text-[#f7b5be] text-2xl">account_balance_wallet</span>
             <div>
-              <h3 className="font-display text-lg sm:text-xl font-bold text-[#f7b5be]">Chapa Payment Gateway</h3>
+              <h3 className="font-display text-lg sm:text-xl font-bold text-[#f7b5be]">{t('Chapa Payment Gateway')}</h3>
               <p className="text-[11px] text-[#9e8d8e]">Order #{orderNumber} • ETB {totalAmountEtb}</p>
             </div>
           </div>
@@ -109,9 +116,9 @@ export default function PaymentModal({
         <div className="mt-3.5 p-3 rounded-xl bg-[#2b1b1e] border border-[#683941] text-[#f7b5be] text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-base">verified_user</span>
-            <span className="font-semibold">Chapa ETB Payment Active</span>
+            <span className="font-semibold">{t('Chapa ETB Payment Active')}</span>
           </div>
-          <span className="px-2 py-0.5 rounded bg-[#f7b5be] text-[#4e232b] text-[10px] font-bold uppercase">Official</span>
+          <span className="px-2 py-0.5 rounded bg-[#f7b5be] text-[#4e232b] text-[10px] font-bold uppercase">{t('Official')}</span>
         </div>
 
         {/* Error Alert */}
@@ -132,7 +139,7 @@ export default function PaymentModal({
           {/* Payment Method Selector */}
           <div>
             <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-2">
-              Select Payment Method
+              {t('Select Payment Method')}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {[
@@ -155,7 +162,7 @@ export default function PaymentModal({
                   }`}
                 >
                   <span className="material-symbols-outlined text-xl">{m.icon}</span>
-                  <span className="text-xs font-bold truncate">{m.name}</span>
+                  <span className="text-xs font-bold truncate">{t(m.name)}</span>
                 </button>
               ))}
             </div>
@@ -165,7 +172,7 @@ export default function PaymentModal({
           {paymentMethod !== 'cash' && paymentMethod !== 'card' && (
             <div>
               <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1.5">
-                Chapa Mobile Test Phone Scenarios
+                {t('Chapa Mobile Test Phone Scenarios')}
               </label>
               <div className="grid grid-cols-2 gap-2 mb-2">
                 <button
@@ -178,7 +185,7 @@ export default function PaymentModal({
                   }`}
                 >
                   <p className="font-bold">🟢 251900000000</p>
-                  <p className="text-[10px] text-emerald-400/80">Success Scenario</p>
+                  <p className="text-[10px] text-emerald-400/80">{t('Success Scenario')}</p>
                 </button>
 
                 <button
@@ -191,7 +198,7 @@ export default function PaymentModal({
                   }`}
                 >
                   <p className="font-bold">🔴 251911111111</p>
-                  <p className="text-[10px] text-red-400/80">Insufficient Funds</p>
+                  <p className="text-[10px] text-red-400/80">{t('Insufficient Funds')}</p>
                 </button>
 
                 <button
@@ -204,7 +211,7 @@ export default function PaymentModal({
                   }`}
                 >
                   <p className="font-bold">🟡 251922222222</p>
-                  <p className="text-[10px] text-amber-400/80">User Cancellation</p>
+                  <p className="text-[10px] text-amber-400/80">{t('User Cancellation')}</p>
                 </button>
 
                 <button
@@ -217,7 +224,7 @@ export default function PaymentModal({
                   }`}
                 >
                   <p className="font-bold">⏱️ 251933333333</p>
-                  <p className="text-[10px] text-blue-400/80">Timeout / Pending</p>
+                  <p className="text-[10px] text-blue-400/80">{t('Timeout / Pending')}</p>
                 </button>
               </div>
 
@@ -242,10 +249,10 @@ export default function PaymentModal({
             <div className="p-3.5 rounded-xl bg-[#131313]-container-high/70 border border-tertiary/20 text-xs space-y-1.5">
               <p className="font-bold text-[#f7b5be] flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-base">open_in_new</span>
-                Redirect to Chapa Hosted Checkout
+                {t('Redirect to Chapa Hosted Checkout')}
               </p>
               <p className="text-[#9e8d8e] text-[11px] leading-relaxed">
-                Clicking the button below will open Chapa's official hosted checkout page where you can pay using Telebirr, CBE Birr, Debit/Credit Card, or Bank Transfer.
+                {t("Clicking the button below will open Chapa's official hosted checkout page where you can pay using Telebirr, CBE Birr, Debit/Credit Card, or Bank Transfer.")}
               </p>
             </div>
           )}
@@ -262,8 +269,8 @@ export default function PaymentModal({
               <>
                 <span>
                   {paymentMethod === 'card'
-                    ? `Proceed to Chapa Payment (ETB ${totalAmountEtb})`
-                    : `Pay ETB ${totalAmountEtb} via ${paymentMethod.toUpperCase()}`}
+                    ? `${t('Proceed to Chapa Payment')} (${birr} ${totalAmountEtb})`
+                    : `${t('Pay')} ${birr} ${totalAmountEtb} ${t('via')} ${t(paymentMethod.toUpperCase())}`}
                 </span>
                 <span className="material-symbols-outlined text-base">east</span>
               </>
