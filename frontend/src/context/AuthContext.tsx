@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { apiFetch, onSessionGone } from '../lib/api';
 
 export interface User {
   id: number;
@@ -16,7 +17,11 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  /** True once the server told us the session is no longer valid. */
+  sessionExpired: boolean;
   login: (usernameOrEmail: string, password: string) => Promise<void>;
+  /** Call this when any API call answers 401 so polling can stop. */
+  reportUnauthorized: () => void;
   register: (data: {
     username: string;
     email: string;
@@ -46,19 +51,29 @@ const parseResponseData = async (res: Response) => {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [sessionExpired, setSessionExpired] = useState<boolean>(false);
+
+  const reportUnauthorized = useCallback(() => {
+    setSessionExpired(true);
+    setUser(null);
+  }, []);
 
   const checkAuth = async () => {
     try {
-      const res = await fetch('/api/v1/auth/me/', {
+      // apiFetch transparently refreshes an expired access cookie and replays the
+      // request, so a returning visitor with a stale access token but a live
+      // refresh token is restored instead of being logged out.
+      const res = await apiFetch('/api/v1/auth/me/', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
       });
       if (res.ok) {
         const userData = await parseResponseData(res);
         if (userData.authenticated === false) {
+          setSessionExpired(false);
           setUser(null);
         } else {
+          setSessionExpired(false);
           setUser(userData);
         }
       } else {
@@ -75,6 +90,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, []);
 
+  // When a refresh fails anywhere in the app, the session is truly over. Drop
+  // the cached user so every consumer re-renders against a signed-out state
+  // instead of each call site having to notice its own 401.
+  useEffect(() => onSessionGone(() => {
+    setSessionExpired(true);
+    setUser(null);
+  }), []);
+
   const login = async (usernameOrEmail: string, password: string) => {
     const res = await fetch('/api/v1/auth/login/', {
       method: 'POST',
@@ -85,11 +108,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const data = await parseResponseData(res);
     if (!res.ok) {
-      const errorMsg = data.detail || data.non_field_errors?.[0] || (typeof data === 'object' ? Object.values(data)[0] : null) || 'Login failed';
+      const errorMsg = data.non_field_errors?.[0] || data.detail || (typeof data === 'object' ? Object.values(data)[0] : null) || 'Login failed';
       const formatted = Array.isArray(errorMsg) ? errorMsg.join(' ') : errorMsg;
       throw new Error(typeof formatted === 'string' ? formatted : JSON.stringify(formatted));
     }
 
+    setSessionExpired(false);
     setUser(data.user);
   };
 
@@ -110,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const data = await parseResponseData(res);
     if (!res.ok) {
-      const errorMsg = data.detail || data.non_field_errors?.[0] || (typeof data === 'object' ? Object.values(data)[0] : null) || 'Registration failed';
+      const errorMsg = data.non_field_errors?.[0] || data.detail || (typeof data === 'object' ? Object.values(data)[0] : null) || 'Registration failed';
       const formatted = Array.isArray(errorMsg) ? errorMsg.join(' ') : errorMsg;
       throw new Error(typeof formatted === 'string' ? formatted : JSON.stringify(formatted));
     }
@@ -120,20 +144,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch('/api/v1/auth/logout/', {
+      // Logout requires authentication, so an expired access token would
+      // otherwise block it and leave the refresh cookie alive on the server.
+      await apiFetch('/api/v1/auth/logout/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
       });
     } catch (e) {
       console.error('Logout error:', e);
     } finally {
+      setSessionExpired(false);
       setUser(null);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, checkAuth }}>
+    <AuthContext.Provider
+      value={{ user, loading, sessionExpired, reportUnauthorized, login, register, logout, checkAuth }}
+    >
       {children}
     </AuthContext.Provider>
   );
