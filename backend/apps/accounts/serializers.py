@@ -4,27 +4,49 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 from .models import Address, validate_ethiopian_phone
+from .validators import validate_deliverable_email
 
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=False, allow_blank=True)
+
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'phone', 'role', 'first_name', 'last_name', 'date_joined')
         read_only_fields = ('id', 'date_joined', 'role')
 
+    def validate_email(self, value):
+        value = (value or '').strip()
+        if not value:
+            return value
+        validate_deliverable_email(value)
+        qs = User.objects.filter(email__iexact=value.lower())
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('A user with this email address already exists.')
+        return value.lower()
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
     phone = serializers.CharField(required=False, allow_blank=True)
+    email = serializers.EmailField(required=True)
 
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'phone', 'password', 'first_name', 'last_name')
 
     def validate_email(self, value):
-        if value and User.objects.filter(email__iexact=value).exists():
+        value = (value or '').strip()
+        # Must be an address the customer really owns — we send receipts there and
+        # the payment gateway rejects non-deliverable domains.
+        validate_deliverable_email(value)
+
+        normalized = value.lower()
+        if User.objects.filter(email__iexact=normalized).exists():
             raise serializers.ValidationError('A user with this email address already exists.')
-        return value
+        return normalized
 
     def validate_phone(self, value):
         if not value:
@@ -34,9 +56,25 @@ class RegisterSerializer(serializers.ModelSerializer):
         validate_ethiopian_phone(norm)
         return norm
 
+    def validate_username(self, value):
+        value = (value or '').strip()
+        if not value:
+            raise serializers.ValidationError('Username is required.')
+        if len(value) < 3:
+            raise serializers.ValidationError('Username must be at least 3 characters long.')
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError('That username is already taken. Please choose another.')
+        return value
+
     def create(self, validated_data):
         password = validated_data.pop('password')
-        user = User.objects.create_user(password=password, role='CUSTOMER', **validated_data)
+        email = validated_data.pop('email', '')
+        user = User.objects.create_user(
+            password=password,
+            role='CUSTOMER',
+            email=email,
+            **validated_data
+        )
         return user
 
 
@@ -54,13 +92,21 @@ class LoginSerializer(serializers.Serializer):
         user = None
         # Check if login identifier is an email
         if '@' in username_or_email:
-            try:
-                found_user = User.objects.get(email__iexact=username_or_email)
-                user = authenticate(username=found_user.username, password=password)
-            except User.DoesNotExist:
-                user = None
+            found_user = User.objects.filter(email__iexact=username_or_email).first()
+            if not found_user:
+                raise serializers.ValidationError(
+                    f"No account is registered with '{username_or_email}'. "
+                    'Check the address, or sign up to create an account.'
+                )
+            user = authenticate(username=found_user.username, password=password)
+            if user is None:
+                raise serializers.ValidationError(
+                    f'The password for {username_or_email} is not correct. Please try again.'
+                )
         else:
             user = authenticate(username=username_or_email, password=password)
+            if user is None and User.objects.filter(username__iexact=username_or_email).exists():
+                raise serializers.ValidationError('That password is not correct. Please try again.')
 
         if not user:
             raise serializers.ValidationError('Invalid login credentials.')

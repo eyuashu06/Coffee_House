@@ -23,6 +23,18 @@ from .permissions import IsCustomer, IsOwnerOrManager
 
 User = get_user_model()
 
+def issue_tokens_for_user(user):
+    """Build access/refresh tokens that carry the role, so the frontend can route
+    staff to the dashboard and customers to their account."""
+    refresh = RefreshToken.for_user(user)
+    refresh['role'] = user.role
+    refresh['username'] = user.username
+    access = refresh.access_token
+    access['role'] = user.role
+    access['username'] = user.username
+    return refresh, access
+
+
 def set_auth_cookies(response, refresh_token, access_token):
     """Utility to attach httpOnly JWT cookies to response."""
     cookie_kwargs = {
@@ -59,8 +71,7 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            refresh = RefreshToken.for_user(user)
-            access = refresh.access_token
+            refresh, access = issue_tokens_for_user(user)
 
             res = Response({
                 'user': UserSerializer(user).data,
@@ -76,14 +87,18 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
-            refresh = RefreshToken.for_user(user)
-            access = refresh.access_token
+            refresh, access = issue_tokens_for_user(user)
 
             res = Response({
                 'user': UserSerializer(user).data,
                 'message': 'Login successful.'
             }, status=status.HTTP_200_OK)
             return set_auth_cookies(res, refresh, access)
+
+        # Wrong identifier/password is an authentication failure (401), not a
+        # malformed request (400). Missing/blank fields stay 400.
+        if set(serializer.errors.keys()) <= {'non_field_errors'}:
+            return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LogoutView(APIView):
@@ -113,6 +128,14 @@ class CookieTokenRefreshView(APIView):
         try:
             refresh = RefreshToken(refresh_token)
             access = refresh.access_token
+
+            # Carry the role forward so page routing keeps working after a refresh
+            role = refresh.get('role')
+            username = refresh.get('username')
+            if role:
+                access['role'] = role
+            if username:
+                access['username'] = username
 
             res = Response({'message': 'Token refreshed successfully.'}, status=status.HTTP_200_OK)
             cookie_kwargs = {
