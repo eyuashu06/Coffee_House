@@ -1,5 +1,6 @@
 from django.db import models
-from apps.orders.models import Order
+from django.utils import timezone
+from apps.orders.models import Order, OrderStatusHistory
 
 class Payment(models.Model):
     STATUS_CHOICES = (
@@ -42,13 +43,22 @@ class Payment(models.Model):
             self.chapa_reference = chapa_ref
         if raw_data:
             self.raw_response = str(raw_data)
+        self.failure_reason = ''
         self.save()
 
-        # Update order status to PLACED
+        # Update order status to PLACED and record it so the customer AND the
+        # manager get notified that a paid order just landed.
         order = self.order
         if order.status == 'PENDING_PAYMENT':
             order.status = 'PLACED'
+            if not order.placed_at:
+                order.placed_at = timezone.now()
             order.save()
+            OrderStatusHistory.objects.create(
+                order=order,
+                status='PLACED',
+                notes=f'Payment confirmed ({self.payment_method})',
+            )
 
     def mark_as_failed(self, reason='Payment Failed', raw_data=''):
         self.status = 'FAILED'
@@ -70,6 +80,11 @@ class Payment(models.Model):
             order.status = 'CANCELLED'
             order.rejection_reason = reason
             order.save()
+            OrderStatusHistory.objects.create(
+                order=order,
+                status='CANCELLED',
+                notes=reason,
+            )
 
     def __str__(self):
         return f"Payment {self.tx_ref} - {self.get_status_display()} ({self.amount_etb} ETB)"
