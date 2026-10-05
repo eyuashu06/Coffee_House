@@ -18,4 +18,5 @@ urlpatterns = [
     path('sommelier/', SommelierRAGView.as_view(), name='sommelier-rag'),
     path('sommelier', SommelierRAGView.as_view(), name='sommelier-rag-noslash'),
     path('analytics/', AnalyticsAPIView.as_view(), name='analytics'),
+    path('analytics', AnalyticsAPIView.as_view(), name='analytics-noslash'),
 ]
