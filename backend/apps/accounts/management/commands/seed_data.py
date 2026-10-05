@@ -16,32 +16,32 @@ class Command(BaseCommand):
         # 1. User Accounts
         # ─────────────────────────────────────────────
         admin, _ = User.objects.get_or_create(username='admin', defaults={
-            'email': 'admin@artisanalreserve.com', 'role': 'ADMIN',
+            'email': 'admin@gmail.com', 'role': 'ADMIN',
             'is_staff': True, 'is_superuser': True,
             'phone': '+251911000001', 'first_name': 'System', 'last_name': 'Admin'
         })
         admin.set_password('AdminPassword123!')
         admin.role = 'ADMIN'; admin.is_staff = True; admin.is_superuser = True
         admin.save()
-        self.stdout.write(self.style.SUCCESS('✔ Admin: admin@artisanalreserve.com / AdminPassword123!'))
+        self.stdout.write(self.style.SUCCESS('✔ Admin: admin@gmail.com / AdminPassword123!'))
 
         manager, _ = User.objects.get_or_create(username='manager', defaults={
-            'email': 'manager@artisanalreserve.com', 'role': 'MANAGER',
+            'email': 'manager@gmail.com', 'role': 'MANAGER',
             'is_staff': True, 'phone': '+251911000002',
             'first_name': 'Hotel', 'last_name': 'Manager'
         })
         manager.set_password('ManagerPassword123!')
         manager.role = 'MANAGER'; manager.is_staff = True
         manager.save()
-        self.stdout.write(self.style.SUCCESS('✔ Manager: manager@artisanalreserve.com / ManagerPassword123!'))
+        self.stdout.write(self.style.SUCCESS('✔ Manager: manager@gmail.com / ManagerPassword123!'))
 
         customer, _ = User.objects.get_or_create(username='customer', defaults={
-            'email': 'customer@artisanalreserve.com', 'role': 'CUSTOMER',
+            'email': 'customer@gmail.com', 'role': 'CUSTOMER',
             'phone': '+251911000003', 'first_name': 'Abebe', 'last_name': 'Bikila'
         })
         customer.set_password('CustomerPassword123!')
         customer.save()
-        self.stdout.write(self.style.SUCCESS('✔ Customer: customer@artisanalreserve.com / CustomerPassword123!'))
+        self.stdout.write(self.style.SUCCESS('✔ Customer: customer@gmail.com / CustomerPassword123!'))
 
         # ─────────────────────────────────────────────
         # 2. Restaurant Settings
@@ -109,7 +109,7 @@ class Command(BaseCommand):
                 'slug': 'sidama-bombe-washed',
                 'description': 'Crisp peach and lemon acidity with a clean, tea-like finish. Sourced from high-altitude Bombe kebele.',
                 'base_price_etb': Decimal('300.00'), 'is_signature': False,
-                'image_url': 'https://images.unsplash.com/photo-1572286258217-215cf8e2e4fb?w=800',
+                'image_url': 'https://images.unsplash.com/photo-1497636577773-f1231844b336?w=800',
                 'tasting_notes': 'Peach, Lemon Zest, Tea-Like',
                 'variants': [('250ml', 0), ('400ml Large', 80)],
                 'addons': [('Extra Shot', 70)],
@@ -171,7 +171,7 @@ class Command(BaseCommand):
                 'slug': 'masala-chai-latte',
                 'description': 'Assam CTC black tea simmered with whole spices — cardamom, cloves, ginger, black pepper — steamed with whole milk.',
                 'base_price_etb': Decimal('200.00'), 'is_signature': True,
-                'image_url': 'https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=800',
+                'image_url': 'https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=800',
                 'tasting_notes': 'Cardamom, Clove, Black Pepper, Ginger',
                 'variants': [('Regular', 0), ('Large', 60)],
                 'addons': [('Oat Milk', 50), ('Extra Spice', 30)],
@@ -253,7 +253,7 @@ class Command(BaseCommand):
                 'slug': 'spicy-pepperoni-nduja',
                 'description': 'Double pepperoni, fiery Calabrian nduja, honey chilli drizzle, smoked mozzarella, and fresh chilli rings.',
                 'base_price_etb': Decimal('720.00'), 'is_signature': True,
-                'image_url': 'https://images.unsplash.com/photo-1595854341625-f33ee10dbf9f?w=800',
+                'image_url': 'https://images.unsplash.com/photo-1579751626657-72bc17010498?w=800',
                 'tasting_notes': 'Pepperoni, Nduja, Chilli Honey',
                 'variants': [('25cm', 0), ('32cm', 170)],
                 'addons': [('Extra Pepperoni', 90), ('Chilli Oil', 40)],
@@ -284,7 +284,7 @@ class Command(BaseCommand):
                 'slug': 'beef-lamb-shawarma',
                 'description': 'Slow-roasted spiced beef and lamb shoulder strips, tahini, pickles, tomato, onion in pillowy Arabic bread.',
                 'base_price_etb': Decimal('380.00'), 'is_signature': True,
-                'image_url': 'https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=800',
+                'image_url': 'https://images.unsplash.com/photo-1613514785940-daed07799d9b?w=800',
                 'tasting_notes': 'Spiced Lamb, Tahini, Arabic Bread',
                 'variants': [('Regular Wrap', 0), ('Large Plate with Fries', 150)],
                 'addons': [('Extra Tahini', 40), ('Fried Egg', 70), ('Hot Sauce', 30)],
