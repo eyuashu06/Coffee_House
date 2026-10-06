@@ -2,6 +2,9 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../lib/api';
+import AuthModal from './AuthModal';
 import LanguageToggle from './LanguageToggle';
 
 interface AssistantItem {
@@ -23,6 +26,24 @@ interface QuickAction {
   query_am: string;
 }
 
+interface AssistantAction {
+  action?: string;
+  /** Set when the assistant needs an account before it can continue. */
+  reason_en?: string;
+  reason_am?: string;
+  /** Which conversation to resume once the customer has signed in. */
+  resume_intent?: string;
+  order_number?: string;
+  order?: { order_number?: string; total_etb?: number };
+}
+
+interface AssistantOrder {
+  order_number: string;
+  status_label?: string;
+  total_etb: number;
+  item_count: number;
+}
+
 interface ChatMessage {
   id: string;
   from: 'user' | 'assistant';
@@ -31,7 +52,8 @@ interface ChatMessage {
   error?: boolean;
   items?: AssistantItem[];
   reservations?: Record<string, unknown>[];
-  action?: { action?: string };
+  orders?: AssistantOrder[];
+  action?: AssistantAction;
 }
 
 const FALLBACK_QUICK_ACTIONS: QuickAction[] = [
@@ -39,13 +61,37 @@ const FALLBACK_QUICK_ACTIONS: QuickAction[] = [
   { id: 'food', label_en: 'Food', label_am: 'ምግብ', icon: '🍰', query_en: 'What food do you have?', query_am: 'ምን አይነት ምግብ አላችሁ?' },
   { id: 'drinks', label_en: 'Drinks', label_am: 'መጠጦች', icon: '🥤', query_en: 'What drinks are available?', query_am: 'ምን አይነት መጠጥ አላችሁ?' },
   { id: 'reservation', label_en: 'Make Reservation', label_am: 'ቦታ ማስያዝ', icon: '📅', query_en: 'I want to reserve a table', query_am: 'ቦታ ማስያዝ እፈልጋለሁ' },
+  { id: 'order', label_en: 'Start an Order', label_am: 'ትዕዛዝ ጀምር', icon: '🧾', query_en: 'I would like to place an order', query_am: 'ትዕዛዝ ለመስጠት እፈልጋለሁ' },
   { id: 'prices', label_en: 'Check Prices', label_am: 'ዋጋ ይመልከቱ', icon: '💰', query_en: 'How much is Masala Chai Latte?', query_am: 'Masala Chai Latte ዋጋው ስንት ነው?' },
   { id: 'about', label_en: 'About Coffee House', label_am: 'ስለ Coffee House', icon: 'ℹ️', query_en: 'What is this system?', query_am: 'ይህ ስርዓት ምንነው?' },
 ];
 
 const GENERIC_ERROR = {
   en: "Sorry, I'm having trouble retrieving that information right now. Please try again shortly.",
-  am: 'ይቅርታ፣ ያንን መረጃ አሁን ማግኘት አልቻልኩም። እባክዎ እንደገና በትንሹ ቆይተው ይሞክሩ።',
+  am: 'ይቅርታ፣ ያንን መረጃ አሁን ማግኘት አልቻልኩም። እባክዎ እንደገና በትንሹ ዆ይተው ይሞክሩ።',
+};
+
+/**
+ * What to say once the customer has signed in, to pick the interrupted
+ * conversation back up. The backend still holds what they already told us, so
+ * these do not repeat any details back to them.
+ */
+const RESUME_PROMPTS: Record<string, string> = {
+  reservation_create: 'I am signed in now, please continue with my reservation',
+  reservation_cancel: 'I am signed in now, please continue with cancelling',
+  reservation_status: 'I am signed in now, please show my reservations',
+  order_create: "I am signed in now, please place my order",
+  order_status: 'I am signed in now, please show my orders',
+  default: 'I am signed in now, please continue',
+};
+
+const RESUME_PROMPTS_AM: Record<string, string> = {
+  reservation_create: 'አሁን ተግባር ላይ ነኝ፣ የቦታ ማስያዣዬን ይቀጥሉ።',
+  reservation_cancel: 'አሁን ተግባር ላይ ነኝ፣ የመሰረዙን ይቀጥሉ።',
+  reservation_status: 'አሁን ተግባር ላይ ነኝ፣ የቦታ ማስያዣዎቼን ያሳዩኝ።',
+  order_create: 'አሁን ተግባር ላይ ነኝ፣ ትዕዛዤን ይላኩ።',
+  order_status: 'አሁን ተግባር ላይ ነኝ፣ ትዕዛዞቼን ያሳዩኝ።',
+  default: 'አሁን ተግባር ላይ ነኝ፣ ይቀጥሉ።',
 };
 
 let messageCounter = 0;
@@ -56,6 +102,7 @@ export default function AssistantChat() {
   // stacked for every reply doubled the height of every message and, for a
   // customer who reads only one of them, buried the part they needed.
   const { language, t, tItem } = useLanguage();
+  const { user, checkAuth } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -63,6 +110,14 @@ export default function AssistantChat() {
   const [quickActions, setQuickActions] = useState<QuickAction[]>(FALLBACK_QUICK_ACTIONS);
   const [lastFailed, setLastFailed] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
+
+  // Sign-in flow. The assistant asks for an account when the customer wants to
+  // reserve a table or check their own orders; the modal opens from the message
+  // that asked for it, and the interrupted conversation resumes on success.
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
+  const [authPrompt, setAuthPrompt] = useState<string | null>(null);
+  const [pendingResume, setPendingResume] = useState<string | null>(null);
 
   const sessionIdRef = useRef<string>('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -80,7 +135,7 @@ export default function AssistantChat() {
       }
     }
 
-    fetch('/api/v1/assistant/quick-actions/', { credentials: 'include' })
+    apiFetch('/api/v1/assistant/quick-actions/')
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
         if (data?.quick_actions?.length) setQuickActions(data.quick_actions);
@@ -94,7 +149,7 @@ export default function AssistantChat() {
     }
   }, [messages, isLoading]);
 
-  const send = useCallback(async (text: string, amharic = false) => {
+  const send = useCallback(async (text: string) => {
     const query = text.trim();
     if (!query || isLoading) return;
 
@@ -106,16 +161,20 @@ export default function AssistantChat() {
 
     setIsLoading(true);
     try {
-      const res = await fetch('/api/v1/assistant/message/', {
+      // apiFetch, not raw fetch: an expired access cookie is refreshed and the
+      // request replayed. Otherwise a signed-in customer silently drops back to
+      // a guest mid-conversation and the assistant starts asking them to sign in
+      // while they are already signed in.
+      const res = await apiFetch('/api/v1/assistant/message/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ query, session_id: sessionIdRef.current }),
       });
 
       if (!res.ok) throw new Error('request failed');
 
       const data = await res.json();
+      const action: AssistantAction = data.action || {};
       setMessages(prev => [
         ...prev,
         {
@@ -125,9 +184,18 @@ export default function AssistantChat() {
           am: data.answer_am || '',
           items: data.items || [],
           reservations: data.reservations || [],
-          action: data.action || {},
+          orders: data.orders || [],
+          action,
         },
       ]);
+
+      // Remember what the customer was trying to do so it can be picked up
+      // after they sign in.
+      if (action.action === 'auth_required') {
+        setPendingResume(action.resume_intent || null);
+      } else {
+        setPendingResume(null);
+      }
     } catch {
       setLastFailed(query);
       setMessages(prev => [
@@ -138,6 +206,26 @@ export default function AssistantChat() {
       setIsLoading(false);
     }
   }, [isLoading, isOpen]);
+
+  const openAuth = useCallback((mode: 'LOGIN' | 'REGISTER', reason?: string) => {
+    setAuthMode(mode);
+    setAuthPrompt(reason ?? null);
+    setAuthModalOpen(true);
+  }, []);
+
+  const handleAuthSuccess = useCallback(async () => {
+    setAuthModalOpen(false);
+    // The cookie is already set by the auth endpoint; re-read the profile so the
+    // assistant sees an authenticated customer on the next turn.
+    await checkAuth();
+    if (pendingResume) {
+      const prompts = language === 'am' ? RESUME_PROMPTS_AM : RESUME_PROMPTS;
+      const resumeQuery = prompts[pendingResume] ?? prompts.default;
+      setPendingResume(null);
+      // Short delay lets the auth cookie settle before the follow-up goes out.
+      setTimeout(() => send(resumeQuery), 250);
+    }
+  }, [checkAuth, language, pendingResume, send]);
 
   const handleQuickAction = (action: QuickAction) => {
     // Send the prompt in the language the customer is actually reading.
@@ -284,6 +372,52 @@ export default function AssistantChat() {
                       </div>
                     )}
 
+                    {msg.orders && msg.orders.length > 0 && (
+                      <div className="border-t border-[#514345] pt-2 text-[11px] text-[#d5c2c3] space-y-1">
+                        {msg.orders.map(order => (
+                          <p key={order.order_number} className="flex items-center gap-1.5">
+                            <i className="ph ph-receipt text-[#f7b5be]"></i>
+                            <span className="font-semibold text-[#e5e2e1]">{order.order_number}</span>
+                            {order.status_label && <span>· {order.status_label}</span>}
+                            <span>· {Number(order.total_etb).toFixed(0)} ETB</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Sign-in / sign-up, shown only when the assistant says it
+                        needs an account. The customer has already been told what
+                        we were about to do for them, so these buttons just get
+                        them there. */}
+                    {msg.action?.action === 'auth_required' && !user && (
+                      <div className="border-t border-[#514345] pt-3 flex flex-wrap gap-2">
+                        <button
+                          onClick={() => openAuth('LOGIN', msg.action?.reason_en)}
+                          className="px-3 py-1.5 rounded-full bg-[#f7b5be] text-[#4e232b] text-[12px] font-bold hover:brightness-110 transition-all"
+                        >
+                          <i className="ph ph-sign-in mr-1"></i>
+                          {t('Sign In')}
+                        </button>
+                        <button
+                          onClick={() => openAuth('REGISTER', msg.action?.reason_am)}
+                          className="px-3 py-1.5 rounded-full bg-transparent border border-[#f7b5be] text-[#f7b5be] text-[12px] font-bold hover:bg-[#f7b5be]/10 transition-colors"
+                        >
+                          <i className="ph ph-user-plus mr-1"></i>
+                          {t('Sign Up')}
+                        </button>
+                      </div>
+                    )}
+
+                    {msg.action?.action === 'order_placed' && (
+                      <a
+                        href="/account?tab=orders"
+                        className="border-t border-[#514345] pt-3 flex items-center gap-1.5 text-[12px] font-bold text-[#f7b5be] hover:underline"
+                      >
+                        <i className="ph ph-receipt"></i>
+                        {t('Track your order')}
+                      </a>
+                    )}
+
                     {msg.error && lastFailed && (
                       <button
                         onClick={() => send(lastFailed)}
@@ -346,6 +480,16 @@ export default function AssistantChat() {
           </form>
         </div>
       )}
+
+      {/* Sign-in / sign-up, opened from the assistant's own request. On success
+          the interrupted conversation resumes on its own. */}
+      <AuthModal
+        isOpen={authModalOpen}
+        initialMode={authMode}
+        promptMessage={authPrompt}
+        onClose={() => setAuthModalOpen(false)}
+        onSuccessCallback={handleAuthSuccess}
+      />
     </>
   );
 }
