@@ -126,7 +126,7 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
           <div className="absolute bottom-3 left-5 right-5">
-            <h3 className="font-display text-2xl font-bold text-white">{item.name}</h3>
+            <h3 className="font-display text-2xl font-bold text-white">{tItem(item.name)}</h3>
             <p className="text-[#f7b5be] font-semibold text-sm mt-0.5">{etb(basePrice, birr)}</p>
           </div>
         </div>

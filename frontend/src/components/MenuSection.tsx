@@ -36,7 +36,7 @@ const CATEGORIES = [
 ];
 
 export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) {
-  const { t } = useLanguage();
+  const { t, tItem } = useLanguage();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<{ [key: number]: { temp: string; milk: string } }>({});
@@ -167,7 +167,7 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
                 {/* Details */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-headline text-lg text-on-surface font-semibold">{item.name}</h3>
+                    <h3 className="font-headline text-lg text-on-surface font-semibold">{tItem(item.name)}</h3>
                     <p className="text-xs text-outline mt-1 leading-relaxed">{item.description}</p>
                   </div>
                   <span className="font-headline text-lg text-secondary font-bold whitespace-nowrap">{Number(item.price).toFixed(2)} ETB</span>
@@ -196,7 +196,7 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
                           currentOpt.temp === 'Hot' ? 'bg-secondary text-on-secondary shadow-sm' : 'text-on-surface-variant'
                         }`}
                       >
-                        Hot
+                        {t('Hot')}
                       </button>
                       <button
                         type="button"
@@ -205,7 +205,7 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
                           currentOpt.temp === 'Iced' ? 'bg-secondary text-on-secondary shadow-sm' : 'text-on-surface-variant'
                         }`}
                       >
-                        Iced
+                        {t('Iced')}
                       </button>
                     </div>
 
@@ -216,10 +216,10 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
                         onChange={(e) => handleMilkChange(item.id, e.target.value)}
                         className="w-full bg-transparent px-2 py-1 text-on-surface appearance-none focus:outline-none cursor-pointer pr-6"
                       >
-                        <option value="Oat Silk (Barista)" className="bg-surface-container-high text-on-surface">Oat Silk (Barista)</option>
-                        <option value="Whole Farmstead" className="bg-surface-container-high text-on-surface">Whole Farmstead</option>
-                        <option value="Sprouted Almond" className="bg-surface-container-high text-on-surface">Sprouted Almond</option>
-                        <option value="Macadamia Cream" className="bg-surface-container-high text-on-surface">Macadamia Cream</option>
+                        <option value="Oat Silk (Barista)" className="bg-surface-container-high text-on-surface">{t('Oat Silk (Barista)')}</option>
+                        <option value="Whole Farmstead" className="bg-surface-container-high text-on-surface">{t('Whole Farmstead')}</option>
+                        <option value="Sprouted Almond" className="bg-surface-container-high text-on-surface">{t('Sprouted Almond')}</option>
+                        <option value="Macadamia Cream" className="bg-surface-container-high text-on-surface">{t('Macadamia Cream')}</option>
                       </select>
                       <span className="material-symbols-outlined text-outline absolute right-1.5 pointer-events-none text-sm">expand_more</span>
                     </div>

@@ -245,22 +245,22 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
         <span className="font-display text-[21px] tracking-wide">Buna Hub</span>
       </a>
       <nav className="flex items-center gap-8 text-[15px] text-[#d5c2c3]">
-        <a className="hover:text-[#f7b5be] transition-colors" href="#menu">{t('Menu', 'ሜኑ')}</a>
-        <a className="hover:text-[#f7b5be] transition-colors" href="#story">{t('Story', 'ታሪክ')}</a>
-        <a className="hover:text-[#f7b5be] transition-colors" href="#gallery">{t('Gallery', 'ፎቶዎች')}</a>
-        <a className="hover:text-[#f7b5be] transition-colors" href="#visit">{t('Visit us', 'ይገኙን')}</a>
+        <a className="hover:text-[#f7b5be] transition-colors" href="#menu">{t('Menu')}</a>
+        <a className="hover:text-[#f7b5be] transition-colors" href="#story">{t('Story')}</a>
+        <a className="hover:text-[#f7b5be] transition-colors" href="#gallery">{t('Gallery')}</a>
+        <a className="hover:text-[#f7b5be] transition-colors" href="#visit">{t('Visit us')}</a>
       </nav>
       <div className="flex items-center gap-3">
         <LanguageToggle />
         {user ? (
-            <Link href="/account" className="h-9 px-5 rounded-[28px] border border-[#514345] text-[#d5c2c3] text-[14.5px] flex items-center hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">{t('Account', 'መለያ')}</Link>
+            <Link href="/account" className="h-9 px-5 rounded-[28px] border border-[#514345] text-[#d5c2c3] text-[14.5px] flex items-center hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">{t('Account')}</Link>
         ) : (
           <>
-            <button onClick={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }} className="h-9 px-5 rounded-[28px] border border-[#514345] text-[#d5c2c3] text-[14.5px] flex items-center hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">{t('Sign In', 'ግቡ')}</button>
-            <button onClick={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }} className="h-9 px-5 rounded-[28px] bg-[#f7b5be] text-[#4e232b] font-semibold text-[14.5px] flex items-center hover:bg-[#ffd9dd] transition-colors">{t('Sign Up', 'ተዝጥር')}</button>
+            <button onClick={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }} className="h-9 px-5 rounded-[28px] border border-[#514345] text-[#d5c2c3] text-[14.5px] flex items-center hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">{t('Sign In')}</button>
+            <button onClick={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }} className="h-9 px-5 rounded-[28px] bg-[#f7b5be] text-[#4e232b] font-semibold text-[14.5px] flex items-center hover:bg-[#ffd9dd] transition-colors">{t('Sign Up')}</button>
           </>
         )}
-        <button onClick={() => setIsCartOpen(true)} className="h-9 px-5 rounded-[28px] border border-[#9e8d8e] text-[14.5px] flex items-center hover:border-[#e5e2e1] transition-colors">{t('Cart', 'የግዢ ሳጥን')}{language === 'am' ? '' : ` (${totalCartCount})`}</button>
+        <button onClick={() => setIsCartOpen(true)} className="h-9 px-5 rounded-[28px] border border-[#9e8d8e] text-[14.5px] flex items-center hover:border-[#e5e2e1] transition-colors">{t('Cart')}{language === 'am' ? '' : ` (${totalCartCount})`}</button>
       </div>
     </div>
   </header>
@@ -315,7 +315,7 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
       </a>
       <Link href="/account" className="flex-1 h-16 rounded-[14px] bg-[#1c1b1b] border border-[#514345] flex items-center gap-3 px-4 hover:border-[#9e8d8e] transition-colors">
         <span className="text-[#f7b5be] text-[22px]"><i className="ph ph-map-pin"></i></span>
-        <span><span className="block text-[16px] font-semibold leading-tight">{t('Track', 'አንበት')}</span><span className="block text-[12.5px] italic text-[#9e8d8e]">{t('order status')}</span></span>
+        <span><span className="block text-[16px] font-semibold leading-tight">{t('Track')}</span><span className="block text-[12.5px] italic text-[#9e8d8e]">{t('order status')}</span></span>
       </Link>
     </div>
   </div>
@@ -449,7 +449,7 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
         <div className="grid grid-cols-[250px_1fr_420px] rounded-[18px] overflow-hidden border border-[#514345]">
           <aside className="bg-[#0e0e0e] px-7 py-9 border-r border-[#514345]">
             <div className="flex items-center gap-2 text-[14px] text-[#fbbb50]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#fbbb50]"></span> {t('Open now')} · {t('kitchen till 22:00', 'ኩሽና እስከ 22:00')}
+              <span className="w-1.5 h-1.5 rounded-full bg-[#fbbb50]"></span> {t('Open now')} · {t('kitchen till 22:00')}
             </div>
             <h2 className="mt-6 font-display text-[28px] leading-tight">{t('Hours')}</h2>
             <dl className="mt-4 space-y-2.5 text-[15.5px]">
@@ -528,9 +528,9 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
           <h3 className="font-display text-[20px]">{t('Hours')}</h3>
           <ul className="mt-4 space-y-2 text-[15px] text-[#d5c2c3]">
             <li className="flex justify-between gap-4"><span>{t('Mon – Thu')}</span><span className="text-[#e5e2e1]">7:00–22:00</span></li>
-            <li className="flex justify-between gap-4"><span>{t('Fri', 'ዓርብ')}</span><span className="text-[#e5e2e1]">7:00–23:00</span></li>
-            <li className="flex justify-between gap-4"><span>{t('Sat', 'ቅዳሜ')}</span><span className="text-[#e5e2e1]">8:00–23:00</span></li>
-            <li className="flex justify-between gap-4"><span>{t('Sun', 'እሁድ')}</span><span className="text-[#e5e2e1]">8:00–21:00</span></li>
+            <li className="flex justify-between gap-4"><span>{t('Fri')}</span><span className="text-[#e5e2e1]">7:00–23:00</span></li>
+            <li className="flex justify-between gap-4"><span>{t('Sat')}</span><span className="text-[#e5e2e1]">8:00–23:00</span></li>
+            <li className="flex justify-between gap-4"><span>{t('Sun')}</span><span className="text-[#e5e2e1]">8:00–21:00</span></li>
           </ul>
         </div>
         <div>

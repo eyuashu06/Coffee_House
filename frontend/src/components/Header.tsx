@@ -99,7 +99,7 @@ export default function Header({ cartCount, onOpenCart, onOpenSommelier }: Heade
                         className="w-full px-4 py-2 text-left text-xs text-[#f7b5be] hover:bg-[#20201f] flex items-center gap-2 font-medium"
                       >
                         <span className="material-symbols-outlined text-base">dashboard</span>
-                        Manager Dashboard
+                        {t('Manager Dashboard')}
                       </Link>
                     )}
 
@@ -109,7 +109,7 @@ export default function Header({ cartCount, onOpenCart, onOpenSommelier }: Heade
                       className="w-full px-4 py-2 text-left text-xs text-[#e5e2e1] hover:bg-[#20201f] flex items-center gap-2"
                     >
                       <span className="material-symbols-outlined text-base">person</span>
-                      My Orders & Profile
+                      {t('My Orders & Profile')}
                     </Link>
 
                     <button
@@ -117,7 +117,7 @@ export default function Header({ cartCount, onOpenCart, onOpenSommelier }: Heade
                       className="w-full px-4 py-2 text-left text-xs text-red-400 hover:bg-[#20201f] flex items-center gap-2 border-t border-[#514345] mt-1"
                     >
                       <span className="material-symbols-outlined text-base">logout</span>
-                      Sign Out
+                      {t('Sign Out')}
                     </button>
                   </div>
                 )}
@@ -128,7 +128,7 @@ export default function Header({ cartCount, onOpenCart, onOpenSommelier }: Heade
                 className="px-3.5 py-1.5 rounded-full bg-[#f7b5be] text-[#4e232b] text-xs font-bold hover:brightness-110 transition-all shadow-[0_2px_10px_rgba(251,187,80,0.25)] flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-base">login</span>
-                <span>Sign In</span>
+                <span>{t('Sign In')}</span>
               </button>
             )}
           </div>

@@ -299,7 +299,7 @@ export default function AuthModal({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
-                    Last Name
+                    {t('Last Name')}
                   </label>
                   <input
                     type="text"
@@ -315,7 +315,7 @@ export default function AuthModal({
 
               <div>
                 <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
-                  Username
+                  {t('Username')}
                 </label>
 <input
                     type="text"
@@ -331,7 +331,7 @@ export default function AuthModal({
 
               <div>
                 <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
-                  Email Address
+                  {t('Email Address')}
                 </label>
                 <input
                   type="email"
@@ -387,7 +387,7 @@ export default function AuthModal({
           {mode === 'FORGOT_PASSWORD' && (
             <div>
               <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
-                Registered Email Address
+                {t('Registered Email Address')}
               </label>
               <input
                 type="email"

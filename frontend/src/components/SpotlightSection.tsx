@@ -53,7 +53,7 @@ export default function SpotlightSection() {
             {subscribed ? (
               <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2">
                 <span className="material-symbols-outlined text-sm">check_circle</span>
-                <span>Welcome to the Reserve Club! Invitation sent to your email.</span>
+                <span>{t('Welcome to the Reserve Club! Invitation sent to your email.')}</span>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 mt-2">
@@ -63,7 +63,7 @@ export default function SpotlightSection() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="Enter your email address"
+                    placeholder={t('Enter your email address')}
                     className="w-full h-11 px-4 pr-10 rounded-xl text-xs bg-white text-on-tertiary-fixed border border-[#d5c2c3] focus:outline-none focus:border-secondary"
                   />
                   <span className="material-symbols-outlined absolute right-3 top-3 text-base text-outline pointer-events-none">mail</span>
