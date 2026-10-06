@@ -7,7 +7,6 @@ fact in the reply comes from the database.
 """
 
 import logging
-import re
 
 from . import responder
 from .retriever import (
@@ -22,22 +21,44 @@ logger = logging.getLogger(__name__)
 
 # Short-term conversation memory: last resolved topic + collected reservation data.
 MAX_TURNS = 6
+#: Longer transcript kept for the language model so it can hold a conversation
+#: rather than answer each message in isolation.
+MAX_HISTORY = 20
 
 
 class Session:
     def __init__(self, session_id=None):
+        from .ordering import StagedOrder
+
         self.session_id = session_id
         self.turns = []
         self.reservation_state = {}
         self.in_reservation_flow = False
         self.last_items = []
         self.last_intent = None
+        #: Role-tagged transcript for the language model agent.
+        self.history = []
+        #: The customer's in-progress order. Created eagerly so every caller,
+        #: including the agent, can rely on it existing.
+        self.staged_order = StagedOrder()
+        #: The last thing they asked for that needed an account, so the flow can
+        #: resume once they sign in instead of starting over.
+        self.pending_auth_intent = None
 
     def remember(self, query, intent, items=None):
         self.turns.append({'q': query, 'intent': intent})
         self.turns = self.turns[-MAX_TURNS:]
         if items:
             self.last_items = [i.id for i in items]
+
+    def remember_exchange(self, query, answer_en=None, answer_am=None):
+        """Append one customer/assistant pair to the model transcript."""
+        self.history.append({'role': 'user', 'text': query})
+        if answer_en:
+            self.history.append({'role': 'assistant', 'text': answer_en})
+        if answer_am:
+            self.history.append({'role': 'assistant', 'text': answer_am})
+        self.history = self.history[-MAX_HISTORY:]
 
     def recent_queries(self, exclude_current=True):
         return [t['q'] for t in self.turns[:-1]] if exclude_current else [t['q'] for t in self.turns]
@@ -73,6 +94,87 @@ def _format_price(amount):
     return f"{float(amount):,.2f} ETB".replace('.00', '')
 
 
+# ── Sign-in gate helpers ────────────────────────────────────────────
+
+def _resume_hint(intent, query, session):
+    """
+    Describe what the customer was already in the middle of, so the sign-in
+    message can say "I still have your table for 4 tomorrow at 7" instead of
+    making them repeat themselves.
+
+    Returns an (english, amharic) pair, or None when there is nothing to carry
+    over.
+    """
+    from .retriever import extract_reservation_fields
+
+    if intent == 'order_create' and getattr(session, 'staged_order', None):
+        summary = session.staged_order.summary()
+        if summary['item_count']:
+            names = ', '.join(f"{line['quantity']}x {line['name']}"
+                               for line in summary['lines'][:3])
+            if len(summary['lines']) <= 3:
+                return f'your order ({names})', f'ትዕዛዝዎን ({names})'
+            return f'your order ({names} and more)', f'ትዕዛዝዎን ({names} እና ተጨማሪ)'
+
+    state = dict(session.reservation_state or {})
+    try:
+        state = extract_reservation_fields(query, state)
+    except Exception:
+        state = dict(session.reservation_state or {})
+
+    if not state:
+        return None
+
+    en_bits, am_bits = [], []
+    # The name leads: it is the one detail that cannot be read back out of the
+    # calendar, so it is the most reassuring thing to confirm we kept it.
+    if state.get('name'):
+        en_bits.append(f"the name {state['name']}")
+        am_bits.append(f"ስምዎ {state['name']}")
+    if state.get('date'):
+        en_bits.append(state['date'])
+        am_bits.append(state['date'])
+    if state.get('time'):
+        en_bits.append(state['time'])
+        am_bits.append(state['time'])
+    if state.get('guests'):
+        en_bits.append(f"{state['guests']} guests")
+        am_bits.append(f"{state['guests']} ሰዎች")
+
+    if not en_bits:
+        return None
+    return (' and '.join(en_bits), ' '.join(am_bits))
+
+
+def _auth_required_reply(intent, query, session):
+    """
+    Build the sign-in answer and the matching UI action.
+
+    The details the customer already gave are captured into the session state, so
+    resuming after sign-in continues the booking instead of restarting it.
+    """
+    from .auth_gate import sign_in_action, sign_in_answer
+
+    if intent.startswith('reservation'):
+        # Keep what they have already said; the flow picks up from here later.
+        from .retriever import extract_reservation_fields
+
+        try:
+            session.reservation_state = extract_reservation_fields(
+                query, session.reservation_state)
+        except Exception:
+            logger.exception('Failed to preserve reservation state across the gate')
+
+    hint = _resume_hint(intent, query, session)
+    answer = sign_in_answer(intent, resume_hint=hint)
+
+    missing = []
+    if intent.startswith('reservation'):
+        state = session.reservation_state or {}
+        missing = [field for field in ('date', 'time', 'guests', 'name') if not state.get(field)]
+    return answer, sign_in_action(intent, pending_intent=intent, missing_fields=missing)
+
+
 def _looks_like_booking(fields):
     """
     Decide whether extracted fields are unmistakably a table booking.
@@ -87,45 +189,6 @@ def _looks_like_booking(fields):
     return has_when and has_who
 
 
-# ── Optional LLM polish (never adds facts) ───────────────────────────
-
-def _llm_polish(question, en_answer, am_answer):
-    """
-    Only rewrites an already-grounded answer for readability. Returns
-    (en, am) unchanged if no key is configured or the call fails.
-    """
-    from django.conf import settings
-
-    if not getattr(settings, 'ASSISTANT_USE_LLM', False):
-        return en_answer, am_answer
-    api_key = getattr(settings, 'GEMINI_API_KEY', '')
-    if not api_key:
-        return en_answer, am_answer
-
-    try:
-        from google import genai
-
-        client = genai.Client(api_key=api_key)
-        prompt = (
-            "Rewrite the two answers below so they sound friendly and natural. "
-            "Do NOT add, remove or change any fact, price, name or number. "
-            "Keep English and Amharic equivalent. "
-            "Return JSON with keys 'en' and 'am'.\n\n"
-            f"Customer question: {question}\n\nEnglish answer:\n{en_answer}\n\nAmharic answer:\n{am_answer}"
-        )
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-        text = getattr(response, 'text', '') or ''
-        match = re.search(r'\{.*\}', text, re.S)
-        if not match:
-            return en_answer, am_answer
-        import json
-        data = json.loads(match.group(0))
-        return data.get('en') or en_answer, data.get('am') or am_answer
-    except Exception:
-        logger.exception('LLM polish failed; using deterministic answer')
-        return en_answer, am_answer
-
-
 # ── Public API ───────────────────────────────────────────────────────
 
 QUICK_ACTIONS = [
@@ -133,30 +196,70 @@ QUICK_ACTIONS = [
     {'id': 'food', 'label_en': 'Food', 'label_am': 'ምግብ', 'icon': '🍰', 'query_en': 'What food do you have?', 'query_am': 'ምን አይነት ምግብ አላችሁ?'},
     {'id': 'drinks', 'label_en': 'Drinks', 'label_am': 'መጠጦች', 'icon': '🥤', 'query_en': 'What drinks are available?', 'query_am': 'ምን አይነት መጠጥ አላችሁ?'},
     {'id': 'reservation', 'label_en': 'Make Reservation', 'label_am': 'ቦታ ማስያዝ', 'icon': '📅', 'query_en': 'I want to reserve a table', 'query_am': 'ቦታ ማስያዝ እፈልጋለሁ'},
+    {'id': 'order', 'label_en': 'Start an Order', 'label_am': 'ትዕዛዝ ጀምር', 'icon': '🧾', 'query_en': 'I would like to place an order', 'query_am': 'ትዕዛዝ ለመስጠት እፈልጋለሁ'},
     {'id': 'prices', 'label_en': 'Check Prices', 'label_am': 'ዋጋ ይመልከቱ', 'icon': '💰', 'query_en': 'How much is Masala Chai Latte?', 'query_am': 'Masala Chai Latte ዋጋው ስንት ነው?'},
     {'id': 'about', 'label_en': 'About Coffee House', 'label_am': 'ስለ Coffee House', 'icon': 'ℹ️', 'query_en': 'What is this system?', 'query_am': 'ይህ ስርዓት ምንነው?'},
 ]
 
 
-def answer_query(query, session_id=None, user=None):
+def answer_query(query, session_id=None, user=None, use_agent=None):
     """
     Main entry point. Returns a dict with the bilingual answer, the items that
     were retrieved, the detected intent and the next action for the UI.
+
+    `user` decides what the customer may do: menu questions are public, anything
+    touching an account (reservations, orders, "my ..." lookups) requires a
+    signed-in customer and a guest is asked to sign in or sign up first.
+
+    The language model handles the conversation when one is configured. If it is
+    unavailable or its answer fails verification, the deterministic engine
+    answers instead, so the assistant never depends on a network call.
     """
     query = (query or '').strip()
     if not query:
         return {
             'answer': responder.bilingual(
-                'Please type your question about our menu, prices or reservations.',
-                'እባክዎ ስለ ሜኑ፣ ዋጋ ወይም ቦታ ማስያዣ ጥያቄዎን ይጻፉ።'),
-            'answer_en': 'Please type your question about our menu, prices or reservations.',
-            'answer_am': 'እባክዎ ስለ ሜኑ፣ ዋጋ ወይም ቦታ ማስያዣ ጥያቄዎን ይጻፉ።',
-            'intent': 'empty', 'items': [], 'reservations': [], 'action': {'action': 'none'},
+                'Ask me about our menu, prices, what is available today, or opening hours.',
+                'ስለ ሜኑ፣ ዋጋ፣ ዛሬ የሚገኙት ምርቶች ወይም የመክፈቻ ሰዓት ይጠይቁኝ።'),
+            'answer_en': 'Ask me about our menu, prices, what is available today, or opening hours.',
+            'answer_am': 'ስለ ሜኑ፣ ዋጋ፣ ዛሬ የሚገኙት ምርቶች ወይም የመክፈቻ ሰዓት ይጠይቁኝ።',
+            'intent': 'empty', 'items': [], 'reservations': [], 'orders': [],
+            'action': {'action': 'none'}, 'engine': 'deterministic',
             'language': 'en', 'sources': [],
         }
 
     session = get_session(session_id)
     language = detect_language(query)
+
+    from . import ordering as ordering_service
+    from .auth_gate import is_authenticated, requires_auth
+
+    if isinstance(session.staged_order, dict):
+        # Sessions live in memory, but a serialized form should still reload.
+        session.staged_order = ordering_service.StagedOrder(session.staged_order)
+
+    # The model drives the conversation when it is configured. `use_agent=False`
+    # forces the deterministic path, which is what the tests and any pinned
+    # deployment rely on.
+    if use_agent is None:
+        from django.conf import settings
+        use_agent = getattr(settings, 'ASSISTANT_USE_LLM', False)
+    if use_agent:
+        from .agent import run_agent
+
+        agent_result = run_agent(query, user=user, session=session,
+                                 staged=session.staged_order, language=language)
+        if agent_result:
+            session.remember_exchange(query, agent_result['answer_en'], agent_result['answer_am'])
+            session.remember(query, agent_result['intent'])
+            if agent_result.get('_placed_order'):
+                session.staged_order.clear()
+                session.pending_auth_intent = None
+            elif agent_result.get('_auth_required'):
+                session.pending_auth_intent = (agent_result['action'] or {}).get('resume_intent')
+            else:
+                session.pending_auth_intent = None
+            return agent_result
 
     if is_out_of_scope(query):
         answer, payload, meta = responder._out_of_scope()[0], [], {'action': 'none'}
@@ -243,6 +346,19 @@ def answer_query(query, session_id=None, user=None):
     elif items and intent == 'unknown':
         intent = 'price'
 
+    # ── Sign-in gate ──────────────────────────────────────────────────
+    # Checked here, once the intent is final, because intent detection is what
+    # tells a booking apart from a question about a product that happens to be
+    # called "Reserve Wagyu Smash Burger".
+    #
+    # Anything that reads or writes a customer's account runs only for a
+    # signed-in customer. Everything else - the whole menu, prices, opening
+    # hours - stays open, because that is how a guest decides to sign up.
+    if requires_auth(intent) and not is_authenticated(user):
+        answer, action = _auth_required_reply(intent, query, session)
+        session.remember(query, intent)
+        return _finalize(query, answer, intent, [], [], action, language, session)
+
     # Reservation intents own the conversation
     if intent == 'reservation_create':
         session.in_reservation_flow = True
@@ -267,6 +383,19 @@ def answer_query(query, session_id=None, user=None):
             query, session.reservation_state, user=user)
         session.remember(query, intent)
         return _finalize(query, answer, intent, [], reservations, meta, language, session)
+
+    if intent in ('order_create', 'order_status', 'order_cancel'):
+        answer, orders, meta = responder.handle_order_intent(
+            intent, query, session.staged_order, user=user)
+        if meta.get('action') == 'auth_required':
+            session.pending_auth_intent = intent
+        if meta.get('action') == 'order_placed':
+            session.staged_order.clear()
+            session.pending_auth_intent = None
+        session.remember(query, intent)
+        result = _finalize(query, answer, intent, [], [], meta, language, session)
+        result['orders'] = orders
+        return result
 
     # Menu / venue answers
     answer, payload, meta = responder.build_venue_answer(intent, query, category, items)
@@ -294,8 +423,13 @@ def answer_query(query, session_id=None, user=None):
 
 
 def _finalize(query, answer, intent, items, reservations, meta, language, session):
+    # The deterministic answer is sent exactly as built. There used to be an
+    # optional "polish" step here that asked a model to reword it; that is now the
+    # agent's job, and running a second unverified rewrite on an already-grounded
+    # answer would undo the guarantee that every fact here came from the database.
     en, am = _strip_markup(answer)
-    en, am = _llm_polish(query, en, am)
+
+    session.remember_exchange(query, en, am)
 
     combined = responder.bilingual(en, am)
     sources = ['Coffee House menu database', 'Restaurant settings']
@@ -310,7 +444,9 @@ def _finalize(query, answer, intent, items, reservations, meta, language, sessio
         'language': language,
         'items': items,
         'reservations': reservations,
+        'orders': [],
         'action': meta or {'action': 'none'},
         'sources': sources,
         'session_id': session.session_id,
+        'engine': 'deterministic',
     }

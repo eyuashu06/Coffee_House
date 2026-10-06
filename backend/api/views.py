@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status
+from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -54,17 +55,25 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 class SommelierRAGView(APIView):
     """
-    AI RAG Coffee Sommelier Endpoint:
+    Legacy AI sommelier endpoint.
+
     Receives JSON: { "query": "user question" }
     Returns JSON: { "answer": "...", "recommendations": [...], "sources": [...] }
+
+    Deprecated in favour of /api/v1/assistant/message/, which this now delegates
+    to. It forwards the caller so the sign-in gate applies here too - otherwise
+    this endpoint would be a way around it.
     """
+    permission_classes = [AllowAny]
+
     def post(self, request):
         query = request.data.get('query', '').strip()
         if not query:
             return Response({'error': 'Query string is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         rag = CoffeeSommelierRAG()
-        result = rag.generate_response(query)
+        user = request.user if request.user and request.user.is_authenticated else None
+        result = rag.generate_response(query, user=user)
         return Response(result, status=status.HTTP_200_OK)
 
 class AnalyticsAPIView(APIView):

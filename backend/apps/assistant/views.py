@@ -33,13 +33,21 @@ def _bilingual_error():
         'language': 'en',
         'items': [],
         'reservations': [],
+        'orders': [],
         'action': {'action': 'none'},
         'sources': [],
+        'engine': 'deterministic',
     }
 
 
 class AssistantMessageView(APIView):
-    """POST /api/v1/assistant/message/ -> bilingual grounded answer."""
+    """
+    POST /api/v1/assistant/message/ -> bilingual grounded answer.
+
+    Open to everyone: browsing the menu never needs an account. Whether the
+    customer is signed in decides what the assistant may do on their behalf,
+    and it is read from the request here, not from anything the client sends.
+    """
 
     permission_classes = [AllowAny]
 
@@ -49,11 +57,12 @@ class AssistantMessageView(APIView):
 
         if not str(query).strip():
             return Response({
-                'answer': "**English 🇬🇧**\n\nPlease type a question first.\n\n**አማርኛ 🇪ት**\n\nእባክዎ መጀመሪያ ጥያቄ ያጻፉ።",
+                'answer': "**English 🇬🇧**\n\nPlease type a question first.\n\n**አማርኛ 🇪🇹**\n\nእባክዎ መጀመሪያ ጥያቄ ያጻፉ።",
                 'answer_en': 'Please type a question first.',
                 'answer_am': 'እባክዎ መጀመሪያ ጥያቄ ያጻፉ።',
                 'intent': 'empty', 'language': 'en', 'items': [], 'reservations': [],
-                'action': {'action': 'none'}, 'sources': [],
+                'orders': [], 'action': {'action': 'none'}, 'sources': [],
+                'engine': 'deterministic',
             }, status=status.HTTP_200_OK)
 
         try:
@@ -62,6 +71,9 @@ class AssistantMessageView(APIView):
             return Response(result, status=status.HTTP_200_OK)
         except DatabaseError:
             logger.exception('Assistant database error')
+            return Response(_bilingual_error(), status=status.HTTP_200_OK)
+        except Exception:
+            logger.exception('Assistant failure')
             return Response(_bilingual_error(), status=status.HTTP_200_OK)
         except Exception:
             logger.exception('Assistant failure')

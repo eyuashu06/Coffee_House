@@ -75,10 +75,34 @@ def tokenize(text):
     return _WORD_RE.findall((text or '').lower())
 
 
+def _english_form_variants(word):
+    """
+    The inflected English forms of a keyword.
+
+    Only regular plurals are generated. General prefix matching is wrong here:
+    it made "cancellation" match the token "cancel", so "cancel my order" scored
+    as a reservation cancellation.
+    """
+    forms = {word}
+    if len(word) > 3 and word.endswith('es'):
+        forms.add(word[:-2])
+    if len(word) > 3 and word.endswith('s'):
+        forms.add(word[:-1])
+    return forms
+
+
 def _amharic_prefix_match(token, keyword):
-    """Amharic verbs inflect (አላችሁ / አላችሁን / አለህ) - match on a shared prefix."""
+    """
+    Match a message token against one lexicon keyword.
+
+    Amharic matches on a shared prefix, because verbs inflect (አላችሁ / አላችሁን /
+    አለህ) and the lexicon cannot list every form. English matches exactly, or
+    across a regular plural, which is how customers actually write ("coffees").
+    """
     if token == keyword:
         return True
+    if keyword.isascii() and token.isascii():
+        return token in _english_form_variants(keyword)
     shorter, longer = sorted([token, keyword], key=len)
     if len(shorter) >= 3 and longer.startswith(shorter):
         return True
@@ -123,14 +147,22 @@ def detect_intent(text):
     scores = {}
     for intent, groups in INTENT_KEYWORDS.items():
         score = 0
+        # Each token is counted once per intent. Keyword lists deliberately hold
+        # variants ("cancel", "cancellation"), and the Amharic-aware prefix
+        # matcher resolves several of them onto the same token; without this the
+        # same word scored two or three times and "cancel my order" was read as a
+        # reservation.
+        seen = set()
         for lang in ('en', 'am'):
             for kw in groups.get(lang, []):
                 if ' ' in kw:
-                    if kw in low:
+                    if kw in low and kw not in seen:
                         score += 3
+                        seen.add(kw)
                 else:
-                    if _hits(kw, token_set):
+                    if _hits(kw, token_set) and kw not in seen:
                         score += 2
+                        seen.add(kw)
         if score:
             scores[intent] = score
 
@@ -150,22 +182,116 @@ def detect_intent(text):
             best, category = cat_score, slug
 
     if not scores:
-        # No intent keyword: a bare item name means a price/detail lookup.
+        # No intent keyword. Three ways to still know what is being asked:
+        # a quantity with an ordering word is an order, a bare instruction is
+        # the next step of one, and anything else naming a product is a
+        # price/detail lookup.
+        if _looks_like_order(low, token_set) or _looks_like_order_step(low, token_set):
+            return 'order_create', tokens, category
         if category or find_menu_items(text, limit=1):
             return 'price', tokens, category
         return 'unknown', tokens, category
 
     priority = {
         'reservation_cancel': 3, 'reservation_create': 2, 'reservation_status': 2,
+        'order_cancel': 4, 'order_status': 3, 'order_create': 2,
         'cheapest': 2, 'recommend': 1, 'diet': 6, 'location': 0, 'hours': 0, 'about': 0,
         'greeting': 0, 'thanks': 0, 'order_help': 0, 'menu_list': 1,
     }
     intent = max(scores.items(), key=lambda kv: (kv[1] + priority.get(kv[0], 0), kv[1]))[0]
 
+    # A product name can contain a trigger word on its own ("Reserve Wagyu Smash
+    # Burger"). When the customer explicitly named an item that we sell, that is
+    # a question about the item, not a booking, so availability, price or
+    # ingredients all beat a reservation keyword.
+    if intent in ('reservation_create', 'reservation_cancel', 'reservation_status'):
+        named = _explicit_item_name(text)
+        if named:
+            low_text = (text or '').lower()
+            if any(word in low_text for word in
+                   ('available', 'availability', 'ይገኛል', 'አለ', 'አይገኝም')):
+                intent = 'availability'
+            elif any(word in low_text for word in
+                     ('ingredient', 'ይዘት', 'መሣሪያ', 'made of', 'contains')):
+                intent = 'ingredients'
+            else:
+                intent = 'price'
+
     # "cheapest latte" -> cheapest wins over price
     if intent == 'price' and scores.get('cheapest', 0) >= scores.get('price', 0):
         intent = 'cheapest'
+
+    # "I want 2 mint teas" asks for no price and names a quantity, so it is an
+    # order rather than a price question. Without this the customer is quoted a
+    # price for something they did not ask about.
+    if intent in ('price', 'unknown', 'menu_list') and _looks_like_order(low, token_set):
+        intent = 'order_create'
+
+    # A bare confirmation or instruction ("yes, place it for pickup", "delivery
+    # please") says nothing about what the customer wants to know, and naming no
+    # product means it can only be the next step of an order they are already
+    # building.
+    if intent == 'unknown' and not category and _looks_like_order_step(low, token_set):
+        intent = 'order_create'
+
     return intent, tokens, category
+
+
+#: Instructions that continue an order the customer has already started.
+_ORDER_STEP_WORDS = {
+    'yes', 'yeah', 'yep', 'sure', 'confirm', 'ok', 'okay', 'place', 'order', 'please',
+    'delivery', 'deliver', 'pickup', 'takeaway', 'take', 'collect', 'dine', 'dinein',
+    'አዎ', 'እሺ', 'ተረጋግጧል', 'አረጋግጥ', 'እባክዎ',
+}
+
+
+def _looks_like_order_step(low, token_set):
+    """True for a message that continues an existing order rather than asks."""
+    if re.search(r'\d', low):
+        # A number here is a quantity or an address, not an instruction.
+        return False
+    return bool(token_set & _ORDER_STEP_WORDS)
+
+
+#: Words that mark a message as a question about information rather than a
+#: request to buy something.
+_INFO_WORDS = {'price', 'prices', 'cost', 'costs', 'how', 'much', 'many', 'available',
+               'availability', 'is', 'are', 'does', 'do', 'what', 'which', 'have',
+               'ingredient', 'ingredients', 'recommend', 'cheapest', 'sell', 'stock'}
+
+#: Words that mean "buy", as opposed to "tell me".
+_ORDER_WORDS = {'order', 'add', 'cart', "i'll", 'ill', 'give', 'want', 'like', 'have'}
+
+
+def _looks_like_order(low, token_set):
+    """
+    Decide whether a message with no explicit ordering verb is still an order.
+
+    The signal is a quantity next to a product name ("2 mint teas", "three
+    croissants") with nothing in the message asking for information about it.
+    A price question ("how much are 2 teas?") is left to the price intent.
+    """
+    if token_set & _INFO_WORDS:
+        return False
+    if not re.search(r'\b\d{1,2}\b', low):
+        return False
+    return bool(token_set & _ORDER_WORDS)
+
+
+def _explicit_item_name(text):
+    """
+    The name of a menu item the customer wrote out in full, if any.
+
+    Only a complete name counts. A shared word ("Reserve") appearing on its own
+    must not qualify, which is why this compares against the whole name rather
+    than scoring tokens.
+    """
+    low = (text or '').lower()
+    for item in MenuItem.objects.all():
+        name = item.name.lower()
+        if len(name) >= 6 and re.search(rf'(?<!\w){re.escape(name)}(?!\w)', low):
+            return item.name
+    return None
 
 
 # ── Menu retrieval ───────────────────────────────────────────────────

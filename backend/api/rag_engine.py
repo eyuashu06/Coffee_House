@@ -25,11 +25,11 @@ class CoffeeSommelierRAG:
         docs = search_knowledge_base(user_query, limit=3)
         return docs, items
 
-    def generate_response(self, user_query, session_id=None):
+    def generate_response(self, user_query, session_id=None, user=None):
         from apps.assistant.engine import answer_query
 
         try:
-            result = answer_query(user_query, session_id=session_id)
+            result = answer_query(user_query, session_id=session_id, user=user)
         except Exception:
             logger.exception('Assistant failure via legacy endpoint')
             return {
@@ -48,6 +48,7 @@ class CoffeeSommelierRAG:
             'intent': result['intent'],
             'recommendations': result['items'],
             'reservations': result['reservations'],
+            'orders': result.get('orders', []),
             'action': result['action'],
             'sources': result['sources'],
         }
