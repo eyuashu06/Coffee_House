@@ -35,11 +35,18 @@ INSTALLED_APPS = [
     'api',
 ]
 
-# ── AI Assistant (RAG) ──────────────────────────────────────────────────
-# Optional: only needed for optional wording polish. The assistant answers from
-# the database with no API key at all, so it never depends on an LLM.
+# ── AI Assistant ──────────────────────────────────────────────────────────
+# The assistant is grounded in the database and works with no API key at all: the
+# deterministic engine answers from the menu, venue settings and reservations.
+# When a key is present the language model can drive the conversation, calling
+# read-only tools for every fact. Its answers are verified against those tool
+# results and discarded if anything is unaccounted for, so a bad model reply can
+# never invent a price or claim a booking that was not made.
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', os.environ.get('GOOGLE_API_KEY', ''))
 ASSISTANT_USE_LLM = os.environ.get('ASSISTANT_USE_LLM', 'False').lower() in ('1', 'true', 'yes')
+ASSISTANT_MODEL = os.environ.get('ASSISTANT_MODEL', 'gemini-2.5-flash')
+#: Requests to the model are capped so a slow provider cannot hold a chat open.
+ASSISTANT_LLM_TIMEOUT = int(os.environ.get('ASSISTANT_LLM_TIMEOUT', '20'))
 
 # Reservation rules used by the assistant's availability check
 ASSISTANT_RESERVATION_TABLES = int(os.environ.get('ASSISTANT_RESERVATION_TABLES', '4'))
@@ -154,6 +161,17 @@ CHAPA_SECRET_KEY = os.environ.get('CHAPA_SECRET_KEY', 'CHASECK_TEST-UMHsYkPPXIFH
 CHAPA_PUBLIC_KEY = os.environ.get('CHAPA_PUBLIC_KEY', 'CHAPUBK_TEST-GYDsYiZ6dmnDWjiYLCbe7JMIm6R52LYD')
 CHAPA_ENCRYPTION_KEY = os.environ.get('CHAPA_ENCRYPTION_KEY', 'NkU1iFiDH7h9MB7mhOclw4cN')
 CHAPA_API_URL = os.environ.get('CHAPA_API_URL', 'https://api.chapa.co/v1')
+# Chapa signs webhooks with the webhook secret. Unsigned webhooks are rejected:
+# the endpoint is public, so accepting them would let anyone POST a fake
+# "payment.success" and mark any order paid.
+CHAPA_WEBHOOK_SECRET = os.environ.get('CHAPA_WEBHOOK_SECRET', '')
+# Where Chapa sends its server-to-server callback. This must be the API host, not
+# the frontend: the request never carries the customer's cookie, and on localhost
+# the frontend origin cannot be reached from the internet at all.
+BACKEND_PUBLIC_URL = os.environ.get(
+    'BACKEND_PUBLIC_URL', os.environ.get('API_URL', 'http://localhost:8000')).rstrip('/')
+# Seconds to wait on the gateway when verifying a transaction.
+CHAPA_VERIFY_TIMEOUT = int(os.environ.get('CHAPA_VERIFY_TIMEOUT', '15'))
 # Receipt address used only when the customer's own email domain has no mail
 # infrastructure (Chapa refuses to initialize hosted checkout for those).
 CHAPA_FALLBACK_EMAIL = os.environ.get('CHAPA_FALLBACK_EMAIL', 'customer@gmail.com')

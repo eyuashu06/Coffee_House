@@ -60,6 +60,7 @@ class OrderSerializer(serializers.ModelSerializer):
     order_number = serializers.CharField(read_only=True)
     placed_at = serializers.DateTimeField(read_only=True)
     latest_payment = serializers.SerializerMethodField()
+    payment_state = serializers.SerializerMethodField()
     # Backend always computes these — not required from frontend
     subtotal_etb = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     total_amount_etb = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
@@ -92,6 +93,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'created_at',
             'items',
             'latest_payment',
+            'payment_state',
         )
         read_only_fields = ('id', 'order_number', 'customer', 'created_at', 'placed_at')
 
@@ -108,7 +110,33 @@ class OrderSerializer(serializers.ModelSerializer):
             'failure_reason': payment.failure_reason,
             'checkout_url': payment.checkout_url,
             'created_at': payment.created_at,
+            'verified_at': payment.verified_at,
+            'gateway_status': payment.gateway_status,
         }
+
+    def get_payment_state(self, order):
+        """
+        Whether the money is actually in, in one word.
+
+        The UI used to decide "paid" from `latest_payment.status`, which is wrong
+        in both directions: a customer who paid on a first attempt and then made
+        a second, abandoned one would see an unpaid order, and a paid order whose
+        newest attempt is still pending looked unpaid too. This derives the answer
+        from whether *any* payment for the order succeeded, so the customer, the
+        kitchen and the receipt can never disagree.
+
+        Values: `paid`, `settling` (attempt in flight), `failed`, `unpaid`.
+        """
+        payments = list(order.payments.all())
+        if any(payment.status == 'SUCCESS' for payment in payments):
+            return 'paid'
+
+        statuses = {payment.status for payment in payments}
+        if 'PENDING' in statuses:
+            return 'settling'
+        if statuses & {'FAILED', 'ABANDONED'}:
+            return 'failed'
+        return 'unpaid'
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])

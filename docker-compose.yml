@@ -44,6 +44,9 @@ services:
       - MYSQL_PORT=3306
       - CHAPA_SECRET_KEY=${CHAPA_SECRET_KEY:-CHASECK_TEST-samplekey}
       - CHAPA_WEBHOOK_SECRET=${CHAPA_WEBHOOK_SECRET:-chapa_webhook_secret_sample}
+      # Chapa's server-to-server callback must point at a host it can reach, so this
+      # has to be the public address of the API, not "localhost" inside the container.
+      - BACKEND_PUBLIC_URL=${BACKEND_PUBLIC_URL:-http://localhost:8000}
     depends_on:
       db:
         condition: service_healthy
