@@ -79,8 +79,26 @@ INTENT_KEYWORDS = {
         'am': ['የአትክልት', 'የአጥር', 'ቬጀቴሪያን', 'ቬጌን', 'ያለ ስጋ', 'ያለ ስጠር', 'አትክልት'],
     },
     'order_help': {
-        'en': ['order', 'how do i order', 'delivery', 'takeaway', 'pickup', 'payment', 'pay', 'chapa'],
-        'am': ['ትዕዛዝ', 'እንዴት ማዘዝ', 'ማድረስ', 'ክፍያ', 'ቻፓ', 'እንዴት እንዛዛለን'],
+        'en': ['how do i order', 'how can i order', 'order process', 'payment', 'pay', 'chapa',
+               'payment method', 'how does ordering work'],
+        'am': ['እንዴት ማዘዝ እንደምችላለሁ', 'የመክፈያ ዘዴ', 'ክፍያ', 'ቻፓ', 'እንዴት እንዛዛለን'],
+    },
+    'order_create': {
+        'en': ['i want to order', 'i would like to order', 'can i order', 'place an order',
+               'order for me', 'i\'d like', 'i will have', 'give me a', 'order me', 'order two',
+               'order 2', 'add to my order', 'add to cart', 'i\'ll take', "i'll take"],
+        'am': ['ትዕዛዝ ለመስጠት', 'ትዕዛዝ ላስጠቅም', 'እንዴት ብቻለሁ', 'ለእኔ አስያዝ',
+               'ወደ ግዢ ቅርጫት አስገባ', 'በግዢ ቅርጫት አስገባ', 'አንድ አመጣልኝ'],
+    },
+    'order_status': {
+        'en': ['my order', 'my orders', 'order status', 'where is my order', 'track my order',
+               'order history', 'did my order', 'has my order'],
+        'am': ['የእኔ ትዕዛዝ', 'የእኔ ትዕዛዞች', 'የትዕዛዝ ሁኔታ', 'ትዕዛዤን አለበለግ',
+               'የትዕዛዝ ታሪክ'],
+    },
+    'order_cancel': {
+        'en': ['cancel my order', 'cancel order', 'cancel the order'],
+        'am': ['ትዕዛዤን መሰረዝ', 'ትዕዛዝ መሰረዝ'],
     },
 }
 
@@ -170,6 +188,9 @@ INTENT_LABEL_EN = {
     'cheapest': 'cheapest',
     'menu_list': 'menu_list',
     'order_help': 'order_help',
+    'order_create': 'order_create',
+    'order_status': 'order_status',
+    'order_cancel': 'order_cancel',
     'unknown_item': 'unknown_item',
     'out_of_scope': 'out_of_scope',
     'unknown': 'unknown',
