@@ -1,10 +1,11 @@
 import json
+import logging
 import re
 import time
 from decimal import Decimal
 
 import httpx
-from chapa import Chapa, verify_webhook
+from chapa import Chapa
 from django.conf import settings
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -12,11 +13,14 @@ from rest_framework import status, viewsets, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+from . import gateway
 from .models import Payment
 from .serializers import PaymentSerializer, InitializePaymentSerializer
 from apps.orders.models import Order
 from apps.accounts.models import normalize_ethiopian_phone
 from apps.accounts.validators import is_deliverable_email
+
+logger = logging.getLogger(__name__)
 
 #: Local/mock phone numbers that simulate gateway outcomes in test mode
 MOCK_TEST_PHONES = {
@@ -84,7 +88,12 @@ def _chapa_email_rejected(response):
 
 def _initialize_chapa_transaction(*, email, amount, first_name, last_name, tx_ref,
                                  callback_url, return_url, customization, phone_number=None):
-    """Initialize a hosted-checkout transaction through the official Chapa SDK."""
+    """Initialize a hosted-checkout transaction through the official Chapa SDK.
+
+    Only initialisation uses the SDK. Verification goes through
+    `apps.payments.gateway` because the SDK's verify path is broken against the
+    httpx version installed here.
+    """
     return get_chapa_client().initialize(
         email=email,
         amount=amount,
@@ -97,6 +106,21 @@ def _initialize_chapa_transaction(*, email, amount, first_name, last_name, tx_re
         return_url=return_url,
         customization=customization,
     )
+
+
+def _can_manage_order(request, order):
+    """
+    True when this caller may pay for, or read the payment of, this order.
+
+    The customer who owns the order, or staff. Anyone else gets a 404 rather than
+    a 403: the existence of someone else's order is not the caller's business.
+    """
+    user = request.user
+    if not (user and user.is_authenticated):
+        return False
+    if user.is_manager_or_admin():
+        return True
+    return order.customer_id == user.id
 
 
 class InitializePaymentView(APIView):
@@ -115,6 +139,20 @@ class InitializePaymentView(APIView):
             order = Order.objects.get(pk=order_id)
         except Order.DoesNotExist:
             return Response({'error': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # A signed-out visitor could otherwise start a payment against any order
+        # id they guessed.
+        if not _can_manage_order(request, order):
+            return Response({'error': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # An order that is already paid must not be paid twice.
+        if order.status != 'PENDING_PAYMENT':
+            return Response(
+                {'error': 'This order has already been paid for.',
+                 'order_status': order.status,
+                 'payment': PaymentSerializer(order.payments.order_by('-created_at').first()).data
+                 if order.payments.exists() else None},
+                status=status.HTTP_400_BAD_REQUEST)
 
         # Normalize phone into 251XXXXXXXXX format for Chapa API
         norm_phone = normalize_ethiopian_phone(raw_phone or order.contact_phone)
@@ -185,6 +223,7 @@ class InitializePaymentView(APIView):
         # ── Chapa SDK call (official hosted checkout) ─────────────────────────
         chapa_secret_key = getattr(settings, 'CHAPA_SECRET_KEY', 'CHASECK_TEST-UMHsYkPPXIFHkoPbm38QkV9OpBh0y4vD')
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        backend_url = getattr(settings, 'BACKEND_PUBLIC_URL', 'http://localhost:8000')
 
         return_url = f"{frontend_url}/account?order={order.order_number}&tx_ref={tx_ref}&payment_status=pending"
 
@@ -214,7 +253,10 @@ class InitializePaymentView(APIView):
                 first_name=chapa_safe_text(first_name, 40),
                 last_name=chapa_safe_text(last_name, 40),
                 tx_ref=tx_ref,
-                callback_url=f"{frontend_url}/api/v1/payments/webhook/",
+                # The webhook is server-to-server: it carries no customer cookie
+                # and the frontend origin is unreachable from the internet during
+                # development, so it has to point at the API host.
+                callback_url=f"{backend_url}/api/v1/payments/webhook/",
                 return_url=return_url,
                 customization=customization,
                 phone_number=clean_phone or None,
@@ -286,61 +328,144 @@ class InitializePaymentView(APIView):
 
 
 class VerifyPaymentView(APIView):
+    """
+    Confirm one payment with the gateway and report the result.
+
+    This is the endpoint the customer's browser polls after Chapa sends them back,
+    which makes it the thing that has to work: on a local deployment the webhook
+    cannot reach us at all, so this is the only path that settles a payment.
+    """
+
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, tx_ref):
         try:
             payment = Payment.objects.select_related('order').get(tx_ref=tx_ref)
         except Payment.DoesNotExist:
-            return Response({'error': 'Payment transaction reference not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Payment transaction reference not found.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
-        # If already resolved (success/failed/abandoned), return immediately
-        if payment.status in ['SUCCESS', 'FAILED', 'ABANDONED']:
+        if not _can_manage_order(request, payment.order):
+            return Response({'error': 'Payment transaction reference not found.'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        # Already answered by the gateway. Re-checking would ask about a
+        # transaction that has been closed, and a settled payment must never be
+        # walked backwards because the gateway no longer recognises it.
+        if payment.status in ('SUCCESS', 'FAILED', 'ABANDONED'):
             return Response({
                 'payment': PaymentSerializer(payment).data,
                 'order_status': payment.order.status,
                 'verified': True,
+                'outcome': payment.status.lower(),
+                'test_mode': gateway.is_test_mode(),
             }, status=status.HTTP_200_OK)
 
-        # Confirm the transaction with the gateway via the official SDK
-        verified = False
-
-        try:
-            verify_data = get_chapa_client().verify(tx_ref)
-            if isinstance(verify_data, dict):
-                data = verify_data.get('data') or {}
-                chapa_status = str(data.get('status', '')).lower()
-                chapa_ref = data.get('reference', '')
-
-                if chapa_status == 'success':
-                    payment.mark_as_success(chapa_ref=chapa_ref, raw_data=verify_data)
-                    verified = True
-                elif chapa_status in ['failed', 'rejected']:
-                    payment.mark_as_failed(reason=_chapa_error_message(verify_data), raw_data=verify_data)
-                    verified = True
-                elif chapa_status in ['cancelled', 'abandoned']:
-                    payment.mark_as_cancelled(reason='Payment cancelled at checkout', raw_data=verify_data)
-                    verified = True
-                elif chapa_status:
-                    payment.raw_response = json.dumps(verify_data, default=str)
-                    payment.save()
-            else:
-                payment.raw_response = "Unexpected verification response from Chapa"
-                payment.save()
-        except Exception as exc:
-            payment.raw_response = f"Verification exception: {exc}"
-            payment.save()
-
+        outcome = reconcile_payment(payment)
         return Response({
             'payment': PaymentSerializer(payment).data,
             'order_status': payment.order.status,
-            'verified': verified,
+            'verified': outcome != 'unknown',
+            'outcome': outcome,
+            'test_mode': gateway.is_test_mode(),
         }, status=status.HTTP_200_OK)
+
+
+def reconcile_payment(payment):
+    """
+    Ask the gateway about a payment and apply the answer.
+
+    Returns one of: 'success', 'failed', 'cancelled', 'pending', 'mismatch',
+    'unknown'.
+
+    The distinction that matters is between "the gateway says they have not paid"
+    (a real answer, and the banner should say so) and "we could not reach the
+    gateway" (`unknown`, which must leave the payment PENDING rather than
+    declaring it unpaid - otherwise a momentary network blip destroys a payment
+    the customer actually completed).
+    """
+    # A transaction the gateway has never heard of can never succeed, so it is
+    # closed rather than retried. Leaving it PENDING is what made these orders
+    # show "confirming..." indefinitely.
+    if not payment.checkout_url and not payment.chapa_reference:
+        payment.mark_as_failed(
+            reason='No payment was ever started with the gateway for this order.',
+            raw_data='', gateway_status='not_found')
+        return 'failed'
+
+    try:
+        data = gateway.verify_transaction(payment.tx_ref)
+    except gateway.TransactionNotFound as exc:
+        logger.info('Gateway has no record of %s: %s', payment.tx_ref, exc)
+        payment.mark_as_failed(
+            reason='The payment gateway has no record of this payment, so it cannot be completed.',
+            raw_data='', gateway_status='not_found')
+        return 'failed'
+    except gateway.GatewayError as exc:
+        # A transient problem: the network, or the gateway being down. This is NOT
+        # evidence that the customer did not pay, so the payment stays PENDING and
+        # is asked about again.
+        logger.warning('Chapa verification could not complete for %s: %s', payment.tx_ref, exc)
+        payment.raw_response = f'Verification unavailable: {exc}'
+        payment.save(update_fields=['raw_response', 'updated_at'])
+        return 'unknown'
+
+    gateway_status = gateway.normalise_status(data)
+
+    if gateway.is_success(gateway_status):
+        try:
+            gateway.check_transaction_matches(payment, data)
+        except gateway.VerificationMismatch as exc:
+            # The gateway confirms *a* payment, but not this one. Recording a
+            # success here would hand a real order to the kitchen without the
+            # money, so this is a failure and says so.
+            logger.error('Verification mismatch for %s: %s', payment.tx_ref, exc)
+            payment.mark_as_failed(
+                reason=f'Payment did not match the order: {exc}'[:255],
+                raw_data=json.dumps(data, default=str),
+                gateway_status=gateway_status,
+            )
+            return 'mismatch'
+
+        payment.mark_as_success(
+            chapa_ref=str(data.get('reference') or ''),
+            raw_data=json.dumps(data, default=str),
+            gateway_status=gateway_status,
+        )
+        return 'success'
+
+    if gateway.is_terminal_failure(gateway_status):
+        payment.mark_as_failed(
+            reason=_chapa_error_message({'message': data.get('message')}),
+            raw_data=json.dumps(data, default=str),
+            gateway_status=gateway_status,
+        )
+        return 'failed'
+
+    if gateway_status in ('cancelled', 'abandoned'):
+        payment.mark_as_cancelled(
+            reason=str(data.get('message') or 'Payment cancelled at checkout')[:255],
+            raw_data=json.dumps(data, default=str),
+            gateway_status=gateway_status,
+        )
+        return 'cancelled'
+
+    # Still settling. Record that we asked, so this is distinguishable from a
+    # payment nobody ever verified.
+    payment.record_checked(gateway_status, json.dumps(data, default=str))
+    return 'pending'
 
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ChapaWebhookView(APIView):
-    """Server-to-server callback from Chapa confirming the payment outcome."""
+    """
+    Server-to-server callback from Chapa confirming the payment outcome.
+
+    The signature is mandatory. This endpoint is public and unauthenticated by
+    nature, so accepting an unsigned body would let anyone POST a
+    `payment.success` for a transaction reference they guessed and mark a real
+    order paid without paying for it.
+    """
 
     permission_classes = [permissions.AllowAny]
 
@@ -350,40 +475,60 @@ class ChapaWebhookView(APIView):
         except Exception:
             data = {}
 
-        # Chapa signs webhooks with the secret key — verify with the SDK helper
-        secret = getattr(settings, 'CHAPA_SECRET_KEY', '')
-        signature = request.headers.get('x-chapa-signature') or request.headers.get('Chapa-Signature')
-        if signature:
-            if not secret or not verify_webhook(secret, data, signature):
-                return Response({'error': 'Invalid webhook signature.'}, status=status.HTTP_401_UNAUTHORIZED)
+        signature = (request.headers.get('x-chapa-signature')
+                     or request.headers.get('Chapa-Signature')
+                     or request.headers.get('x-chapa-signature'.upper()))
 
-        event = data.get('event') or data.get('status')
+        # Chapa sends `Chapa-Signature`; some proxies normalise the case. If the
+        # header is simply absent the request is not from Chapa.
+        if not signature:
+            return Response({'error': 'Missing webhook signature.'},
+                            status=status.HTTP_401_UNAUTHORIZED)
+
+        if not gateway.webhook_signature_is_valid(request.body, signature):
+            return Response({'error': 'Invalid webhook signature.'},
+                            status=status.HTTP_401_UNAUTHORIZED)
+
+        event = str(data.get('event') or data.get('status') or '').strip()
         tx_ref = data.get('tx_ref') or data.get('reference')
 
         if not tx_ref:
-            return Response({'status': 'ignored', 'reason': 'Missing tx_ref'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status': 'ignored', 'reason': 'Missing tx_ref'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            payment = Payment.objects.get(tx_ref=tx_ref)
+            payment = Payment.objects.select_related('order').get(tx_ref=tx_ref)
         except Payment.DoesNotExist:
-            return Response({'status': 'ignored', 'reason': 'Transaction reference not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'status': 'ignored', 'reason': 'Transaction reference not found'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         # Idempotency check: if payment already completed, return 200 without duplicate action
-        if payment.status in ['SUCCESS', 'FAILED', 'ABANDONED'] and event in ['payment.success', 'success', 'SUCCESS']:
-            return Response({'status': 'already_processed', 'payment_status': payment.status}, status=status.HTTP_200_OK)
+        if payment.status in ['SUCCESS', 'FAILED', 'ABANDONED'] and event.lower() in (
+                'payment.success', 'success'):
+            return Response({'status': 'already_processed', 'payment_status': payment.status},
+                            status=status.HTTP_200_OK)
 
-        if event in ['payment.success', 'success', 'SUCCESS']:
-            payment.mark_as_success(chapa_ref=data.get('chapa_reference', ''), raw_data=data)
-        elif event in ['payment.failed', 'failed', 'INSUFFICIENT_FUNDS']:
-            payment.mark_as_failed(reason=data.get('message', 'Payment failed'), raw_data=data)
-        elif event in ['payment.cancelled', 'cancelled', 'USER_CANCELLED']:
-            payment.mark_as_cancelled(reason=data.get('message', 'User cancelled'), raw_data=data)
-        elif event in ['payment.incomplete', 'incomplete']:
+        lowered = event.lower()
+        if lowered in ('payment.success', 'success'):
+            payment.mark_as_success(chapa_ref=data.get('chapa_reference', ''),
+                                    raw_data=data, gateway_status='success')
+        elif lowered in ('payment.failed', 'failed', 'insufficient_funds'):
+            payment.mark_as_failed(reason=str(data.get('message') or 'Payment failed')[:255],
+                                   raw_data=data, gateway_status='failed')
+        elif lowered in ('payment.cancelled', 'cancelled', 'user_cancelled'):
+            payment.mark_as_cancelled(reason=str(data.get('message') or 'User cancelled')[:255],
+                                      raw_data=data, gateway_status='cancelled')
+        elif lowered in ('payment.incomplete', 'incomplete'):
             payment.status = 'PENDING'
             payment.failure_reason = 'Payment incomplete'
+            payment.gateway_status = 'incomplete'
             payment.save()
+        else:
+            return Response({'status': 'ignored', 'reason': f'Unknown event {event!r}'},
+                            status=status.HTTP_200_OK)
 
-        return Response({'status': 'processed', 'payment_status': payment.status}, status=status.HTTP_200_OK)
+        return Response({'status': 'processed', 'payment_status': payment.status},
+                        status=status.HTTP_200_OK)
 
 
 class PaymentHistoryView(viewsets.ReadOnlyModelViewSet):
