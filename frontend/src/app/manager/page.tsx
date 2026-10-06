@@ -41,7 +41,11 @@ interface Order {
     payment_method: string;
     failure_reason?: string;
     created_at: string;
+    verified_at?: string | null;
+    gateway_status?: string;
   } | null;
+  /** Backend's authoritative "has the money arrived" answer. */
+  payment_state?: 'paid' | 'settling' | 'failed' | 'unpaid';
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -49,7 +53,13 @@ const PAYMENT_LABELS: Record<string, string> = {
   ebirr: 'E-Birr', card: 'Card / Bank', cash: 'Cash on Delivery',
 };
 
-const isOrderPaid = (order: Order): boolean => order.latest_payment?.status === 'SUCCESS';
+/**
+ * Whether money was actually captured. The backend decides this from whether any
+ * payment for the order succeeded, so a later abandoned retry cannot make a paid
+ * order look unpaid to the manager either.
+ */
+const isOrderPaid = (order: Order): boolean =>
+  order.payment_state ? order.payment_state === 'paid' : order.latest_payment?.status === 'SUCCESS';
 
 interface MenuItem {
   id: number;
@@ -288,7 +298,7 @@ export default function ManagerDashboard() {
       });
       if (res.ok) {
         setIsOpen(!isOpen);
-        setActionMsg(`${t('Cafe is now')} ${!isOpen ? t('OPEN', 'ክፍት') : t('CLOSED', 'ዝግ')}`);
+        setActionMsg(`${t('Cafe is now')} ${!isOpen ? t('OPEN') : t('CLOSED')}`);
         setTimeout(() => setActionMsg(null), 3000);
       }
     } catch (e) {
@@ -508,7 +518,7 @@ export default function ManagerDashboard() {
                   <MoneyCell value={analytics.daily_revenue} />
                 </div>
                 <p className="text-[#d5c2c3] text-[14.5px] mt-2">
-                  {t('from')} {analytics.daily_orders_count} {t('paid orders', 'የተከፈሉ ትዕዛዞች')} {t('today', 'ዛሬ')}
+                  {t('from')} {analytics.daily_orders_count} {t('paid orders')} {t('today')}
                 </p>
               </div>
 
@@ -519,7 +529,7 @@ export default function ManagerDashboard() {
                   <MoneyCell value={analytics.monthly_revenue} />
                 </div>
                 <p className="text-[#d5c2c3] text-[14.5px] mt-2">
-                  {t('from')} {analytics.monthly_orders_count} {t('paid orders', 'የተከፈሉ ትዕዛዞች')} {t('this month', 'ወህ ወር')}
+                  {t('from')} {analytics.monthly_orders_count} {t('paid orders')} {t('this month')}
                 </p>
               </div>
             </div>
@@ -556,7 +566,7 @@ export default function ManagerDashboard() {
                         <div key={day.day} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
                           <span className="text-[11px] text-[#d5c2c3]">{day.revenue > 0 ? day.revenue.toFixed(0) : ''}</span>
                           <div
-                            title={`${day.day}: ${birr} ${day.revenue.toFixed(2)} · ${day.orders} ${t('orders', 'ትዕዛዞች')}`}
+                            title={`${day.day}: ${birr} ${day.revenue.toFixed(2)} · ${day.orders} ${t('orders')}`}
                             className="w-full rounded-t-[8px] bg-gradient-to-t from-[#683941] to-[#f7b5be] transition-all duration-700"
                             style={{ height: `${Math.max((day.revenue / max) * 100, day.revenue > 0 ? 6 : 2)}%` }}
                           />
@@ -591,7 +601,7 @@ export default function ManagerDashboard() {
                               style={{ width: `${Math.max((row.revenue / total) * 100, 3)}%` }}
                             />
                           </div>
-                          <p className="text-[11px] text-[#9e8d8e] mt-1">{row.payments} {t('payments', 'ክፍያዎች')}</p>
+                          <p className="text-[11px] text-[#9e8d8e] mt-1">{row.payments} {t('payments')}</p>
                         </div>
                       );
                     })}

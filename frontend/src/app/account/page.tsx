@@ -46,7 +46,16 @@ interface Order {
     failure_reason?: string;
     checkout_url?: string;
     created_at: string;
+    verified_at?: string | null;
+    gateway_status?: string;
   } | null;
+  /**
+   * Whether the money is in, decided by the backend from whether *any* payment
+   * for this order succeeded. Deriving it here from the newest attempt was wrong
+   * in both directions: a paid order whose latest attempt was abandoned read as
+   * unpaid, and the receipt could be withheld from a customer who had paid.
+   */
+  payment_state?: 'paid' | 'settling' | 'failed' | 'unpaid';
 }
 
 const ACTIVE_STATUSES = ['PENDING_PAYMENT', 'PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'];
@@ -56,18 +65,36 @@ const VERIFY_INTERVAL_MS = 5000;
 const MAX_VERIFY_ATTEMPTS = 24;
 const PAST_STATUSES = ['COMPLETED', 'CANCELLED', 'REJECTED'];
 
-const PAID_STATUSES = ['SUCCESS'];
+/**
+ * A receipt only exists once the money has actually been captured.
+ *
+ * Prefers the backend's `payment_state`, and falls back to the latest attempt for
+ * orders fetched before the field existed.
+ */
+const isOrderPaid = (order: Order): boolean => {
+  if (order.payment_state) return order.payment_state === 'paid';
+  return order.latest_payment?.status === 'SUCCESS';
+};
 
-/** A receipt only exists once the money has actually been captured. */
-const isOrderPaid = (order: Order): boolean =>
-  !!order.latest_payment && PAID_STATUSES.includes(order.latest_payment.status);
-
-/** True while a payment attempt is still fresh (gateway may be settling). */
+/**
+ * True while a payment is genuinely in flight: the customer has started paying
+ * and the gateway has not answered yet.
+ *
+ * The window is generous on purpose. A payment that was never completed - the
+ * customer closed the Chapa tab - must be shown as unpaid rather than
+ * "settling" forever, but a payment being confirmed a minute later is normal.
+ */
 const isPaymentSettling = (order: Order): boolean => {
+  if (order.payment_state) return order.payment_state === 'settling';
   if (!order.latest_payment || order.latest_payment.status !== 'PENDING') return false;
   const created = new Date(order.latest_payment.created_at).getTime();
   return Date.now() - created < 2 * 60 * 1000;
 };
+
+/** An attempt that was rejected or abandoned: unpaid, and worth retrying. */
+const isPaymentFailed = (order: Order): boolean =>
+  order.payment_state === 'failed' ||
+  ['FAILED', 'ABANDONED'].includes(order.latest_payment?.status ?? '');
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING_PAYMENT: 'Awaiting Payment',
@@ -179,11 +206,46 @@ export default function AccountPage() {
     }
   }, []);
 
+  /**
+   * Ask the gateway about every unsettled payment on this account.
+   *
+   * Re-checking all of them, not just the first, matters: a customer who paid
+   * for one order and abandoned an attempt on another would otherwise keep seeing
+   * the abandoned one as the only thing being confirmed.
+   */
+  const reconcileUnsettled = useCallback(async (): Promise<number> => {
+    const unsettled = orders
+      .filter(o => o.status === 'PENDING_PAYMENT' && o.latest_payment?.status === 'PENDING')
+      .filter(o => o.latest_payment && !settledPaymentsRef.current.has(o.latest_payment.tx_ref));
+    if (!unsettled.length) return 0;
+
+    let changed = 0;
+    for (const order of unsettled) {
+      const txRef = order.latest_payment!.tx_ref;
+      const status = await verifyPaymentOnce(txRef);
+      // A null status means the call itself failed and 'PENDING' means the gateway
+      // has not settled yet. Neither is an answer, so this transaction stays
+      // eligible for the next tick.
+      if (!status || status === 'PENDING') continue;
+      settledPaymentsRef.current.add(txRef);
+      changed += 1;
+      announcePaymentResult({ ...order.latest_payment, status, order_number: order.order_number });
+    }
+    return changed;
+  }, [orders, verifyPaymentOnce, announcePaymentResult]);
+
   const verifyPendingPayment = useCallback(async () => {
     const params = new URLSearchParams(window.location.search);
     // Chapa returns the reference as tx_ref or trx_ref depending on the flow
     const txRef = params.get('tx_ref') || params.get('trx_ref');
-    if (!txRef || verifiedPaymentRef.current === txRef) return;
+
+    // No reference in the URL: the customer may still have an unsettled payment
+    // from an earlier visit, so reconcile those too rather than doing nothing.
+    if (!txRef) {
+      await reconcileUnsettled();
+      return;
+    }
+    if (verifiedPaymentRef.current === txRef) return;
     verifiedPaymentRef.current = txRef;
 
     setIsConfirmingPayment(true);
@@ -201,6 +263,7 @@ export default function AccountPage() {
           fetchOrders(true);
 
           if (payment?.status && payment.status !== 'PENDING') {
+            settledPaymentsRef.current.add(txRef);
             announcePaymentResult(payment);
             setIsConfirmingPayment(false);
             // Drop the query string so a refresh doesn't re-check a settled payment
@@ -222,30 +285,18 @@ export default function AccountPage() {
     };
 
     poll();
-  }, [fetchOrders, announcePaymentResult]);
+  }, [fetchOrders, announcePaymentResult, reconcileUnsettled]);
 
   // Safety net: any order whose payment is still settling gets re-checked too, so a
   // customer who closed the Chapa tab still sees the confirmation when they come back.
+  // This also runs on mount, so a paid order is recognised even without the gateway
+  // ever reaching the webhook.
   useEffect(() => {
     if (!user) return;
-    const checkUnsettled = async () => {
-      const settling = orders.find(
-        o => o.status === 'PENDING_PAYMENT' && o.latest_payment?.status === 'PENDING'
-      );
-      if (!settling?.latest_payment) return;
-      const txRef = settling.latest_payment.tx_ref;
-      if (settledPaymentsRef.current.has(txRef)) return;
-
-      const status = await verifyPaymentOnce(txRef);
-      if (status && status !== 'PENDING') {
-        settledPaymentsRef.current.add(txRef);
-        announcePaymentResult({ ...settling.latest_payment, status, order_number: settling.order_number });
-      }
-    };
-    const interval = setInterval(checkUnsettled, 8000);
-    checkUnsettled();
+    const interval = setInterval(reconcileUnsettled, 8000);
+    reconcileUnsettled();
     return () => clearInterval(interval);
-  }, [user, orders, verifyPaymentOnce, announcePaymentResult]);
+  }, [user, reconcileUnsettled]);
 
   const fetchAddresses = useCallback(async () => {
     try {
@@ -469,7 +520,23 @@ export default function AccountPage() {
                     <div className="space-y-4">
                       {pendingOrders.map(order => (
                         <div key={order.id} className="bg-[#1c1b1b] border border-[#683941] rounded-[18px] p-5">
-                          {order.status === 'PENDING_PAYMENT' ? (
+                          {/* A payment being confirmed right now is not the same as a payment that was
+                              never made. Telling someone "NOT PAID YET" while the
+                              gateway is still answering them is what made a real
+                              paid order look unpaid. */}
+                          {isPaymentSettling(order) ? (
+                            <div className="mt-4 rounded-xl border border-blue-500/40 bg-blue-950/40 p-3 text-xs space-y-2">
+                              <p className="flex items-start gap-2 text-blue-200 font-semibold">
+                                <i className="ph ph-spinner-gap animate-spin text-lg mt-0.5"></i>
+                                <span>
+                                  {t('Confirming your payment')}
+                                </span>
+                              </p>
+                              <p className="text-[#d5c2c3]">
+                                {t('We are checking with the payment provider. This page updates by itself — you do not need to pay again.')}
+                              </p>
+                            </div>
+                          ) : order.status === 'PENDING_PAYMENT' ? (
                             <div className="mt-4 rounded-xl border border-red-500/40 bg-red-950/50 p-3 text-xs space-y-2">
                               <p className="flex items-start gap-2 text-red-200 font-semibold">
                                 <i className="ph ph-warning-octagon text-lg mt-0.5"></i>
@@ -477,15 +544,9 @@ export default function AccountPage() {
                                   {t('NOT PAID YET — you have not paid for this order, so the kitchen has not received it and no receipt can be issued.')}
                                 </span>
                               </p>
-                              {order.latest_payment?.status === 'FAILED' && (
+                              {isPaymentFailed(order) && order.latest_payment?.failure_reason && (
                                 <p className="text-red-300/90">
-                                  Last attempt failed: {order.latest_payment.failure_reason || t('payment declined')}.
-                                </p>
-                              )}
-                              {isPaymentSettling(order) && (
-                                <p className="flex items-center gap-1.5 text-blue-200">
-                                  <i className="ph ph-spinner-gap animate-spin"></i>
-                                  {t('Waiting for Chapa to confirm the payment you just started…')}
+                                  {t('Last attempt:')} {order.latest_payment.failure_reason}
                                 </p>
                               )}
                               <p className="text-[#d5c2c3]">

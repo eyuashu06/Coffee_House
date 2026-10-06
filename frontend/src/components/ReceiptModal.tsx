@@ -20,6 +20,12 @@ interface Order {
   id: number;
   order_number: string;
   latest_payment?: { status: string } | null;
+  /**
+   * The backend's answer on whether money was captured, derived from whether any
+   * payment for this order succeeded. Reading the newest attempt instead can
+   * withhold the receipt from a customer who already paid.
+   */
+  payment_state?: 'paid' | 'settling' | 'failed' | 'unpaid';
   order_type: string;
   table_number?: string;
   contact_name: string;
@@ -47,7 +53,9 @@ export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
 
   const ref = order.order_number || `ORD-${order.id}`;
   // A receipt is only ever issued for money that was actually captured.
-  const paid = order.latest_payment?.status === 'SUCCESS';
+  const paid = order.payment_state
+    ? order.payment_state === 'paid'
+    : order.latest_payment?.status === 'SUCCESS';
 
   const handleDownload = () => {
     if (!paid) return;

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { apiFetch } from '../lib/api';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -40,10 +41,12 @@ export default function PaymentModal({
     setError(null);
 
     try {
-      const res = await fetch('/api/v1/payments/initialize/', {
+      // apiFetch, not raw fetch: an expired access cookie is refreshed and the
+      // request replayed. Without it a long-idle customer gets
+      // "Authentication credentials were not provided" instead of a payment page.
+      const res = await apiFetch('/api/v1/payments/initialize/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           order_id: orderId,
           payment_method: paymentMethod,
@@ -51,7 +54,7 @@ export default function PaymentModal({
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data.error || data.detail || t('Payment initialization failed.'));
       }
