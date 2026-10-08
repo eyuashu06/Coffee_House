@@ -152,7 +152,7 @@ export default function NotificationsDropdown() {
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
                   className={`w-full text-left px-4 py-3 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors flex items-start gap-3 ${
-                    !notification.is_read ? 'bg-tertiary/8' : ''
+                    !notification.is_read ? 'bg-tertiary/10' : ''
                   }`}
                 >
                   {/* Icon */}

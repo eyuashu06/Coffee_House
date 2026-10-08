@@ -161,7 +161,7 @@ export default function CartDrawer({
         />
 
         {/* Slide-over Drawer Panel */}
-        <div className="relative w-full max-w-md bg-[#131313]-container h-full shadow-2xl flex flex-col justify-between z-10 border-l border-[#514345]">
+        <div className="relative w-full max-w-md bg-surface-container h-full shadow-2xl flex flex-col justify-between z-10 border-l border-[#514345]">
           {/* Header */}
           <div className="p-5 bg-[#1c1b1b] border-b border-[#514345] flex items-center justify-between">
             <div className="flex items-center gap-2 text-[#f7b5be]">
@@ -232,7 +232,7 @@ export default function CartDrawer({
               </div>
             ) : (
               cartItems.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-[#131313]-container-high/60 border border-[#514345]/50">
+                <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-surface-container-high/60 border border-[#514345]/50">
                   <img
                     src={item.coffee.image_url}
                     alt={tItem(item.coffee.name)}
@@ -262,17 +262,17 @@ export default function CartDrawer({
                   </div>
 
                   {/* Quantity Controller */}
-                  <div className="flex items-center gap-2 bg-[#131313]-container px-2 py-1 rounded-lg border border-[#514345]/50">
+                  <div className="flex items-center gap-2 bg-surface-container px-2 py-1 rounded-lg border border-[#514345]/50">
                     <button 
                       onClick={() => onUpdateQty(idx, -1)}
-                      className="w-5 h-5 rounded bg-[#131313]-bright flex items-center justify-center text-xs font-bold hover:text-[#f7b5be] text-[#e5e2e1]"
+                      className="w-5 h-5 rounded bg-surface-bright flex items-center justify-center text-xs font-bold hover:text-[#f7b5be] text-[#e5e2e1]"
                     >
                       -
                     </button>
                     <span className="text-xs font-bold text-white min-w-[14px] text-center">{item.quantity}</span>
                     <button 
                       onClick={() => onUpdateQty(idx, 1)}
-                      className="w-5 h-5 rounded bg-[#131313]-bright flex items-center justify-center text-xs font-bold hover:text-[#f7b5be] text-[#e5e2e1]"
+                      className="w-5 h-5 rounded bg-surface-bright flex items-center justify-center text-xs font-bold hover:text-[#f7b5be] text-[#e5e2e1]"
                     >
                       +
                     </button>

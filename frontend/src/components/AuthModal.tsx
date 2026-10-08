@@ -161,7 +161,7 @@ export default function AuthModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in overflow-y-auto">
       {/* Dynamic responsive card size for all devices */}
-      <div className="relative w-[95%] sm:w-full max-w-md my-auto bg-[#131313] border border-[#514345] rounded-2xl shadow-2xl p-5 sm:p-7 text-[#e5e2e1] max-h-[90vh] overflow-y-auto">
+      <div className="relative w-[95%] sm:w-full max-w-md my-auto bg-surface border border-[#514345] rounded-2xl shadow-2xl p-5 sm:p-7 text-[#e5e2e1] max-h-[90vh] overflow-y-auto">
         {/* Ambient background glow */}
         <div className="absolute -top-20 -right-20 w-36 h-36 bg-[#2b1b1e] rounded-full blur-3xl pointer-events-none" />
 

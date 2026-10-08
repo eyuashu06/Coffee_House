@@ -413,7 +413,7 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#131313] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[#f7b5be] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -421,7 +421,7 @@ export default function AccountPage() {
 
   if (!user && sessionExpired) {
     return (
-      <div className="min-h-screen bg-[#131313] text-[#e5e2e1] flex flex-col items-center justify-center gap-4 px-6 text-center font-body">
+      <div className="min-h-screen bg-surface text-[#e5e2e1] flex flex-col items-center justify-center gap-4 px-6 text-center font-body">
         <span className="material-symbols-outlined text-5xl text-amber-400">lock_clock</span>
         <h2 className="font-display text-[26px] font-bold">{t('Session expired')}</h2>
         <p className="text-[#d5c2c3] text-[15px] max-w-md">
@@ -436,7 +436,7 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#131313] text-[#e5e2e1] flex flex-col items-center justify-center font-body">
+      <div className="min-h-screen bg-surface text-[#e5e2e1] flex flex-col items-center justify-center font-body">
         <span className="material-symbols-outlined text-5xl text-[#f7b5be] mb-4">lock</span>
         <h2 className="font-display text-[26px] font-bold">{t('Sign In Required')}</h2>
         <p className="text-[#d5c2c3] mt-2 mb-6 text-[15px]">{t('Please sign in to view your orders and manage your profile.')}</p>
@@ -451,9 +451,9 @@ export default function AccountPage() {
   const pastOrders = orders.filter(o => PAST_STATUSES.includes(o.status));
 
   return (
-    <div className="bg-[#131313] text-[#e5e2e1] font-body min-h-screen pb-24">
+    <div className="bg-surface text-[#e5e2e1] font-body min-h-screen pb-24">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-[#131313]/90 backdrop-blur-sm border-b border-[#514345]/60">
+      <header className="sticky top-0 z-50 bg-surface/90 backdrop-blur-sm border-b border-[#514345]/60">
         <div className="flex items-center justify-between px-6 h-14">
           <Link href="/?welcome=1" className="flex items-center gap-2.5 group">
             <span className="w-8 h-8 rounded-full bg-[#3b141c] border border-[#683941] flex items-center justify-center text-[#f7b5be] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
@@ -672,20 +672,20 @@ export default function AccountPage() {
               <form onSubmit={handleAddAddress} className="space-y-4">
                 <div>
                   <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('Street Address')}</label>
-                  <input type="text" required value={streetAddress} onChange={e => setStreetAddress(e.target.value)} className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole Road, House 123" />
+                  <input type="text" required value={streetAddress} onChange={e => setStreetAddress(e.target.value)} className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole Road, House 123" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('City')}</label>
-                    <input type="text" value="Addis Ababa" disabled className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#9e8d8e] cursor-not-allowed opacity-70" />
+                    <input type="text" value="Addis Ababa" disabled className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#9e8d8e] cursor-not-allowed opacity-70" />
                   </div>
                   <div>
                     <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('Subcity / Zone')}</label>
-                    <input type="text" value={subcityOrZone} onChange={e => setSubcityOrZone(e.target.value)} className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole, Arada, etc." />
+                    <input type="text" value={subcityOrZone} onChange={e => setSubcityOrZone(e.target.value)} className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole, Arada, etc." />
                   </div>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer mt-2 w-max">
-                  <input type="checkbox" checked={isDefaultAddr} onChange={e => setIsDefaultAddr(e.target.checked)} className="rounded border-[#514345] bg-[#131313] text-[#f7b5be] focus:ring-[#f7b5be]" />
+                  <input type="checkbox" checked={isDefaultAddr} onChange={e => setIsDefaultAddr(e.target.checked)} className="rounded border-[#514345] bg-surface text-[#f7b5be] focus:ring-[#f7b5be]" />
                   <span className="text-[14.5px] text-[#d5c2c3]">{t('Set as default delivery address')}</span>
                 </label>
                 <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">{t('Save Address')}</button>
@@ -727,7 +727,7 @@ export default function AccountPage() {
               
               <div className="mb-6">
                 <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('Username / Email')}</label>
-                <div className="h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 flex items-center text-[#9e8d8e] opacity-70">
+                <div className="h-11 bg-surface border border-[#514345] rounded-[12px] px-4 flex items-center text-[#9e8d8e] opacity-70">
                   {user.email || user.username}
                 </div>
                 <p className="text-[#514345] text-xs mt-1">{t('Username/email cannot be changed here.')}</p>
@@ -737,16 +737,16 @@ export default function AccountPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('First Name')}</label>
-                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" />
+                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" />
                   </div>
                   <div>
                     <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('Last Name')}</label>
-                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" />
+                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('Phone Number')}</label>
-                  <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-11 bg-[#131313] border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="+251 911 234567" />
+                  <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="+251 911 234567" />
                 </div>
                 <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">{t('Update Profile')}</button>
               </form>

@@ -39,12 +39,12 @@ export default function Header({ cartCount, onOpenCart, onOpenSommelier }: Heade
           {/* Action Controls */}
           <div className="flex items-center gap-2">
             {/* Language Switcher */}
-            <LanguageToggle className="px-2.5 py-1.5 rounded-full bg-[#131313]-container-high/80 hover:bg-[#2b1b1e] text-[#f7b5be] border border-[#683941] text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm" />
+            <LanguageToggle className="px-2.5 py-1.5 rounded-full bg-surface-container-high/80 hover:bg-[#2b1b1e] text-[#f7b5be] border border-[#683941] text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm" />
 
             {/* AI Sommelier Button */}
             <button
               onClick={onOpenSommelier}
-              className="px-3 py-1.5 rounded-full bg-[#131313]-container-high/80 hover:bg-[#131313]-bright text-[#f7b5be] border border-[#683941] text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+              className="px-3 py-1.5 rounded-full bg-surface-container-high/80 hover:bg-surface-bright text-[#f7b5be] border border-[#683941] text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
             >
               <span className="material-symbols-outlined text-base">auto_awesome</span>
               <span className="hidden sm:inline">{t('Ask AI Sommelier')}</span>
@@ -54,7 +54,7 @@ export default function Header({ cartCount, onOpenCart, onOpenSommelier }: Heade
             <button
               onClick={onOpenCart}
               aria-label="Shopping Cart"
-              className="relative w-10 h-10 flex items-center justify-center rounded-full text-[#9e8d8e] hover:text-[#f7b5be] transition-colors bg-[#131313]-container/60 border border-white/5"
+              className="relative w-10 h-10 flex items-center justify-center rounded-full text-[#9e8d8e] hover:text-[#f7b5be] transition-colors bg-surface-container/60 border border-white/5"
             >
               <span className="material-symbols-outlined text-[22px]">shopping_bag</span>
               {cartCount > 0 && (

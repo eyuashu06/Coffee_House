@@ -376,7 +376,7 @@ export default function ManagerDashboard() {
 
   if (loading || (isLoading && user)) {
     return (
-      <div className="min-h-screen bg-[#131313] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[#f7b5be] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -384,7 +384,7 @@ export default function ManagerDashboard() {
 
   if (!user && sessionExpired) {
     return (
-      <div className="min-h-screen bg-[#131313] text-[#e5e2e1] font-body flex flex-col items-center justify-center gap-4 px-6 text-center">
+      <div className="min-h-screen bg-surface text-[#e5e2e1] font-body flex flex-col items-center justify-center gap-4 px-6 text-center">
         <span className="material-symbols-outlined text-5xl text-amber-400">lock_clock</span>
         <h2 className="font-display text-[26px] font-bold">{t('Session expired')}</h2>
         <p className="text-[#d5c2c3] text-[15px] max-w-md">
@@ -402,7 +402,7 @@ export default function ManagerDashboard() {
 
   if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) {
     return (
-      <div className="min-h-screen bg-[#131313] text-[#e5e2e1] flex flex-col items-center justify-center font-body">
+      <div className="min-h-screen bg-surface text-[#e5e2e1] flex flex-col items-center justify-center font-body">
         <span className="material-symbols-outlined text-5xl text-red-500 mb-4">gavel</span>
         <h2 className="font-display text-[26px] font-bold">{t('Access Denied')}</h2>
         <p className="text-[#d5c2c3] mt-2 mb-6 text-[15px]">{t('You do not have permission to view this page.')}</p>
@@ -417,7 +417,7 @@ export default function ManagerDashboard() {
   const liveOrderCount = orders.filter(o => !CLOSED_STATUSES.includes(o.status)).length;
 
   return (
-    <div className="bg-[#131313] text-[#e5e2e1] font-body min-h-screen flex flex-col md:flex-row">
+    <div className="bg-surface text-[#e5e2e1] font-body min-h-screen flex flex-col md:flex-row">
       {/* SIDEBAR */}
       <aside className="w-full md:w-64 bg-[#1c1b1b] border-r border-[#514345] md:min-h-screen flex flex-col flex-shrink-0 relative z-20">
         <div className="p-6 border-b border-[#514345]">
@@ -595,7 +595,7 @@ export default function ManagerDashboard() {
                             <span className="text-[#d5c2c3]">{t(PAYMENT_METHOD_LABELS[row.method] || row.method)}</span>
                             <span className="text-[#f7b5be] font-bold">{row.revenue.toFixed(2)} {birr}</span>
                           </div>
-                          <div className="h-2 rounded-full bg-[#131313] overflow-hidden">
+                          <div className="h-2 rounded-full bg-surface overflow-hidden">
                             <div
                               className="h-full rounded-full bg-[#f7b5be] transition-all duration-700"
                               style={{ width: `${Math.max((row.revenue / total) * 100, 3)}%` }}
