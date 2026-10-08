@@ -15,6 +15,15 @@ interface AuthModalProps {
   postLoginRedirect?: string | null;
 }
 
+/**
+ * Seeded demo logins, shown so a reviewer can try each role.
+ *
+ * Development only. These were rendered on the sign-in page unconditionally, which
+ * published the administrator and manager passwords to anyone who loaded the site.
+ * Set NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS=true to see them locally; it stays off in a build.
+ */
+const SHOW_DEMO_ACCOUNTS = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === 'true';
+
 const DEMO_ACCOUNTS = [
   { label: 'Administrator', role: 'Admin', email: 'admin@gmail.com', password: 'AdminPassword123!' },
   { label: 'Manager / Staff', role: 'Manager', email: 'manager@gmail.com', password: 'ManagerPassword123!' },
@@ -161,7 +170,7 @@ export default function AuthModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in overflow-y-auto">
       {/* Dynamic responsive card size for all devices */}
-      <div className="relative w-[95%] sm:w-full max-w-md my-auto bg-[#131313] border border-[#514345] rounded-2xl shadow-2xl p-5 sm:p-7 text-[#e5e2e1] max-h-[90vh] overflow-y-auto">
+      <div className="relative w-[95%] sm:w-full max-w-md my-auto bg-surface border border-[#514345] rounded-2xl shadow-2xl p-5 sm:p-7 text-[#e5e2e1] max-h-[90vh] overflow-y-auto">
         {/* Ambient background glow */}
         <div className="absolute -top-20 -right-20 w-36 h-36 bg-[#2b1b1e] rounded-full blur-3xl pointer-events-none" />
 
@@ -251,8 +260,9 @@ export default function AuthModal({
                 </button>
               </div>
 
-              {/* Demo accounts - tap to fill, then Sign in */}
-              <div className="rounded-xl border border-[#514345] bg-[#131313]/70 p-3">
+              {/* Demo accounts - tap to fill, then Sign in. Development builds only. */}
+              {SHOW_DEMO_ACCOUNTS && (
+              <div className="rounded-xl border border-[#514345] bg-surface/70 p-3">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#9e8d8e] mb-2">
                   {t('Demo accounts — tap to fill')}
                 </p>
@@ -277,6 +287,7 @@ export default function AuthModal({
                   ))}
                 </div>
               </div>
+              )}
             </>
           )}
 

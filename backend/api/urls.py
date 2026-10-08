@@ -10,7 +10,10 @@ class OptionalSlashRouter(DefaultRouter):
 router = OptionalSlashRouter()
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'coffees', CoffeeItemViewSet, basename='coffee')
-router.register(r'orders', OrderViewSet, basename='order')
+# The live order API is apps.orders, registered at /api/v1/orders/. This legacy viewset
+# used to claim the same prefix, which meant it was unreachable and reverse('order-list')
+# silently pointed at the wrong model. It stays reachable, under its own name.
+router.register(r'legacy-orders', OrderViewSet, basename='legacy-order')
 router.register(r'reservations', TableReservationViewSet, basename='reservation')
 
 urlpatterns = [

@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
 interface OrderTrackerProps {
   status: string;
+  /** Minutes the kitchen promised, used for the "ready around" countdown. */
+  estimatedPrepMinutes?: number | null;
+  /** When the order was placed (null while still awaiting payment). */
+  placedAt?: string | null;
 }
 
 const STATUS_STAGES = [
@@ -15,9 +19,61 @@ const STATUS_STAGES = [
   { key: 'COMPLETED', label: 'Completed', icon: 'done_all' },
 ];
 
-export default function OrderTracker({ status }: OrderTrackerProps) {
-  const { t } = useLanguage();
-  // If order is cancelled, rejected, or failed, we just show a failed state
+/** Statuses where a countdown to "ready" is meaningful. */
+const IN_KITCHEN = ['PLACED', 'ACCEPTED', 'PREPARING'];
+
+/**
+ * Statuses that mean the drink is done being made. A pickup order stops at READY,
+ * a delivery order has to reach OUT_FOR_DELIVERY first.
+ */
+function isReadyPhase(status: string, orderType?: string): boolean {
+  if (orderType === 'PICKUP' || orderType === 'DINE_IN') {
+    return ['READY', 'COMPLETED'].includes(status);
+  }
+  return ['READY', 'OUT_FOR_DELIVERY', 'COMPLETED'].includes(status);
+}
+
+/** "in about 12 minutes", from the kitchen's own estimate and when work started. */
+function ReadyEstimate({
+  placedAt,
+  prepMinutes,
+  locale,
+  t,
+}: {
+  placedAt: string;
+  prepMinutes: number;
+  locale: string;
+  t: (text: string) => string;
+}) {
+  const readyAt = new Date(new Date(placedAt).getTime() + prepMinutes * 60_000);
+  const minutesAway = Math.round((readyAt.getTime() - Date.now()) / 60_000);
+  const time = readyAt.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+
+  return (
+    <p className="mt-3 text-[13px] text-on-surface-variant">
+      {minutesAway > 1
+        ? `${t('Ready in about')} ${minutesAway} ${t('min')}`
+        : `${t('Ready around')} ${time}`}
+    </p>
+  );
+}
+
+export default function OrderTracker({
+  status,
+  estimatedPrepMinutes,
+  placedAt,
+  orderType,
+}: OrderTrackerProps & { orderType?: string }) {
+  const { t, language } = useLanguage();
+  const locale = language === 'am' ? 'am-ET' : 'en-ET';
+
+  // Re-render once a minute so the countdown does not freeze at its first value.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
   if (['CANCELLED', 'REJECTED', 'FAILED'].includes(status)) {
     return (
       <div className="flex items-center gap-2 p-3 mt-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold">
@@ -27,8 +83,7 @@ export default function OrderTracker({ status }: OrderTrackerProps) {
     );
   }
 
-  // Find the index of the current status
-  const currentIndex = STATUS_STAGES.findIndex(s => s.key === status);
+  const currentIndex = STATUS_STAGES.findIndex((s) => s.key === status);
 
   return (
     <div className="mt-4 pt-4 border-t border-white/5">
@@ -37,7 +92,7 @@ export default function OrderTracker({ status }: OrderTrackerProps) {
         {/* Connecting Line background */}
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-surface-container rounded-full z-0"></div>
         {/* Connecting Line active */}
-        <div 
+        <div
           className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-tertiary rounded-full z-0 transition-all duration-500"
           style={{ width: `${(currentIndex / (STATUS_STAGES.length - 1)) * 100}%` }}
         ></div>
@@ -49,11 +104,11 @@ export default function OrderTracker({ status }: OrderTrackerProps) {
 
           return (
             <div key={stage.key} className="relative z-10 flex flex-col items-center gap-2 w-12">
-              <div 
+              <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  isCompleted 
-                    ? 'bg-tertiary text-on-tertiary border-2 border-tertiary' 
-                    : isCurrent 
+                  isCompleted
+                    ? 'bg-tertiary text-on-tertiary border-2 border-tertiary'
+                    : isCurrent
                       ? 'bg-primary-container text-tertiary border-2 border-tertiary shadow-[0_0_10px_rgba(251,187,80,0.5)]'
                       : 'bg-surface-container text-on-surface-variant border-2 border-surface-container-high'
                 }`}
@@ -69,6 +124,21 @@ export default function OrderTracker({ status }: OrderTrackerProps) {
           );
         })}
       </div>
+
+      {/* The prep estimate the kitchen committed to, so the wait has a number on it. */}
+      {estimatedPrepMinutes && placedAt && IN_KITCHEN.includes(status) && (
+        <ReadyEstimate
+          placedAt={placedAt}
+          prepMinutes={estimatedPrepMinutes}
+          locale={locale}
+          t={t}
+        />
+      )}
+      {isReadyPhase(status, orderType) && orderType !== 'DELIVERY' && (
+        <p className="mt-3 text-[13px] font-semibold text-tertiary">
+          {t('Ready now — ask at the counter with your order number.')}
+        </p>
+      )}
     </div>
   );
 }

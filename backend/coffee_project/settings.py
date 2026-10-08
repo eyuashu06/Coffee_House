@@ -5,9 +5,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-artisanal-coffee-reserve-secret-key')
 
-DEBUG = True
+# Both were hardcoded, which silently ignored DEBUG/ALLOWED_HOSTS from the environment
+# and docker-compose: a deployment asking for DEBUG=0 still ran in debug mode.
+DEBUG = os.environ.get('DEBUG', 'false').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,backend').split(',')
+    if host.strip()
+]
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -23,7 +29,6 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    'django_filters',
     'drf_spectacular',
     # Local Apps
     'apps.accounts',
@@ -52,6 +57,7 @@ ASSISTANT_LLM_TIMEOUT = int(os.environ.get('ASSISTANT_LLM_TIMEOUT', '20'))
 ASSISTANT_RESERVATION_TABLES = int(os.environ.get('ASSISTANT_RESERVATION_TABLES', '4'))
 ASSISTANT_RESERVATION_MAX_GUESTS = int(os.environ.get('ASSISTANT_RESERVATION_MAX_GUESTS', '10'))
 ASSISTANT_RESERVATION_SLOT_MINUTES = int(os.environ.get('ASSISTANT_RESERVATION_SLOT_MINUTES', '90'))
+ASSISTANT_RESERVATION_TABLES = int(os.environ.get('ASSISTANT_RESERVATION_TABLES', '4'))
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

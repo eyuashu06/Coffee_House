@@ -90,7 +90,7 @@ ${t('Thank you for visiting Artisanal Cafe!')}
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-[#131313]-container border border-[#514345] rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-[#e5e2e1] relative">
+      <div className="bg-surface-container border border-[#514345] rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-[#e5e2e1] relative">
         {/* Header Bar */}
         <div className="flex items-center justify-between border-b border-dashed border-[#514345] pb-3">
           <div className="flex items-center gap-2">
@@ -120,7 +120,7 @@ ${t('Thank you for visiting Artisanal Cafe!')}
             </p>
           </div>
         ) : (
-        <div className="bg-[#131313]-container-lowest border border-[#514345] rounded-xl p-4 font-mono text-xs text-[#9e8d8e] space-y-3 shadow-inner">
+        <div className="bg-surface-container-lowest border border-[#514345] rounded-xl p-4 font-mono text-xs text-[#9e8d8e] space-y-3 shadow-inner">
           <div className="text-center border-b border-dashed border-[#514345] pb-2">
             <p className="font-bold text-sm text-[#f7b5be]">{t('Artisanal Reserve Cafe')}</p>
             <p className="text-[10px] text-outline">{t('Bole Medhanialem, Addis Ababa')}</p>

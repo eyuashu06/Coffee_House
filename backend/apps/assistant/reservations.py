@@ -17,23 +17,62 @@ logger = logging.getLogger(__name__)
 
 ACTIVE_STATUSES = ['PENDING', 'CONFIRMED']
 
-MAX_GUESTS = getattr(settings, 'ASSISTANT_RESERVATION_MAX_GUESTS', 10)
-TOTAL_TABLES = getattr(settings, 'ASSISTANT_RESERVATION_TABLES', 4)
-SLOT_MINUTES = getattr(settings, 'ASSISTANT_RESERVATION_SLOT_MINUTES', 90)
+#: Read through functions rather than module constants: binding them at import time
+#: froze the values, so a settings override (tests, per-venue config) was ignored.
+DEFAULT_MAX_GUESTS = 10
+DEFAULT_TOTAL_TABLES = 4
+DEFAULT_SLOT_MINUTES = 90
+
+
+def max_guests():
+    return int(getattr(settings, 'ASSISTANT_RESERVATION_MAX_GUESTS', DEFAULT_MAX_GUESTS))
+
+
+def total_tables():
+    return int(getattr(settings, 'ASSISTANT_RESERVATION_TABLES', DEFAULT_TOTAL_TABLES))
+
+
+def slot_minutes():
+    return int(getattr(settings, 'ASSISTANT_RESERVATION_SLOT_MINUTES', DEFAULT_SLOT_MINUTES))
 
 
 def parse_date_time(date_str, time_str):
     """Combine the collected date/time into a timezone-aware datetime, or None."""
     if not date_str or not time_str:
         return None
-    try:
-        naive = datetime.fromisoformat(f"{date_str}T{time_str}:00")
-    except ValueError:
+    return parse_iso_datetime(f"{date_str}T{time_str}:00")
+
+
+def parse_iso_datetime(value):
+    """
+    Read an ISO-8601 datetime string into an aware datetime, or None.
+
+    Handles what browsers and `datetime-local` inputs actually send: a bare
+    `2026-10-11T18:30`, a `Z`/offset suffix, and fractional seconds. Values that
+    already carry an offset are converted rather than re-labelled - calling
+    make_aware() on an aware datetime raised and the booking was rejected as malformed.
+    """
+    if not value:
         return None
+    if isinstance(value, datetime):
+        return value if timezone.is_aware(value) else timezone.make_aware(value)
+
+    raw = str(value).strip()
+    if raw.endswith(('Z', 'z')):
+        raw = raw[:-1] + '+00:00'
     try:
-        return timezone.make_aware(naive)
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        # `datetime-local` submits "YYYY-MM-DDTHH:MM", which fromisoformat accepts;
+        # anything else (free text like "next tuesday") is genuinely unreadable.
+        return None
+
+    if timezone.is_aware(parsed):
+        return parsed
+    try:
+        return timezone.make_aware(parsed)
     except Exception:
-        return naive
+        return parsed
 
 
 def check_availability(date_str, time_str, guests):
@@ -47,18 +86,18 @@ def check_availability(date_str, time_str, guests):
     when = parse_date_time(date_str, time_str)
     if when is None:
         return False, 'invalid_datetime'
-    if guests and guests > MAX_GUESTS:
+    if guests and guests > max_guests():
         return False, 'too_large'
 
-    window_start = when - timedelta(minutes=SLOT_MINUTES)
-    window_end = when + timedelta(minutes=SLOT_MINUTES)
+    window_start = when - timedelta(minutes=slot_minutes())
+    window_end = when + timedelta(minutes=slot_minutes())
 
     overlapping = TableReservation.objects.filter(
         status__in=ACTIVE_STATUSES,
         date_time__range=(window_start, window_end),
     ).count()
 
-    if overlapping >= TOTAL_TABLES:
+    if overlapping >= total_tables():
         return False, 'fully_booked'
     return True, 'available'
 
@@ -92,7 +131,7 @@ def create_reservation(name, phone, date_str, time_str, guests, user=None):
         return None, 'invalid_datetime'
     if when < timezone.now():
         return None, 'past_date'
-    if guests > MAX_GUESTS:
+    if guests > max_guests():
         return None, 'too_large'
 
     try:

@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  backend:
+    name: Backend (Django tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Django system checks
+        env:
+          USE_SQLITE: 'true'
+          REQUIRE_EMAIL_MX: 'false'
+          DEBUG: 'false'
+          ALLOWED_HOSTS: 'localhost,127.0.0.1,testserver'
+          GEMINI_API_KEY: ''
+        run: python manage.py check --deploy --fail-level ERROR
+
+      - name: Verify migrations are committed
+        # A model change without its migration fails here instead of breaking `migrate`
+        # on the next deploy. docker-compose no longer runs makemigrations at boot.
+        env:
+          USE_SQLITE: 'true'
+          REQUIRE_EMAIL_MX: 'false'
+          ALLOWED_HOSTS: 'localhost,testserver'
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run tests
+        env:
+          # SQLite keeps the suite self-contained. MX lookups are off: signup rejects
+          # undeliverable domains, and CI has no reliable DNS.
+          USE_SQLITE: 'true'
+          REQUIRE_EMAIL_MX: 'false'
+          DEBUG: 'false'
+          ALLOWED_HOSTS: 'localhost,127.0.0.1,testserver'
+          # The assistant tests stub the model client and opt in per-test. Pinned here
+          # so the suite can never reach the real Gemini API from CI.
+          ASSISTANT_USE_LLM: 'false'
+          GEMINI_API_KEY: ''
+        run: python manage.py test apps api --verbosity 2
+
+  frontend:
+    name: Frontend (typecheck + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Production build
+        env:
+          # Same value the compose file sets, so the proxy rewrite is compiled the way
+          # it runs in production rather than against localhost.
+          INTERNAL_BACKEND_URL: 'http://backend:8000'
+        run: npm run build
+
+  docker:
+    name: Docker Compose config
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose file parses and resolves
+        run: docker compose config --quiet

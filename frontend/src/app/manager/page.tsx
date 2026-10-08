@@ -33,6 +33,8 @@ interface Order {
   total_amount_etb: string;
   status: string;
   created_at: string;
+  /** Committed prep time; the panel offers an editor once an order is accepted. */
+  estimated_prep_minutes?: number | null;
   items: OrderItem[];
   latest_payment?: {
     id: number;
@@ -103,6 +105,33 @@ const STATUS_FILTERS = [
 
 // Terminal states are not counted as "live"
 const CLOSED_STATUSES = ['COMPLETED', 'CANCELLED', 'REJECTED'];
+
+/**
+ * The legal status moves, mirroring apps/orders/workflow.py on the server.
+ *
+ * The panel used to show a button per status, so staff could push an order from
+ * "Placed" straight to "Completed" and the API had to reject it — or worse, accept it
+ * because no transition rules existed. Rendering only the real moves keeps the button
+ * and the rule in agreement.
+ */
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  PENDING_PAYMENT: ['PLACED', 'CANCELLED', 'REJECTED'],
+  PLACED: ['ACCEPTED', 'CANCELLED', 'REJECTED'],
+  ACCEPTED: ['PREPARING', 'CANCELLED', 'REJECTED'],
+  PREPARING: ['READY', 'CANCELLED', 'REJECTED'],
+  READY: ['OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED'],
+  OUT_FOR_DELIVERY: ['COMPLETED', 'CANCELLED'],
+  COMPLETED: [],
+  CANCELLED: [],
+  REJECTED: [],
+};
+
+/** How long the kitchen should promise for a status, by order type. */
+const DEFAULT_PREP_MINUTES: Record<string, number> = {
+  DELIVERY: 30,
+  PICKUP: 20,
+  DINE_IN: 25,
+};
 
 interface TableReservation {
   id: number;
@@ -325,6 +354,15 @@ export default function ManagerDashboard() {
 
   const handleUpdateStatus = async (orderId: number, newStatus: string, notes?: string) => {
     setActionMsg(null);
+    const order = orders.find((o) => o.id === orderId);
+
+    // Accepting the order also commits to a prep time, so the customer has a number
+    // to wait against instead of "soon". It used to stay at the model default forever.
+    const shouldSetPrep =
+      newStatus === 'ACCEPTED' &&
+      order &&
+      !order.estimated_prep_minutes;
+
     try {
       const res = await apiFetch(`/api/v1/orders/${orderId}/update_status/`, {
         method: 'POST',
@@ -333,12 +371,14 @@ export default function ManagerDashboard() {
           status: newStatus,
           notes: notes || undefined,
           rejection_reason: newStatus === 'REJECTED' ? (notes || t('Rejected by manager.')) : undefined,
+          estimated_prep_minutes:
+            shouldSetPrep ? DEFAULT_PREP_MINUTES[order.order_type] ?? 20 : undefined,
         }),
       });
 
       if (res.ok) {
         const updatedOrder = await res.json();
-        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: updatedOrder.status } : o));
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: updatedOrder.status, estimated_prep_minutes: updatedOrder.estimated_prep_minutes ?? o.estimated_prep_minutes } : o));
         setActionMsg(`${t('Order')} #${updatedOrder.order_number} → ${t(STATUS_LABELS[newStatus] || newStatus)}`);
         setTimeout(() => setActionMsg(null), 3000);
         fetchAnalytics(); // Refresh analytics after order update
@@ -348,6 +388,41 @@ export default function ManagerDashboard() {
       }
     } catch (e) {
       setActionMsg(t('Error updating status.'));
+    }
+  };
+
+  /**
+ * Adjust the prep time after accepting, without moving the status.
+ *
+ * Re-sends the current status as a no-op transition (the API treats same-status as a
+ * no-op) so the value can be corrected after the fact, which is what happens when an
+ * order turns out to be bigger than it looked.
+ */
+const handleSetPrepTime = async (orderId: number, minutes: number) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order || !Number.isFinite(minutes) || minutes === order.estimated_prep_minutes) return;
+
+    try {
+      const res = await apiFetch(`/api/v1/orders/${orderId}/update_status/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: order.status,
+          estimated_prep_minutes: minutes,
+          notes: t('Prep time updated'),
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, estimated_prep_minutes: updated.estimated_prep_minutes } : o));
+        setActionMsg(`${t('Order')} #${updated.order_number} — ${minutes} ${t('min')}`);
+        setTimeout(() => setActionMsg(null), 3000);
+      } else {
+        const err = await res.json();
+        setActionMsg(err.estimated_prep_minutes?.[0] || err.error || t('Failed to update prep time.'));
+      }
+    } catch {
+      setActionMsg(t('Error updating prep time.'));
     }
   };
 
@@ -376,7 +451,7 @@ export default function ManagerDashboard() {
 
   if (loading || (isLoading && user)) {
     return (
-      <div className="min-h-screen bg-[#131313] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[#f7b5be] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -384,7 +459,7 @@ export default function ManagerDashboard() {
 
   if (!user && sessionExpired) {
     return (
-      <div className="min-h-screen bg-[#131313] text-[#e5e2e1] font-body flex flex-col items-center justify-center gap-4 px-6 text-center">
+      <div className="min-h-screen bg-surface text-[#e5e2e1] font-body flex flex-col items-center justify-center gap-4 px-6 text-center">
         <span className="material-symbols-outlined text-5xl text-amber-400">lock_clock</span>
         <h2 className="font-display text-[26px] font-bold">{t('Session expired')}</h2>
         <p className="text-[#d5c2c3] text-[15px] max-w-md">
@@ -402,7 +477,7 @@ export default function ManagerDashboard() {
 
   if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) {
     return (
-      <div className="min-h-screen bg-[#131313] text-[#e5e2e1] flex flex-col items-center justify-center font-body">
+      <div className="min-h-screen bg-surface text-[#e5e2e1] flex flex-col items-center justify-center font-body">
         <span className="material-symbols-outlined text-5xl text-red-500 mb-4">gavel</span>
         <h2 className="font-display text-[26px] font-bold">{t('Access Denied')}</h2>
         <p className="text-[#d5c2c3] mt-2 mb-6 text-[15px]">{t('You do not have permission to view this page.')}</p>
@@ -417,7 +492,7 @@ export default function ManagerDashboard() {
   const liveOrderCount = orders.filter(o => !CLOSED_STATUSES.includes(o.status)).length;
 
   return (
-    <div className="bg-[#131313] text-[#e5e2e1] font-body min-h-screen flex flex-col md:flex-row">
+    <div className="bg-surface text-[#e5e2e1] font-body min-h-screen flex flex-col md:flex-row">
       {/* SIDEBAR */}
       <aside className="w-full md:w-64 bg-[#1c1b1b] border-r border-[#514345] md:min-h-screen flex flex-col flex-shrink-0 relative z-20">
         <div className="p-6 border-b border-[#514345]">
@@ -595,7 +670,7 @@ export default function ManagerDashboard() {
                             <span className="text-[#d5c2c3]">{t(PAYMENT_METHOD_LABELS[row.method] || row.method)}</span>
                             <span className="text-[#f7b5be] font-bold">{row.revenue.toFixed(2)} {birr}</span>
                           </div>
-                          <div className="h-2 rounded-full bg-[#131313] overflow-hidden">
+                          <div className="h-2 rounded-full bg-surface overflow-hidden">
                             <div
                               className="h-full rounded-full bg-[#f7b5be] transition-all duration-700"
                               style={{ width: `${Math.max((row.revenue / total) * 100, 3)}%` }}
@@ -721,7 +796,24 @@ export default function ManagerDashboard() {
                         </div>
                       )}
                       {order.status === 'ACCEPTED' && (
-                        <button onClick={() => handleUpdateStatus(order.id, 'PREPARING')} className="w-full h-10 rounded-[12px] bg-blue-900/40 border border-blue-800 text-blue-300 font-bold text-[13px] hover:bg-blue-900/60">{t('Start Preparing')}</button>
+                        <>
+                          <div className="flex items-center gap-2">
+                            <label className="text-[12px] text-[#9e8d8e] shrink-0" htmlFor={`prep-${order.id}`}>
+                              {t('Ready in')}
+                            </label>
+                            <input
+                              id={`prep-${order.id}`}
+                              type="number"
+                              min={1}
+                              max={240}
+                              defaultValue={order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20}
+                              onBlur={(e) => handleSetPrepTime(order.id, Number(e.target.value))}
+                              className="flex-1 h-9 px-3 rounded-[12px] bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-[13px] focus:border-[#f7b5be] focus:outline-none"
+                            />
+                            <span className="text-[12px] text-[#9e8d8e]">{t('min')}</span>
+                          </div>
+                          <button onClick={() => handleUpdateStatus(order.id, 'PREPARING')} className="w-full h-10 rounded-[12px] bg-blue-900/40 border border-blue-800 text-blue-300 font-bold text-[13px] hover:bg-blue-900/60">{t('Start Preparing')}</button>
+                        </>
                       )}
                       {order.status === 'PREPARING' && (
                         <button onClick={() => handleUpdateStatus(order.id, 'READY')} className="w-full h-10 rounded-[12px] bg-blue-900/40 border border-blue-800 text-blue-300 font-bold text-[13px] hover:bg-blue-900/60">{t('Mark Ready')}</button>

@@ -97,7 +97,7 @@ export default function PaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-[95%] sm:w-full max-w-lg my-auto bg-[#131313]-container border border-[#514345] rounded-2xl shadow-2xl p-5 sm:p-7 text-[#e5e2e1] max-h-[92vh] overflow-y-auto">
+      <div className="relative w-[95%] sm:w-full max-w-lg my-auto bg-surface-container border border-[#514345] rounded-2xl shadow-2xl p-5 sm:p-7 text-[#e5e2e1] max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-[#514345]">
           <div className="flex items-center gap-2.5">
@@ -161,7 +161,7 @@ export default function PaymentModal({
                   className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all ${
                     paymentMethod === m.id
                       ? 'bg-[#2b1b1e] border-tertiary text-[#f7b5be] shadow-sm'
-                      : 'bg-[#131313]-container border-[#514345] text-[#9e8d8e] hover:bg-outline-variant/10'
+                      : 'bg-surface-container border-[#514345] text-[#9e8d8e] hover:bg-outline-variant/10'
                   }`}
                 >
                   <span className="material-symbols-outlined text-xl">{m.icon}</span>
@@ -232,7 +232,7 @@ export default function PaymentModal({
               </div>
 
               {/* Phone Input */}
-              <div className="flex items-center rounded-lg bg-[#131313]-container border border-[#514345] focus-within:border-tertiary overflow-hidden">
+              <div className="flex items-center rounded-lg bg-surface-container border border-[#514345] focus-within:border-tertiary overflow-hidden">
                 <span className="px-3 py-2 bg-transparent border-r border-[#514345] text-[#f7b5be] font-bold text-xs shrink-0">
                   🇪🇹
                 </span>
@@ -249,7 +249,7 @@ export default function PaymentModal({
           )}
 
           {paymentMethod === 'card' && (
-            <div className="p-3.5 rounded-xl bg-[#131313]-container-high/70 border border-tertiary/20 text-xs space-y-1.5">
+            <div className="p-3.5 rounded-xl bg-surface-container-high/70 border border-tertiary/20 text-xs space-y-1.5">
               <p className="font-bold text-[#f7b5be] flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-base">open_in_new</span>
                 {t('Redirect to Chapa Hosted Checkout')}

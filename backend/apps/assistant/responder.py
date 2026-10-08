@@ -333,9 +333,9 @@ def handle_reservation_create(text, state, user=None):
 
     if not available:
         if detail == 'too_large':
-            en = (f"For parties larger than {reservation_service.MAX_GUESTS} guests we cannot take an "
+            en = (f"For parties larger than {reservation_service.max_guests()} guests we cannot take an "
                   "online reservation. Please call the Coffee House and we will arrange it for you.")
-            am = (f"ከ {reservation_service.MAX_GUESTS} በላይ ለሆኑ ሰዎች በኦንላይን ቦታ ማስያዝ አይቻልም። "
+            am = (f"ከ {reservation_service.max_guests()} በላይ ለሆኑ ሰዎች በኦንላይን ቦታ ማስያዝ አይቻልም። "
                   "እባክዎን በቀጥታ ወደ Coffee House ይደውሉ፤ እናስተናግዶታለን።")
             return bilingual(en, am), [], state, {'action': 'none'}
 

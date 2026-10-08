@@ -321,7 +321,7 @@ def execute_tool(name, args, ctx):
             'phone': venue.contact_phone,
             'email': venue.contact_email,
             'average_prep_minutes': venue.default_prep_minutes,
-            'max_reservation_guests': reservation_service.MAX_GUESTS,
+            'max_reservation_guests': reservation_service.max_guests(),
         }
 
     if name == 'list_categories':
@@ -340,9 +340,9 @@ def execute_tool(name, args, ctx):
             return {'available': True, 'detail': detail}
 
         if detail == 'too_large':
-            ctx.remember_number(reservation_service.MAX_GUESTS)
+            ctx.remember_number(reservation_service.max_guests())
             return {'available': False, 'detail': 'too_large',
-                    'max_guests': reservation_service.MAX_GUESTS,
+                    'max_guests': reservation_service.max_guests(),
                     'note': 'Tell them the limit and suggest calling the cafe.'}
         if detail == 'invalid_datetime':
             return {'available': False, 'detail': 'invalid_datetime',

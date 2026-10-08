@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -6,12 +6,20 @@ from apps.accounts.models import Address
 
 User = get_user_model()
 
+#: Signup deliberately rejects undeliverable domains, so the fixtures use a real-looking
+#: address and MX lookups are switched off (CI runs offline and example.com is banned).
+TEST_EMAIL = 'testcustomer@coffeereceipts.com'
+TEST_EMAIL_ALT = 'testcustomer2@coffeereceipts.com'
+EXISTING_EMAIL = 'existinguser@coffeereceipts.com'
+
+
+@override_settings(REQUIRE_EMAIL_MX=False)
 class AuthAndProfileAPITests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user_data = {
             'username': 'testcustomer',
-            'email': 'customer@example.com',
+            'email': TEST_EMAIL,
             'phone': '+251911223344',
             'password': 'Password123!',
             'first_name': 'Test',
@@ -19,7 +27,7 @@ class AuthAndProfileAPITests(TestCase):
         }
         self.user = User.objects.create_user(
             username='existinguser',
-            email='existing@example.com',
+            email=EXISTING_EMAIL,
             phone='0911000000',
             password='Password123!',
             role='CUSTOMER'
@@ -36,7 +44,7 @@ class AuthAndProfileAPITests(TestCase):
     def test_register_invalid_ethiopian_phone(self):
         invalid_data = self.user_data.copy()
         invalid_data['username'] = 'invalidphoneuser'
-        invalid_data['email'] = 'invalidphone@example.com'
+        invalid_data['email'] = TEST_EMAIL_ALT
         invalid_data['phone'] = '12345'
         res = self.client.post('/api/v1/auth/register/', invalid_data)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
@@ -45,7 +53,7 @@ class AuthAndProfileAPITests(TestCase):
     def test_register_duplicate_email(self):
         duplicate_data = self.user_data.copy()
         duplicate_data['username'] = 'differentuser'
-        duplicate_data['email'] = 'existing@example.com'
+        duplicate_data['email'] = EXISTING_EMAIL
         res = self.client.post('/api/v1/auth/register/', duplicate_data)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', res.data)
@@ -63,7 +71,7 @@ class AuthAndProfileAPITests(TestCase):
 
     def test_login_with_email_success(self):
         login_data = {
-            'username_or_email': 'existing@example.com',
+            'username_or_email': EXISTING_EMAIL,
             'password': 'Password123!'
         }
         res = self.client.post('/api/v1/auth/login/', login_data)
@@ -76,7 +84,20 @@ class AuthAndProfileAPITests(TestCase):
             'password': 'WrongPassword'
         }
         res = self.client.post('/api/v1/auth/login/', login_data)
+        # A recognised identifier with the wrong password is an authentication failure.
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_login_missing_fields_is_bad_request(self):
+        res = self.client.post('/api/v1/auth/login/', {'username_or_email': 'existinguser'})
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_register_rejects_undeliverable_email_domain(self):
+        rejected = self.user_data.copy()
+        rejected['username'] = 'exampledomainuser'
+        rejected['email'] = 'someone@example.com'
+        res = self.client.post('/api/v1/auth/register/', rejected)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', res.data)
 
     def test_user_profile_get_and_patch_via_cookie(self):
         # First login to obtain cookies
@@ -145,7 +166,7 @@ class AuthAndProfileAPITests(TestCase):
 
     def test_password_reset_flow(self):
         req_res = self.client.post('/api/v1/auth/password-reset/', {
-            'email': 'existing@example.com'
+            'email': EXISTING_EMAIL
         })
         self.assertEqual(req_res.status_code, status.HTTP_200_OK)
         uidb64 = req_res.data['uidb64']

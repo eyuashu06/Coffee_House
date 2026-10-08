@@ -110,7 +110,7 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-md bg-[#131313] border border-[#514345] rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+      <div className="relative w-full max-w-md bg-surface border border-[#514345] rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
         {/* Header image */}
         <div className="h-44 w-full relative shrink-0">
           <img

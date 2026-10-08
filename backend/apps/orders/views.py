@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.db import models
 from django.utils import timezone
 
 from .models import Order, DeliveryZone, RestaurantSettings, OrderStatusHistory
@@ -10,6 +11,7 @@ from .serializers import (
     DeliveryZoneSerializer,
     RestaurantSettingsSerializer,
 )
+from .workflow import assert_transition, InvalidTransition
 from apps.accounts.permissions import IsManager, IsOwnerOrManager
 
 
@@ -32,14 +34,46 @@ class OrderViewSet(viewsets.ModelViewSet):
             return [IsManager()]
         return [permissions.IsAuthenticated()]
 
+    def create(self, request, *args, **kwargs):
+        # A closed cafe must not accept web orders (FR-C5). The assistant already
+        # refuses; without this the checkout button still created them.
+        venue = RestaurantSettings.get_settings()
+        if not venue.is_open:
+            return Response(
+                {'error': 'We are closed right now and are not accepting orders. '
+                          'Our opening hours are ' + venue.opening_hours},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        return super().create(request, *args, **kwargs)
+
     def get_queryset(self):
         user = self.request.user
         if not user or not user.is_authenticated:
             return Order.objects.none()
-        if user.is_manager_or_admin():
-            return Order.objects.all().prefetch_related('items__add_ons', 'payments')
-        # Return only this customer's orders, newest first
-        return Order.objects.filter(customer=user).prefetch_related('items__add_ons', 'payments').order_by('-created_at')
+
+        queryset = (
+            Order.objects.all()
+            if user.is_manager_or_admin()
+            else Order.objects.filter(customer=user)
+        )
+        queryset = queryset.prefetch_related('items__add_ons', 'payments').order_by('-created_at')
+
+        # The footer's order tracker looks an order up by its code, and the manager
+        # panel will want the same. Scoped to whatever get_queryset() already allows,
+        # so a customer can never search their way into someone else's order.
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            queryset = queryset.filter(
+                models.Q(order_number__icontains=search)
+                | models.Q(contact_name__icontains=search)
+                | models.Q(contact_phone__icontains=search)
+            )
+
+        status_filter = self.request.query_params.get('status', '').strip()
+        if status_filter and status_filter in {choice[0] for choice in Order.STATUS_CHOICES}:
+            queryset = queryset.filter(status=status_filter)
+
+        return queryset
 
     def perform_create(self, serializer):
         order = serializer.save()
@@ -62,6 +96,8 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         order = self.get_object()
         new_status = request.data.get('status')
+        # Prep time can be corrected without moving the order along, so a same-status
+        # request is a legitimate no-op rather than an illegal transition.
 
         valid_statuses = [choice[0] for choice in Order.STATUS_CHOICES]
         if new_status not in valid_statuses:
@@ -70,34 +106,64 @@ class OrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Never let staff "re-open" a finished order
-        if order.status in ['COMPLETED', 'CANCELLED', 'REJECTED'] and new_status not in ['COMPLETED', 'CANCELLED', 'REJECTED']:
-            return Response(
-                {'error': f'Order #{order.order_number} is already closed ({order.get_status_display()}).'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Only legal moves are accepted (SRS 5.2). A closed order never reopens, and
+        # an order cannot jump from PLACED straight to COMPLETED skipping the kitchen.
+        is_noop = new_status == order.status
+        if not is_noop:
+            try:
+                assert_transition(order.status, new_status)
+            except InvalidTransition as exc:
+                return Response(
+                    {'error': str(exc)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-        if new_status == order.status:
+        # Accepting an order commits to a prep time, so the customer can be told when
+        # it will be ready. Only staff-supplied values are honoured, and only upward.
+        prep_minutes = request.data.get('estimated_prep_minutes')
+        if prep_minutes is not None:
+            try:
+                prep_minutes = int(prep_minutes)
+            except (TypeError, ValueError):
+                return Response(
+                    {'estimated_prep_minutes': ['Enter the prep time in whole minutes.']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if prep_minutes < 1 or prep_minutes > 240:
+                return Response(
+                    {'estimated_prep_minutes': ['Prep time must be between 1 and 240 minutes.']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        if is_noop and prep_minutes is None:
             return Response(
                 OrderSerializer(order, context={'request': request}).data,
                 status=status.HTTP_200_OK
             )
 
-        order.status = new_status
+        if not is_noop:
+            order.status = new_status
         if new_status == 'PLACED' and not order.placed_at:
             order.placed_at = timezone.now()
         if new_status in ['REJECTED', 'CANCELLED']:
             reason = request.data.get('rejection_reason') or request.data.get('notes')
             if reason:
                 order.rejection_reason = reason
+        if prep_minutes is not None:
+            order.estimated_prep_minutes = prep_minutes
 
         order.save()
 
+        # A no-op status change is still logged, because the prep time moved and the
+        # customer is about to be told a different ready time.
         OrderStatusHistory.objects.create(
             order=order,
             status=new_status,
             changed_by=request.user,
-            notes=request.data.get('notes', f'Status changed to {new_status}')
+            notes=request.data.get(
+                'notes',
+                'Prep time updated' if is_noop else f'Status changed to {new_status}',
+            )
         )
 
         return Response(

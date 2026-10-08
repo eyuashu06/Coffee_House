@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import LanguageToggle from '../components/LanguageToggle';
 import { apiFetch } from '../lib/api';
+import { useCart, readLocalCart, saveLocalCart, clearLocalCart } from '../lib/cart';
 import Link from 'next/link';
 
 export interface MenuItem {
@@ -27,12 +28,54 @@ export interface MenuItem {
     add_ons?: { id: number; name: string; price_etb: string }[];
 }
 
+export interface DeliveryZone {
+    id: number;
+    name: string;
+    delivery_fee_etb: string;
+}
+
+/**
+ * Render the server cart in the drawer's line shape.
+ *
+ * The saved cart stores ids and names only, so the drink's photo and description are
+ * looked up from the menu already loaded on this page. A drink that left the menu falls
+ * back to its stored name rather than rendering an empty row.
+ */
+function serverCartToCartItems(
+    cart: { items: import('../lib/cart').ServerCartLine[] } | null,
+    menu: MenuItem[]
+): CartItem[] {
+    if (!cart) return [];
+    return cart.items.map((line) => {
+        const menuItem = menu.find((item) => item.id === line.menu_item);
+        return {
+            lineKey: `server-${line.id}`,
+            serverLineId: line.id,
+            coffee: {
+                id: line.menu_item,
+                name: line.menu_item_name,
+                price: menuItem?.base_price_etb ?? menuItem?.price ?? line.unit_price_etb,
+                image_url: menuItem?.image_url ?? '',
+                category_slug: menuItem?.category_slug ?? '',
+                description: menuItem?.description ?? '',
+                is_signature: menuItem?.is_signature ?? false,
+            } as never,
+            quantity: line.quantity,
+            temperature: line.temperature,
+            milk: line.milk_choice,
+            variant: line.variant_label
+                ? { id: line.variant ?? 0, name: line.variant_label, price_modifier_etb: '0' }
+                : null,
+            addOns: line.add_on_labels.map((name, index) => ({ id: index, name })),
+        } as CartItem;
+    });
+}
+
 export default function Home() {
     const router = useRouter();
     const { user, loading: authLoading } = useAuth();
     const { t, language, tCategory, tItem } = useLanguage();
     const [items, setItems] = useState<MenuItem[]>([]);
-    const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -42,7 +85,62 @@ export default function Home() {
     const [activeCat, setActiveCat] = useState('all');
     const [bookingData, setBookingData] = useState({ name: '', date_time: '', party_size: 2, contact_phone: '' });
     const [bookingStatus, setBookingStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
+    const [bookingError, setBookingError] = useState<string | null>(null);
     const [minDateTime, setMinDateTime] = useState('');
+
+    // Order tracking. This used to be a form that always printed a hardcoded
+    // "BH-1024 ready for pickup" for any input, which told customers their order was
+    // ready before it existed. It now asks the API about their actual orders.
+    const [trackCode, setTrackCode] = useState('');
+    const [trackResult, setTrackResult] = useState<string | null>(null);
+    const [isTracking, setIsTracking] = useState(false);
+
+    const handleTrackSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) {
+            setInitialAuthMode('LOGIN');
+            setIsAuthModalOpen(true);
+            return;
+        }
+        const code = trackCode.trim();
+        if (!code) return;
+
+        setIsTracking(true);
+        setTrackResult(null);
+        try {
+            const res = await apiFetch(`/api/v1/orders/?search=${encodeURIComponent(code)}`);
+            if (!res.ok) {
+                setTrackResult(t('We could not check that order right now. Please try again.'));
+                return;
+            }
+            const data = await res.json();
+            const orders = Array.isArray(data) ? data : data.results || [];
+            const match = orders.find(
+                (order: { order_number: string }) => order.order_number === code
+            );
+            setTrackResult(
+                match
+                    ? `${match.order_number} · ${t(match.status.replace(/_/g, ' ').toLowerCase())}`
+                    : t('No order with that code on your account.')
+            );
+        } catch {
+            setTrackResult(t('We could not check that order right now. Please try again.'));
+        } finally {
+            setIsTracking(false);
+        }
+    };
+
+    // Signed-in customers get a cart in the database (it survives a refresh, a closed
+    // tab and a second device). Guests keep theirs locally and it is merged at sign-in.
+    const isSignedIn = !!user && !authLoading;
+    const { cart: serverCart, addLine: addServerLine, setQuantity: setServerQuantity,
+            removeLine: removeServerLine, clearCart: clearServerCart, syncGuestCart } =
+        useCart(isSignedIn);
+    // Guests start from whatever was left in localStorage so a refresh keeps the order.
+    const [guestCart, setGuestCart] = useState<CartItem[]>([]);
+    useEffect(() => { if (!isSignedIn) setGuestCart(readLocalCart() as CartItem[]); }, [isSignedIn]);
+
+    const cartItems = isSignedIn ? serverCartToCartItems(serverCart, items) : guestCart;
 
     // Middleware sends signed-out visitors here with ?auth=login&redirect=/account —
     // honour it so the sign-in form actually opens (and remember where to go after).
@@ -65,6 +163,12 @@ export default function Home() {
             router.replace('/manager');
         }
     }, [user, authLoading, router]);
+
+    // On sign-in the guest's local cart is merged into the account cart, so nothing
+    // that was in the basket disappears. Runs on every transition into "signed in".
+    useEffect(() => {
+        if (isSignedIn) void syncGuestCart();
+    }, [isSignedIn, syncGuestCart]);
 
     useEffect(() => {
         const tomorrow = new Date();
@@ -96,6 +200,7 @@ export default function Home() {
         }
 
         setBookingStatus('LOADING');
+        setBookingError(null);
         try {
             const res = await apiFetch('/api/v1/reservations/', {
                 method: 'POST',
@@ -107,10 +212,29 @@ export default function Home() {
                 setBookingData({ name: '', date_time: '', party_size: 2, contact_phone: '' });
                 setTimeout(() => setBookingStatus('IDLE'), 5000);
             } else {
+                // The API explains why (slot full, party too large, past date) and can
+                // suggest free times nearby - showing that beats a bare "failed".
+                let message = t('That time is not available. Please try another.');
+                let alternatives: string[] = [];
+                try {
+                    const data = await res.json();
+                    const flat = Object.entries(data)
+                        .filter(([key]) => key !== 'alternatives')
+                        .map(([, value]) => (Array.isArray(value) ? value.join(' ') : String(value)))
+                        .join(' ');
+                    if (flat) message = flat;
+                    if (Array.isArray(data.alternatives)) alternatives = data.alternatives;
+                } catch { /* keep the generic message */ }
+                setBookingError(
+                    alternatives.length > 0
+                        ? `${message} ${t('Free times nearby:')} ${alternatives.join(', ')}`
+                        : message
+                );
                 setBookingStatus('ERROR');
-                setTimeout(() => setBookingStatus('IDLE'), 5000);
+                setTimeout(() => setBookingStatus('IDLE'), 8000);
             }
         } catch (error) {
+            setBookingError(t('Network error. Please check your connection and try again.'));
             setBookingStatus('ERROR');
             setTimeout(() => setBookingStatus('IDLE'), 5000);
         }
@@ -129,56 +253,99 @@ export default function Home() {
         variant?: { id: number; name: string; price_modifier_etb: string } | null,
         addOns: { id: number; name: string; price_etb: string }[] = []
     ) => {
-        setCartItems(prev => {
-            // Same item + same options = merge quantities, otherwise add a new line
-            const sameLine = (i: (typeof prev)[number]) =>
-                i.coffee.id === item.id &&
-                i.temperature === temperature &&
-                i.milk === milk &&
-                (i.variant?.id ?? null) === (variant?.id ?? null) &&
-                i.addOns.map(a => a.name).sort().join('|') === addOns.map(a => a.name).sort().join('|');
+        const newLine: CartItem = {
+            lineKey: `guest-${item.id}-${temperature}-${milk}-${variant?.id ?? 'none'}-${addOns.map(a => a.id).sort().join('.')}`,
+            coffee: {
+                id: item.id,
+                name: item.name,
+                price: parseFloat(item.base_price_etb ?? item.price),
+                image_url: item.image_url,
+                category_slug: item.category_slug,
+                description: item.description,
+                is_signature: item.is_signature
+            } as never,
+            quantity,
+            temperature,
+            milk,
+            variant: variant ?? null,
+            addOns
+        };
 
-            const existingIdx = prev.findIndex(sameLine);
-            if (existingIdx > -1) {
-                const updated = [...prev];
-                updated[existingIdx].quantity += quantity;
-                return updated;
-            }
-            return [...prev, {
-                coffee: {
-                    id: item.id,
-                    name: item.name,
-                    price: parseFloat(item.base_price_etb ?? item.price),
-                    image_url: item.image_url,
-                    category_slug: item.category_slug,
-                    description: item.description,
-                    is_signature: item.is_signature
-                } as any,
+        if (isSignedIn) {
+            // The server merges identical lines itself, so this is a single call.
+            void addServerLine({
+                coffee: newLine.coffee,
                 quantity,
                 temperature,
                 milk,
                 variant: variant ?? null,
                 addOns
-            }];
-        });
+            });
+        } else {
+            setGuestCart(prev => {
+                // Same drink + same options = one line with a higher quantity.
+                const index = prev.findIndex(
+                    (i) =>
+                        i.coffee.id === item.id &&
+                        i.temperature === temperature &&
+                        i.milk === milk &&
+                        (i.variant?.id ?? null) === (variant?.id ?? null) &&
+                        (i.addOns || []).map(a => a.name).sort().join('|') ===
+                            addOns.map(a => a.name).sort().join('|')
+                );
+                if (index === -1) return [...prev, newLine];
+                const next = [...prev];
+                next[index] = { ...next[index], quantity: next[index].quantity + quantity };
+                return next;
+            });
+        }
         setIsItemModalOpen(false);
         setIsCartOpen(true);
     };
 
     const handleUpdateQty = (index: number, delta: number) => {
-        setCartItems(prev => {
-            const updated = [...prev];
-            updated[index].quantity += delta;
-            if (updated[index].quantity <= 0) updated.splice(index, 1);
-            return updated;
+        const line = cartItems[index];
+        if (!line) return;
+        const nextQty = line.quantity + delta;
+
+        if (isSignedIn && line.serverLineId) {
+            // Quantity 0 removes the line; the API treats it that way.
+            void setServerQuantity(line.serverLineId, nextQty);
+            return;
+        }
+        setGuestCart(prev => {
+            const next = [...prev];
+            if (nextQty <= 0) {
+                next.splice(index, 1);
+            } else {
+                next[index] = { ...next[index], quantity: nextQty };
+            }
+            saveLocalCart(next as unknown as Parameters<typeof saveLocalCart>[0]);
+            return next;
         });
     };
 
     const handleRemoveItem = (index: number) => {
-        setCartItems(prev => prev.filter((_, i) => i !== index));
+        const line = cartItems[index];
+        if (isSignedIn && line?.serverLineId) {
+            void removeServerLine(line.serverLineId);
+            return;
+        }
+        setGuestCart(prev => {
+            const next = prev.filter((_, i) => i !== index);
+            saveLocalCart(next as unknown as Parameters<typeof saveLocalCart>[0]);
+            return next;
+        });
     };
 
-    const handleClearCart = () => setCartItems([]);
+    const handleClearCart = () => {
+        clearLocalCart();
+        if (isSignedIn) {
+            void clearServerCart();
+        } else {
+            setGuestCart([]);
+        }
+    };
 
     const filteredItems = activeCat === 'all' 
         ? items 
@@ -494,7 +661,11 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
                   <p id="bk-note" className="text-[14px] italic text-[#9e8d8e]">{t('No deposit — we hold your table for 20 minutes.')}</p>
                 </div>
                 {bookingStatus === 'SUCCESS' && <p className="text-[#f7b5be] font-semibold text-sm">{t('Your table is booked! We\'ll call you shortly to confirm.')}</p>}
-                {bookingStatus === 'ERROR' && <p className="text-red-400 text-sm">{t('There was an error booking your table. Please try again.')}</p>}
+                {bookingStatus === 'ERROR' && (
+                  <p className="text-red-400 text-sm">
+                    {bookingError ?? t('There was an error booking your table. Please try again.')}
+                  </p>
+                )}
               </div>
             </form>
           </div>
@@ -544,11 +715,24 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
         <div>
           <h3 className="font-display text-[20px]"><Link href="/account" className="inline-flex items-center gap-1.5 text-[14.5px] text-[#9e8d8e] hover:text-[#f7b5be] transition-colors">{t('Track your order')}</Link></h3>
           <p className="mt-4 text-[14.5px] text-[#d5c2c3]">{t('Order pickup by phone — +251 11 555 0148. Already ordered? The code on your receipt starts with BH.')}</p>
-          <form id="track-form" className="mt-3 flex gap-2.5">
-            <input type="text" placeholder="BH-1024" aria-label="Order code" className="field flex-1 h-11 px-4 text-[15px] min-w-0"/>
-            <button type="submit" className="h-11 px-5 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[15px] font-semibold hover:bg-[#ffd9dd] transition-colors shrink-0">{t('Check')}</button>
+          <form id="track-form" className="mt-3 flex gap-2.5" onSubmit={handleTrackSubmit}>
+            <input
+              type="text"
+              value={trackCode}
+              onChange={(e) => setTrackCode(e.target.value)}
+              placeholder="ORD-20260930-1234"
+              aria-label={t('Order code')}
+              className="field flex-1 h-11 px-4 text-[15px] min-w-0"
+            />
+            <button type="submit" disabled={isTracking} className="h-11 px-5 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[15px] font-semibold hover:bg-[#ffd9dd] transition-colors shrink-0 disabled:opacity-50">
+              {isTracking ? t('Checking...') : t('Check')}
+            </button>
           </form>
-          <p id="track-result" className="mt-4 hidden items-center gap-2 text-[14.5px] text-[#fbbb50]"><span className="w-1.5 h-1.5 rounded-full bg-[#fbbb50]"></span> BH-1024 · {t('Ready for pickup — ask at the counter')}</p>
+          {trackResult && (
+            <p className="mt-4 flex items-center gap-2 text-[14.5px] text-[#fbbb50]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#fbbb50]"></span> {trackResult}
+            </p>
+          )}
         </div>
       </div>
       <div className="mt-14 pt-6 border-t border-[#514345] flex items-center justify-between text-[13.5px] text-[#9e8d8e]">
