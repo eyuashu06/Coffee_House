@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: mysql:8.0
@@ -25,9 +23,10 @@ services:
       dockerfile: Dockerfile
     container_name: coffee_django_backend
     restart: always
+    # migrate + seed, not makemigrations: a container boot should apply the committed
+    # migrations, never invent new ones (which then vanish with the container).
     command: >
-      sh -c "python manage.py makemigrations &&
-             python manage.py migrate &&
+      sh -c "python manage.py migrate --noinput &&
              python manage.py seed_data &&
              python manage.py runserver 0.0.0.0:8000"
     volumes:
@@ -47,6 +46,12 @@ services:
       # Chapa's server-to-server callback must point at a host it can reach, so this
       # has to be the public address of the API, not "localhost" inside the container.
       - BACKEND_PUBLIC_URL=${BACKEND_PUBLIC_URL:-http://localhost:8000}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      # Seed users carry @gmail.com addresses; a real DNS lookup would make the
+      # container boot depend on the network being up.
+      - REQUIRE_EMAIL_MX=${REQUIRE_EMAIL_MX:-false}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
     depends_on:
       db:
         condition: service_healthy
@@ -61,7 +66,10 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://backend:8000
+      # next.config.js proxies /api/v1 and /media through INTERNAL_BACKEND_URL. It used
+      # to read NEXT_PUBLIC_API_URL, which nothing in the code consulted, so inside the
+      # container the app resolved "localhost:8000" - itself - and every API call 404'd.
+      - INTERNAL_BACKEND_URL=http://backend:8000
     depends_on:
       - backend
 
