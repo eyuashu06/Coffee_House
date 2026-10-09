@@ -44,6 +44,9 @@ export default function NotificationsDropdown() {
       const interval = setInterval(fetchNotifications, 15000); // Poll every 15s
       return () => clearInterval(interval);
     }
+    // Deliberately keyed on `user` alone. fetchNotifications is recreated on every
+    // render, so depending on it would reset the 15s poll continuously.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // Close dropdown when clicking outside

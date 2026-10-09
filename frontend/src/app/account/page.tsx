@@ -182,7 +182,7 @@ export default function AccountPage() {
     } finally {
       if (!silent) setIsLoadingOrders(false);
     }
-  }, []);
+  }, [reportUnauthorized]);
 
   // After returning from the Chapa gateway the payment is often not settled yet, and
   // the webhook cannot reach localhost - so keep re-checking until the gateway answers.
@@ -206,7 +206,7 @@ export default function AccountPage() {
     } else if (payment?.status === 'ABANDONED') {
       setBanner({ type: 'error', message: `${t('Payment was cancelled')}${ref}. ${t('Your order is saved — tap "Pay Now" to try again.')}` });
     }
-  }, []);
+  }, [t]);
 
   /**
    * Ask the gateway about every unsettled payment on this account.
@@ -287,7 +287,9 @@ export default function AccountPage() {
     };
 
     poll();
-  }, [fetchOrders, announcePaymentResult, reconcileUnsettled]);
+    // `t` is included so a gateway response arriving after a language switch reports
+    // in the language now on screen, not the one in force when the poll started.
+  }, [fetchOrders, announcePaymentResult, reconcileUnsettled, t]);
 
   // Safety net: any order whose payment is still settling gets re-checked too, so a
   // customer who closed the Chapa tab still sees the confirmation when they come back.
@@ -329,7 +331,7 @@ export default function AccountPage() {
     } finally {
       setIsLoadingReservations(false);
     }
-  }, []);
+  }, [reportUnauthorized]);
 
   useEffect(() => {
     if (user) {

@@ -219,6 +219,10 @@ export default function ManagerDashboard() {
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
+    // Deliberately keyed on `user` alone. The three fetchers are plain functions,
+    // recreated on every render, so listing them would tear down and rebuild the
+    // 5s interval on every render - a request loop against the API.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const fetchOrders = async () => {

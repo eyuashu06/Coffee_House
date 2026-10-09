@@ -80,6 +80,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        # --max-warnings=0 is already in the script; this makes a regression in either
+        # the script or its invocation fail loudly rather than silently pass.
+        run: npm run lint
+
       - name: Typecheck
         run: npx tsc --noEmit
 
