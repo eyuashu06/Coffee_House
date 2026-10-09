@@ -46,6 +46,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setLanguageState(lang);
     if (typeof window !== 'undefined') {
       localStorage.setItem('app_lang', lang);
+      // localStorage is invisible to the server, so a server-rendered page has no way to
+      // know the choice was made. The cookie is sent with every request, which is what
+      // lets the server render the same language the client will.
+      document.cookie = `app_lang=${lang}; path=/; max-age=31536000; samesite=lax`;
     }
   };
 
