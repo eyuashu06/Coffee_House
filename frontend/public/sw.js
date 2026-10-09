@@ -36,11 +36,15 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
+      // Delete every cache of ours that is not the current version. This condition was
+      // inverted: it deleted anything NOT sharing our prefix and kept everything that
+      // did, which is all of them. Invalidation had therefore never run.
       return Promise.all(
         cacheNames.map((cache) => {
-          if (!cache.startsWith('artisanal-coffee-cache-')) {
+          if (cache.startsWith('artisanal-coffee-cache-') && cache !== CACHE_NAME) {
             return caches.delete(cache);
           }
+          return undefined;
         })
       );
     })
