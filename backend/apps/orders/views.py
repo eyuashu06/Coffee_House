@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.db import models
 from django.utils import timezone
 
 from .models import Order, DeliveryZone, RestaurantSettings, OrderStatusHistory
@@ -49,10 +50,30 @@ class OrderViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user or not user.is_authenticated:
             return Order.objects.none()
-        if user.is_manager_or_admin():
-            return Order.objects.all().prefetch_related('items__add_ons', 'payments')
-        # Return only this customer's orders, newest first
-        return Order.objects.filter(customer=user).prefetch_related('items__add_ons', 'payments').order_by('-created_at')
+
+        queryset = (
+            Order.objects.all()
+            if user.is_manager_or_admin()
+            else Order.objects.filter(customer=user)
+        )
+        queryset = queryset.prefetch_related('items__add_ons', 'payments').order_by('-created_at')
+
+        # The footer's order tracker looks an order up by its code, and the manager
+        # panel will want the same. Scoped to whatever get_queryset() already allows,
+        # so a customer can never search their way into someone else's order.
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            queryset = queryset.filter(
+                models.Q(order_number__icontains=search)
+                | models.Q(contact_name__icontains=search)
+                | models.Q(contact_phone__icontains=search)
+            )
+
+        status_filter = self.request.query_params.get('status', '').strip()
+        if status_filter and status_filter in {choice[0] for choice in Order.STATUS_CHOICES}:
+            queryset = queryset.filter(status=status_filter)
+
+        return queryset
 
     def perform_create(self, serializer):
         order = serializer.save()

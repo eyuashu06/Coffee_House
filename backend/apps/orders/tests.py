@@ -335,3 +335,69 @@ class OrderCreationTests(TestCase):
         self.assertEqual(order.estimated_prep_minutes, 35)
 
 
+class OrderSearchTests(TestCase):
+    """The footer's tracker looks an order up by its code; it must be scoped per user."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.customer = User.objects.create_user(
+            username='searchcustomer', email='search@coffeereceipts.com',
+            phone='+251911666000', password='Password123!', role='CUSTOMER',
+        )
+        self.other = User.objects.create_user(
+            username='othersearcher', email='othersearch@coffeereceipts.com',
+            phone='+251911666111', password='Password123!', role='CUSTOMER',
+        )
+        self.manager = User.objects.create_user(
+            username='searchmanager', email='searchmgr@coffeereceipts.com',
+            phone='+251911666222', password='Password123!', role='MANAGER',
+        )
+        self.mine = Order.objects.create(
+            order_number='ORD-SEARCH-AAA', customer=self.customer,
+            contact_name='Selam Bekele', contact_phone='+251911666333',
+            subtotal_etb=Decimal('100.00'), total_amount_etb=Decimal('100.00'),
+            status='PLACED',
+        )
+        self.theirs = Order.objects.create(
+            order_number='ORD-SEARCH-BBB', customer=self.other,
+            contact_name='Marta Tesfaye', contact_phone='+251911666444',
+            subtotal_etb=Decimal('200.00'), total_amount_etb=Decimal('200.00'),
+            status='PLACED',
+        )
+
+    def _numbers(self, res):
+        return [row['order_number'] for row in res.data['results']]
+
+    def test_customer_finds_their_own_order_by_code(self):
+        self.client.force_authenticate(self.customer)
+        res = self.client.get('/api/v1/orders/?search=ORD-SEARCH')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._numbers(res), ['ORD-SEARCH-AAA'])
+
+    def test_customer_cannot_search_into_someone_elses_order(self):
+        self.client.force_authenticate(self.customer)
+        res = self.client.get('/api/v1/orders/?search=ORD-SEARCH-BBB')
+        self.assertEqual(res.data['results'], [])
+
+    def test_manager_can_search_every_order(self):
+        self.client.force_authenticate(self.manager)
+        res = self.client.get('/api/v1/orders/?search=ORD-SEARCH')
+        self.assertEqual(len(res.data['results']), 2)
+
+    def test_status_filter_applies(self):
+        self.client.force_authenticate(self.manager)
+        res = self.client.get('/api/v1/orders/?status=PLACED')
+        self.assertEqual(len(res.data['results']), 2)
+        res = self.client.get('/api/v1/orders/?status=COMPLETED')
+        self.assertEqual(res.data['results'], [])
+
+    def test_bogus_status_filter_is_ignored_not_an_error(self):
+        self.client.force_authenticate(self.manager)
+        res = self.client.get('/api/v1/orders/?status=NOT_A_STATUS')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data['results']), 2)
+
+    def test_anonymous_caller_sees_nothing(self):
+        self.client.force_authenticate(user=None)
+        res = self.client.get('/api/v1/orders/?search=ORD-SEARCH')
+        self.assertNotEqual(res.status_code, status.HTTP_200_OK)
