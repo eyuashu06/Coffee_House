@@ -15,6 +15,15 @@ interface AuthModalProps {
   postLoginRedirect?: string | null;
 }
 
+/**
+ * Seeded demo logins, shown so a reviewer can try each role.
+ *
+ * Development only. These were rendered on the sign-in page unconditionally, which
+ * published the administrator and manager passwords to anyone who loaded the site.
+ * Set NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS=true to see them locally; it stays off in a build.
+ */
+const SHOW_DEMO_ACCOUNTS = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === 'true';
+
 const DEMO_ACCOUNTS = [
   { label: 'Administrator', role: 'Admin', email: 'admin@gmail.com', password: 'AdminPassword123!' },
   { label: 'Manager / Staff', role: 'Manager', email: 'manager@gmail.com', password: 'ManagerPassword123!' },
@@ -251,32 +260,34 @@ export default function AuthModal({
                 </button>
               </div>
 
-              {/* Demo accounts - tap to fill, then Sign in */}
-              <div className="rounded-xl border border-[#514345] bg-[#131313]/70 p-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[#9e8d8e] mb-2">
-                  {t('Demo accounts — tap to fill')}
-                </p>
-                <div className="grid gap-1.5">
-                  {DEMO_ACCOUNTS.map(acct => (
-                    <button
-                      key={acct.email}
-                      type="button"
-                      onClick={() => {
-                        setUsernameOrEmail(acct.email);
-                        setPassword(acct.password);
-                        setError(null);
-                      }}
-                      className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-[#1c1b1b] border border-[#514345]/70 hover:border-[#f7b5be] transition-colors text-left"
-                    >
-                      <span className="min-w-0">
-                        <span className="block text-[12.5px] text-[#e5e2e1] truncate">{t(acct.label)}</span>
-                        <span className="block text-[11px] text-[#9e8d8e] truncate">{acct.email} · {acct.password}</span>
-                      </span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#f7b5be] shrink-0">{t(acct.role)}</span>
-                    </button>
-                  ))}
+              {/* Demo accounts - tap to fill, then Sign in. Development builds only. */}
+              {SHOW_DEMO_ACCOUNTS && (
+                <div className="rounded-xl border border-[#514345] bg-surface/70 p-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#9e8d8e] mb-2">
+                    {t('Demo accounts — tap to fill')}
+                  </p>
+                  <div className="grid gap-1.5">
+                    {DEMO_ACCOUNTS.map(acct => (
+                      <button
+                        key={acct.email}
+                        type="button"
+                        onClick={() => {
+                          setUsernameOrEmail(acct.email);
+                          setPassword(acct.password);
+                          setError(null);
+                        }}
+                        className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-[#1c1b1b] border border-[#514345]/70 hover:border-[#f7b5be] transition-colors text-left"
+                      >
+                        <span className="min-w-0">
+                          <span className="block text-[12.5px] text-[#e5e2e1] truncate">{t(acct.label)}</span>
+                          <span className="block text-[11px] text-[#9e8d8e] truncate">{acct.email} · {acct.password}</span>
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#f7b5be] shrink-0">{t(acct.role)}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
 
