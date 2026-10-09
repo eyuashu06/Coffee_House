@@ -164,6 +164,13 @@ class OrderSerializer(serializers.ModelSerializer):
         random_suffix = str(int(time.time() * 1000))[-4:]
         validated_data['order_number'] = f"ORD-{timestamp_part}-{random_suffix}"
 
+        # Promise a prep time from the venue's own setting, so every new order carries
+        # one the customer can be shown instead of a model default nobody ever set.
+        if not validated_data.get('estimated_prep_minutes'):
+            validated_data['estimated_prep_minutes'] = (
+                RestaurantSettings.get_settings().default_prep_minutes
+            )
+
         # Ensure delivery fee exists
         if 'delivery_fee_etb' not in validated_data or validated_data['delivery_fee_etb'] is None:
             validated_data['delivery_fee_etb'] = Decimal('0.00')

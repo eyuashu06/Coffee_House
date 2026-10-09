@@ -11,6 +11,7 @@ from .serializers import (
     RestaurantSettingsSerializer,
 )
 from apps.accounts.permissions import IsManager, IsOwnerOrManager
+from .workflow import assert_transition, InvalidTransition
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -70,34 +71,66 @@ class OrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Never let staff "re-open" a finished order
-        if order.status in ['COMPLETED', 'CANCELLED', 'REJECTED'] and new_status not in ['COMPLETED', 'CANCELLED', 'REJECTED']:
-            return Response(
-                {'error': f'Order #{order.order_number} is already closed ({order.get_status_display()}).'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Only legal moves are accepted (SRS 5.2). A closed order never reopens, and
+        # an order cannot jump from PLACED straight to COMPLETED skipping the kitchen.
+        # Repeating the current status is a no-op rather than an illegal transition:
+        # the prep time is corrected that way, without moving the order along.
+        is_noop = new_status == order.status
+        if not is_noop:
+            try:
+                assert_transition(order.status, new_status)
+            except InvalidTransition as exc:
+                return Response(
+                    {'error': str(exc)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-        if new_status == order.status:
+        # Accepting an order commits to a prep time, so the customer can be told when
+        # it will be ready. Staff-supplied values are validated before anything is saved.
+        prep_minutes = request.data.get('estimated_prep_minutes')
+        if prep_minutes is not None:
+            try:
+                prep_minutes = int(prep_minutes)
+            except (TypeError, ValueError):
+                return Response(
+                    {'estimated_prep_minutes': ['Enter the prep time in whole minutes.']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if prep_minutes < 1 or prep_minutes > 240:
+                return Response(
+                    {'estimated_prep_minutes': ['Prep time must be between 1 and 240 minutes.']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        if is_noop and prep_minutes is None:
             return Response(
                 OrderSerializer(order, context={'request': request}).data,
                 status=status.HTTP_200_OK
             )
 
-        order.status = new_status
+        if not is_noop:
+            order.status = new_status
         if new_status == 'PLACED' and not order.placed_at:
             order.placed_at = timezone.now()
         if new_status in ['REJECTED', 'CANCELLED']:
             reason = request.data.get('rejection_reason') or request.data.get('notes')
             if reason:
                 order.rejection_reason = reason
+        if prep_minutes is not None:
+            order.estimated_prep_minutes = prep_minutes
 
         order.save()
 
+        # A no-op status change is still logged: the prep time moved, and the customer
+        # is about to be told a different ready time.
         OrderStatusHistory.objects.create(
             order=order,
             status=new_status,
             changed_by=request.user,
-            notes=request.data.get('notes', f'Status changed to {new_status}')
+            notes=request.data.get(
+                'notes',
+                'Prep time updated' if is_noop else f'Status changed to {new_status}',
+            )
         )
 
         return Response(

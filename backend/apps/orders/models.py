@@ -78,7 +78,10 @@ class Order(models.Model):
     # Lifecycle & Progress
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='PENDING_PAYMENT', db_index=True)
     notes = models.TextField(blank=True)
-    estimated_prep_minutes = models.PositiveIntegerField(default=20)
+    estimated_prep_minutes = models.PositiveIntegerField(
+        default=20,
+        help_text='Filled from RestaurantSettings.default_prep_minutes when the order is placed',
+    )
     rejection_reason = models.TextField(blank=True)
     placed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
