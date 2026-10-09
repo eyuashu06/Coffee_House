@@ -79,6 +79,7 @@ export default function Home() {
     const [activeCat, setActiveCat] = useState('all');
     const [bookingData, setBookingData] = useState({ name: '', date_time: '', party_size: 2, contact_phone: '' });
     const [bookingStatus, setBookingStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
+    const [bookingError, setBookingError] = useState<string | null>(null);
     const [minDateTime, setMinDateTime] = useState('');
 
     // Signed-in customers get a cart in the database (it survives a refresh, a closed
@@ -158,6 +159,7 @@ export default function Home() {
         }
 
         setBookingStatus('LOADING');
+        setBookingError(null);
         try {
             const res = await apiFetch('/api/v1/reservations/', {
                 method: 'POST',
@@ -169,10 +171,30 @@ export default function Home() {
                 setBookingData({ name: '', date_time: '', party_size: 2, contact_phone: '' });
                 setTimeout(() => setBookingStatus('IDLE'), 5000);
             } else {
+                // The API explains why - slot full, party too large, time in the past -
+                // and can offer slots that are actually free. Showing that beats a bare
+                // "there was an error".
+                let message = t('That time is not available. Please try another.');
+                let alternatives: string[] = [];
+                try {
+                    const data = await res.json();
+                    const flat = Object.entries(data)
+                        .filter(([key]) => key !== 'alternatives')
+                        .map(([, value]) => (Array.isArray(value) ? value.join(' ') : String(value)))
+                        .join(' ');
+                    if (flat) message = flat;
+                    if (Array.isArray(data.alternatives)) alternatives = data.alternatives;
+                } catch { /* keep the generic message */ }
+                setBookingError(
+                    alternatives.length > 0
+                        ? `${message} ${t('Free times nearby:')} ${alternatives.join(', ')}`
+                        : message
+                );
                 setBookingStatus('ERROR');
-                setTimeout(() => setBookingStatus('IDLE'), 5000);
+                setTimeout(() => setBookingStatus('IDLE'), 8000);
             }
         } catch (error) {
+            setBookingError(t('Network error. Please check your connection and try again.'));
             setBookingStatus('ERROR');
             setTimeout(() => setBookingStatus('IDLE'), 5000);
         }
@@ -601,7 +623,11 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
                   <p id="bk-note" className="text-[14px] italic text-[#9e8d8e]">{t('No deposit — we hold your table for 20 minutes.')}</p>
                 </div>
                 {bookingStatus === 'SUCCESS' && <p className="text-[#f7b5be] font-semibold text-sm">{t('Your table is booked! We\'ll call you shortly to confirm.')}</p>}
-                {bookingStatus === 'ERROR' && <p className="text-red-400 text-sm">{t('There was an error booking your table. Please try again.')}</p>}
+                {bookingStatus === 'ERROR' && (
+                  <p className="text-red-400 text-sm">
+                    {bookingError ?? t('There was an error booking your table. Please try again.')}
+                  </p>
+                )}
               </div>
             </form>
           </div>
