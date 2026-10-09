@@ -1,5 +1,9 @@
 // Service Worker for Artisanal Reserve Coffee PWA
-const CACHE_NAME = 'artisanal-coffee-cache-v2';
+//
+// Bump this whenever a deploy changes the app. The worker cannot tell one build's
+// assets from another's, so without a bump a returning visitor keeps the previous
+// version's cached shell and chunks.
+const CACHE_NAME = 'artisanal-coffee-cache-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
