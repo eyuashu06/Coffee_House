@@ -33,6 +33,18 @@ class OrderViewSet(viewsets.ModelViewSet):
             return [IsManager()]
         return [permissions.IsAuthenticated()]
 
+    def create(self, request, *args, **kwargs):
+        # A closed cafe must not accept web orders (FR-C5). The assistant already
+        # refuses; without this the checkout button still created them.
+        venue = RestaurantSettings.get_settings()
+        if not venue.is_open:
+            return Response(
+                {'error': 'We are closed right now and are not accepting orders. '
+                          'Our opening hours are ' + venue.opening_hours},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        return super().create(request, *args, **kwargs)
+
     def get_queryset(self):
         user = self.request.user
         if not user or not user.is_authenticated:

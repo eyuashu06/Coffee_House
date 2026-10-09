@@ -68,6 +68,7 @@ class OrderSerializer(serializers.ModelSerializer):
     # Contact fields are optional — backend fills them from the authenticated user / defaults
     contact_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     contact_phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    order_type = serializers.ChoiceField(choices=Order.ORDER_TYPES, default='DELIVERY')
 
     class Meta:
         model = Order
@@ -138,6 +139,44 @@ class OrderSerializer(serializers.ModelSerializer):
             return 'failed'
         return 'unpaid'
 
+    def validate(self, attrs):
+        """
+        Each order type needs the details that make it fulfillable.
+
+        The web form only ever sent DELIVERY, so nothing checked that a delivery order
+        actually had somewhere to be delivered to - the courier got an order with no
+        address, and a dine-in order could not name its table.
+        """
+        order_type = attrs.get('order_type', 'DELIVERY')
+
+        if order_type == 'DINE_IN' and not (attrs.get('table_number') or '').strip():
+            raise serializers.ValidationError(
+                {'table_number': ['Which table are you sitting at?']}
+            )
+
+        if order_type == 'DELIVERY':
+            has_zone = bool(attrs.get('delivery_zone'))
+            has_address = bool((attrs.get('delivery_address') or '').strip())
+            if not has_zone and not has_address:
+                raise serializers.ValidationError(
+                    {
+                        'delivery_address': [
+                            'Choose a delivery zone or enter the address to deliver to.'
+                        ]
+                    }
+                )
+
+        if attrs.get('delivery_zone') and not attrs['delivery_zone'].is_active:
+            raise serializers.ValidationError(
+                {'delivery_zone': ['We do not deliver to that zone at the moment.']}
+            )
+
+        items = attrs.get('items')
+        if items is not None and not items:
+            raise serializers.ValidationError({'items': ['Your cart is empty.']})
+
+        return attrs
+
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
         request = self.context.get('request')
@@ -171,11 +210,14 @@ class OrderSerializer(serializers.ModelSerializer):
                 RestaurantSettings.get_settings().default_prep_minutes
             )
 
-        # Ensure delivery fee exists
-        if 'delivery_fee_etb' not in validated_data or validated_data['delivery_fee_etb'] is None:
-            validated_data['delivery_fee_etb'] = Decimal('0.00')
-
-        delivery_fee = Decimal(str(validated_data['delivery_fee_etb']))
+        # The delivery fee comes from the zone the customer chose, not from the browser.
+        # The client could send its own value, so it is always overwritten here.
+        zone = validated_data.get('delivery_zone')
+        if zone is not None:
+            delivery_fee = Decimal(str(zone.delivery_fee_etb))
+        else:
+            delivery_fee = Decimal('0.00')
+        validated_data['delivery_fee_etb'] = delivery_fee
 
         # Resolve every line server-side so prices can never be tampered with.
         prepared_lines = [self._prepare_line(item) for item in items_data]
@@ -184,15 +226,10 @@ class OrderSerializer(serializers.ModelSerializer):
         item_subtotals = [line['fields']['subtotal_etb'] for line in prepared_lines]
         computed_total = sum(item_subtotals, Decimal('0')) + delivery_fee
 
-        total_amount = validated_data.get('total_amount_etb')
-        if not total_amount or Decimal(str(total_amount)) == Decimal('0'):
-            total_amount = computed_total
-        else:
-            # Trust the database over the browser.
-            total_amount = computed_total
-
-        validated_data['total_amount_etb'] = total_amount
-        validated_data['subtotal_etb'] = total_amount - delivery_fee
+        # The item subtotals plus the zone fee are the total. Whatever the browser sent
+        # in total_amount_etb is discarded.
+        validated_data['total_amount_etb'] = computed_total
+        validated_data['subtotal_etb'] = computed_total - delivery_fee
 
         order = Order.objects.create(**validated_data)
 

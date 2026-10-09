@@ -222,3 +222,116 @@ class OrderStatusApiTests(TestCase):
         self.assertEqual(order.status_history.count(), before)
 
 
+class OrderCreationTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.item = make_menu_item('Test Macchiato', Decimal('90.00'))
+        self.zone = DeliveryZone.objects.create(
+            name='Bole', delivery_fee_etb=Decimal('100.00'), is_active=True,
+        )
+        self.payload = {
+            'order_type': 'DELIVERY',
+            'contact_name': 'Marta Tesfaye',
+            'contact_phone': '+251911444555',
+            'delivery_address': 'Kazanchis, House 7',
+            'items': [{'menu_item': self.item.id, 'quantity': 2}],
+        }
+
+    def test_closed_store_refuses_new_orders(self):
+        venue = RestaurantSettings.get_settings()
+        venue.is_open = False
+        venue.save()
+        res = self.client.post('/api/v1/orders/', self.payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertFalse(Order.objects.exists())
+
+    def test_open_store_accepts_order_and_prices_it_server_side(self):
+        res = self.client.post('/api/v1/orders/', self.payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        order = Order.objects.get(order_number=res.data['order_number'])
+        # 90 ETB x 2 from the menu, not whatever the client claimed.
+        self.assertEqual(order.total_amount_etb, Decimal('180.00'))
+        self.assertEqual(order.items.count(), 1)
+
+    def test_client_cannot_invent_a_price(self):
+        tampered = dict(self.payload)
+        tampered['total_amount_etb'] = '1.00'
+        tampered['items'] = [{'menu_item': self.item.id, 'quantity': 2, 'unit_price_etb': '0.01'}]
+        res = self.client.post('/api/v1/orders/', tampered, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data['total_amount_etb'], '180.00')
+
+    def test_delivery_fee_comes_from_the_zone_not_the_client(self):
+        payload = dict(self.payload)
+        payload['delivery_zone'] = self.zone.id
+        payload['delivery_fee_etb'] = '1.00'  # the browser would like a 1 birr delivery
+        res = self.client.post('/api/v1/orders/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        # 2 x 90 + the zone's 100 fee
+        self.assertEqual(res.data['delivery_fee_etb'], '100.00')
+        self.assertEqual(res.data['total_amount_etb'], '280.00')
+
+    def test_inactive_zone_is_rejected(self):
+        self.zone.is_active = False
+        self.zone.save()
+        payload = dict(self.payload)
+        payload['delivery_zone'] = self.zone.id
+        res = self.client.post('/api/v1/orders/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delivery_without_zone_or_address_is_rejected(self):
+        payload = dict(self.payload)
+        payload['delivery_address'] = ''
+        res = self.client.post('/api/v1/orders/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('delivery_address', res.data)
+
+    def test_pickup_needs_no_address(self):
+        payload = dict(self.payload)
+        payload['order_type'] = 'PICKUP'
+        payload['delivery_address'] = ''
+        res = self.client.post('/api/v1/orders/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        order = Order.objects.get(order_number=res.data['order_number'])
+        self.assertEqual(order.order_type, 'PICKUP')
+        self.assertEqual(order.delivery_fee_etb, Decimal('0.00'))
+
+    def test_dine_in_needs_a_table_number(self):
+        payload = dict(self.payload)
+        payload['order_type'] = 'DINE_IN'
+        res = self.client.post('/api/v1/orders/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('table_number', res.data)
+
+    def test_dine_in_with_table_number_is_accepted(self):
+        payload = dict(self.payload)
+        payload['order_type'] = 'DINE_IN'
+        payload['table_number'] = '7'
+        res = self.client.post('/api/v1/orders/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        order = Order.objects.get(order_number=res.data['order_number'])
+        self.assertEqual(order.order_type, 'DINE_IN')
+        self.assertEqual(order.table_number, '7')
+
+    def test_unknown_order_type_is_rejected(self):
+        payload = dict(self.payload)
+        payload['order_type'] = 'TELEPORT'
+        res = self.client.post('/api/v1/orders/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_empty_cart_is_rejected(self):
+        payload = dict(self.payload)
+        payload['items'] = []
+        res = self.client.post('/api/v1/orders/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_prep_time_defaults_to_the_venue_setting(self):
+        venue = RestaurantSettings.get_settings()
+        venue.default_prep_minutes = 35
+        venue.save()
+        res = self.client.post('/api/v1/orders/', self.payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        order = Order.objects.get(order_number=res.data['order_number'])
+        self.assertEqual(order.estimated_prep_minutes, 35)
+
+
