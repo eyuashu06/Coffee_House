@@ -106,26 +106,6 @@ const STATUS_FILTERS = [
 // Terminal states are not counted as "live"
 const CLOSED_STATUSES = ['COMPLETED', 'CANCELLED', 'REJECTED'];
 
-/**
- * The legal status moves, mirroring apps/orders/workflow.py on the server.
- *
- * The panel used to show a button per status, so staff could push an order from
- * "Placed" straight to "Completed" and the API had to reject it — or worse, accept it
- * because no transition rules existed. Rendering only the real moves keeps the button
- * and the rule in agreement.
- */
-const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  PENDING_PAYMENT: ['PLACED', 'CANCELLED', 'REJECTED'],
-  PLACED: ['ACCEPTED', 'CANCELLED', 'REJECTED'],
-  ACCEPTED: ['PREPARING', 'CANCELLED', 'REJECTED'],
-  PREPARING: ['READY', 'CANCELLED', 'REJECTED'],
-  READY: ['OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED'],
-  OUT_FOR_DELIVERY: ['COMPLETED', 'CANCELLED'],
-  COMPLETED: [],
-  CANCELLED: [],
-  REJECTED: [],
-};
-
 /** How long the kitchen should promise for a status, by order type. */
 const DEFAULT_PREP_MINUTES: Record<string, number> = {
   DELIVERY: 30,
