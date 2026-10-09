@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import LanguageToggle from '../components/LanguageToggle';
 import { apiFetch } from '../lib/api';
+import { useCart, readLocalCart, saveLocalCart, clearLocalCart, ServerCartLine } from '../lib/cart';
 import Link from 'next/link';
 
 export interface MenuItem {
@@ -27,12 +28,48 @@ export interface MenuItem {
     add_ons?: { id: number; name: string; price_etb: string }[];
 }
 
+/**
+ * Render the saved cart in the drawer's line shape.
+ *
+ * The stored cart holds ids and names only, so the drink's photo and description are
+ * looked up from the menu already loaded on this page. A drink that has left the menu
+ * still renders, from its stored name, rather than as an empty row.
+ */
+function serverCartToCartItems(
+    cart: { items: ServerCartLine[] } | null,
+    menu: MenuItem[]
+): CartItem[] {
+    if (!cart) return [];
+    return cart.items.map((line) => {
+        const menuItem = menu.find((item) => item.id === line.menu_item);
+        return {
+            lineKey: `server-${line.id}`,
+            serverLineId: line.id,
+            coffee: {
+                id: line.menu_item,
+                name: line.menu_item_name,
+                price: menuItem?.base_price_etb ?? menuItem?.price ?? line.unit_price_etb,
+                image_url: menuItem?.image_url ?? '',
+                category_slug: menuItem?.category_slug ?? '',
+                description: menuItem?.description ?? '',
+                is_signature: menuItem?.is_signature ?? false,
+            } as never,
+            quantity: line.quantity,
+            temperature: line.temperature,
+            milk: line.milk_choice,
+            variant: line.variant_label
+                ? { id: line.variant ?? 0, name: line.variant_label, price_modifier_etb: '0' }
+                : null,
+            addOns: line.add_on_labels.map((name, index) => ({ id: index, name })),
+        } as CartItem;
+    });
+}
+
 export default function Home() {
     const router = useRouter();
     const { user, loading: authLoading } = useAuth();
     const { t, language, tCategory, tItem } = useLanguage();
     const [items, setItems] = useState<MenuItem[]>([]);
-    const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -43,6 +80,31 @@ export default function Home() {
     const [bookingData, setBookingData] = useState({ name: '', date_time: '', party_size: 2, contact_phone: '' });
     const [bookingStatus, setBookingStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
     const [minDateTime, setMinDateTime] = useState('');
+
+    // Signed-in customers get a cart in the database (it survives a refresh, a closed
+    // tab and a second device). Guests keep theirs locally, and it is merged into the
+    // account cart at sign-in. It used to be React state and nothing else, so a refresh
+    // threw the order away and signing in did nothing to it.
+    const isSignedIn = !!user && !authLoading;
+    const {
+        cart: serverCart,
+        addLine: addServerLine,
+        setQuantity: setServerQuantity,
+        removeLine: removeServerLine,
+        clearCart: clearServerCart,
+        syncGuestCart,
+    } = useCart(isSignedIn);
+
+    const [guestCart, setGuestCart] = useState<CartItem[]>([]);
+    useEffect(() => { if (!isSignedIn) setGuestCart(readLocalCart() as CartItem[]); }, [isSignedIn]);
+
+    const cartItems = isSignedIn ? serverCartToCartItems(serverCart, items) : guestCart;
+
+    // On sign-in the guest's local cart is folded into the account cart, so nothing
+    // that was in the basket disappears.
+    useEffect(() => {
+        if (isSignedIn) void syncGuestCart();
+    }, [isSignedIn, syncGuestCart]);
 
     // Middleware sends signed-out visitors here with ?auth=login&redirect=/account —
     // honour it so the sign-in form actually opens (and remember where to go after).
@@ -129,56 +191,101 @@ export default function Home() {
         variant?: { id: number; name: string; price_modifier_etb: string } | null,
         addOns: { id: number; name: string; price_etb: string }[] = []
     ) => {
-        setCartItems(prev => {
-            // Same item + same options = merge quantities, otherwise add a new line
-            const sameLine = (i: (typeof prev)[number]) =>
-                i.coffee.id === item.id &&
-                i.temperature === temperature &&
-                i.milk === milk &&
-                (i.variant?.id ?? null) === (variant?.id ?? null) &&
-                i.addOns.map(a => a.name).sort().join('|') === addOns.map(a => a.name).sort().join('|');
+        const newLine: CartItem = {
+            lineKey: `guest-${item.id}-${temperature}-${milk}-${variant?.id ?? 'none'}-${addOns.map(a => a.id).sort().join('.')}`,
+            coffee: {
+                id: item.id,
+                name: item.name,
+                price: parseFloat(item.base_price_etb ?? item.price),
+                image_url: item.image_url,
+                category_slug: item.category_slug,
+                description: item.description,
+                is_signature: item.is_signature
+            } as never,
+            quantity,
+            temperature,
+            milk,
+            variant: variant ?? null,
+            addOns
+        };
 
-            const existingIdx = prev.findIndex(sameLine);
-            if (existingIdx > -1) {
-                const updated = [...prev];
-                updated[existingIdx].quantity += quantity;
-                return updated;
-            }
-            return [...prev, {
-                coffee: {
-                    id: item.id,
-                    name: item.name,
-                    price: parseFloat(item.base_price_etb ?? item.price),
-                    image_url: item.image_url,
-                    category_slug: item.category_slug,
-                    description: item.description,
-                    is_signature: item.is_signature
-                } as any,
+        if (isSignedIn) {
+            // The server merges identical lines itself, so this is a single call.
+            void addServerLine({
+                coffee: newLine.coffee,
                 quantity,
                 temperature,
                 milk,
                 variant: variant ?? null,
                 addOns
-            }];
-        });
+            });
+        } else {
+            setGuestCart(prev => {
+                // Same drink + same options = one line with a higher quantity.
+                const index = prev.findIndex(
+                    (i) =>
+                        i.coffee.id === item.id &&
+                        i.temperature === temperature &&
+                        i.milk === milk &&
+                        (i.variant?.id ?? null) === (variant?.id ?? null) &&
+                        (i.addOns || []).map(a => a.name).sort().join('|') ===
+                            addOns.map(a => a.name).sort().join('|')
+                );
+                const next = index === -1 ? [...prev, newLine] : [...prev];
+                if (index !== -1) {
+                    next[index] = { ...next[index], quantity: next[index].quantity + quantity };
+                }
+                saveLocalCart(next as unknown as Parameters<typeof saveLocalCart>[0]);
+                return next;
+            });
+        }
         setIsItemModalOpen(false);
         setIsCartOpen(true);
     };
 
     const handleUpdateQty = (index: number, delta: number) => {
-        setCartItems(prev => {
-            const updated = [...prev];
-            updated[index].quantity += delta;
-            if (updated[index].quantity <= 0) updated.splice(index, 1);
-            return updated;
+        const line = cartItems[index];
+        if (!line) return;
+        const nextQty = line.quantity + delta;
+
+        if (isSignedIn && line.serverLineId) {
+            // Quantity 0 removes the line; the API treats it that way.
+            void setServerQuantity(line.serverLineId, nextQty);
+            return;
+        }
+        setGuestCart(prev => {
+            const next = [...prev];
+            if (nextQty <= 0) {
+                next.splice(index, 1);
+            } else {
+                next[index] = { ...next[index], quantity: nextQty };
+            }
+            saveLocalCart(next as unknown as Parameters<typeof saveLocalCart>[0]);
+            return next;
         });
     };
 
     const handleRemoveItem = (index: number) => {
-        setCartItems(prev => prev.filter((_, i) => i !== index));
+        const line = cartItems[index];
+        if (isSignedIn && line?.serverLineId) {
+            void removeServerLine(line.serverLineId);
+            return;
+        }
+        setGuestCart(prev => {
+            const next = prev.filter((_, i) => i !== index);
+            saveLocalCart(next as unknown as Parameters<typeof saveLocalCart>[0]);
+            return next;
+        });
     };
 
-    const handleClearCart = () => setCartItems([]);
+    const handleClearCart = () => {
+        clearLocalCart();
+        if (isSignedIn) {
+            void clearServerCart();
+        } else {
+            setGuestCart([]);
+        }
+    };
 
     const filteredItems = activeCat === 'all' 
         ? items 

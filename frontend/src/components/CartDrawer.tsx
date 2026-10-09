@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CoffeeItemData } from './MenuSection';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -16,6 +16,10 @@ export interface CartLineOption {
 }
 
 export interface CartItem {
+  /** Stable key so a quantity change finds the same line again after a re-render. */
+  lineKey?: string;
+  /** Set when the line came from the saved server cart (needed to PATCH/DELETE it). */
+  serverLineId?: number;
   coffee: CoffeeItemData;
   quantity: number;
   temperature: string;
