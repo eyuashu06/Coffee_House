@@ -82,6 +82,48 @@ export default function Home() {
     const [bookingError, setBookingError] = useState<string | null>(null);
     const [minDateTime, setMinDateTime] = useState('');
 
+    // Order tracking. This was a form that printed a hardcoded "BH-1024 · ready for
+    // pickup" for whatever was typed into it, which told customers their order was on
+    // its way before it existed. It asks the API about their own orders now.
+    const [trackCode, setTrackCode] = useState('');
+    const [trackResult, setTrackResult] = useState<string | null>(null);
+    const [isTracking, setIsTracking] = useState(false);
+
+    const handleTrackSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) {
+            setInitialAuthMode('LOGIN');
+            setIsAuthModalOpen(true);
+            return;
+        }
+        const code = trackCode.trim();
+        if (!code) return;
+
+        setIsTracking(true);
+        setTrackResult(null);
+        try {
+            const res = await apiFetch(`/api/v1/orders/?search=${encodeURIComponent(code)}`);
+            if (!res.ok) {
+                setTrackResult(t('We could not check that order right now. Please try again.'));
+                return;
+            }
+            const data = await res.json();
+            const orders = Array.isArray(data) ? data : data.results || [];
+            const match = orders.find(
+                (order: { order_number: string }) => order.order_number === code
+            );
+            setTrackResult(
+                match
+                    ? `${match.order_number} · ${t(match.status.replace(/_/g, ' ').toLowerCase())}`
+                    : t('No order with that code on your account.')
+            );
+        } catch {
+            setTrackResult(t('We could not check that order right now. Please try again.'));
+        } finally {
+            setIsTracking(false);
+        }
+    };
+
     // Signed-in customers get a cart in the database (it survives a refresh, a closed
     // tab and a second device). Guests keep theirs locally, and it is merged into the
     // account cart at sign-in. It used to be React state and nothing else, so a refresh
@@ -677,11 +719,24 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
         <div>
           <h3 className="font-display text-[20px]"><Link href="/account" className="inline-flex items-center gap-1.5 text-[14.5px] text-[#9e8d8e] hover:text-[#f7b5be] transition-colors">{t('Track your order')}</Link></h3>
           <p className="mt-4 text-[14.5px] text-[#d5c2c3]">{t('Order pickup by phone — +251 11 555 0148. Already ordered? The code on your receipt starts with BH.')}</p>
-          <form id="track-form" className="mt-3 flex gap-2.5">
-            <input type="text" placeholder="BH-1024" aria-label="Order code" className="field flex-1 h-11 px-4 text-[15px] min-w-0"/>
-            <button type="submit" className="h-11 px-5 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[15px] font-semibold hover:bg-[#ffd9dd] transition-colors shrink-0">{t('Check')}</button>
+          <form id="track-form" className="mt-3 flex gap-2.5" onSubmit={handleTrackSubmit}>
+            <input
+              type="text"
+              value={trackCode}
+              onChange={(e) => setTrackCode(e.target.value)}
+              placeholder="ORD-20260930-1234"
+              aria-label={t('Order code')}
+              className="field flex-1 h-11 px-4 text-[15px] min-w-0"
+            />
+            <button type="submit" disabled={isTracking} className="h-11 px-5 rounded-[28px] bg-[#f7b5be] text-[#4e232b] text-[15px] font-semibold hover:bg-[#ffd9dd] transition-colors shrink-0 disabled:opacity-50">
+              {isTracking ? t('Checking...') : t('Check')}
+            </button>
           </form>
-          <p id="track-result" className="mt-4 hidden items-center gap-2 text-[14.5px] text-[#fbbb50]"><span className="w-1.5 h-1.5 rounded-full bg-[#fbbb50]"></span> BH-1024 · {t('Ready for pickup — ask at the counter')}</p>
+          {trackResult && (
+            <p className="mt-4 flex items-center gap-2 text-[14.5px] text-[#fbbb50]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#fbbb50]"></span> {trackResult}
+            </p>
+          )}
         </div>
       </div>
       <div className="mt-14 pt-6 border-t border-[#514345] flex items-center justify-between text-[13.5px] text-[#9e8d8e]">
