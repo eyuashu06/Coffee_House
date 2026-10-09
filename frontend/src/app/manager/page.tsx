@@ -909,7 +909,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
       {selectedReceiptOrder && (
         <ReceiptModal
           onClose={() => setSelectedReceiptOrder(null)}
-          order={selectedReceiptOrder as any}
+          order={selectedReceiptOrder}
         />
       )}
     </div>

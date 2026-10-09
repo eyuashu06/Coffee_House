@@ -768,7 +768,7 @@ export default function AccountPage() {
       {selectedReceiptOrder && (
         <ReceiptModal
           onClose={() => setSelectedReceiptOrder(null)}
-          order={selectedReceiptOrder as any}
+          order={selectedReceiptOrder}
         />
       )}
 
