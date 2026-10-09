@@ -1,5 +1,9 @@
 // Service Worker for Artisanal Reserve Coffee PWA
-const CACHE_NAME = 'artisanal-coffee-cache-v2';
+//
+// Bump this whenever a deploy changes the app. The worker cannot tell one build's
+// assets from another's, so without a bump a returning visitor keeps the previous
+// version's cached shell and chunks.
+const CACHE_NAME = 'artisanal-coffee-cache-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -36,11 +40,15 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
+      // Delete every cache of ours that is not the current version. This condition was
+      // inverted: it deleted anything NOT sharing our prefix and kept everything that
+      // did, which is all of them. Invalidation had therefore never run.
       return Promise.all(
         cacheNames.map((cache) => {
-          if (!cache.startsWith('artisanal-coffee-cache-')) {
+          if (cache.startsWith('artisanal-coffee-cache-') && cache !== CACHE_NAME) {
             return caches.delete(cache);
           }
+          return undefined;
         })
       );
     })

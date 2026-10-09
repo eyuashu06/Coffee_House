@@ -26,27 +26,44 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  // Read the saved preference during the initial render rather than in an effect.
-  // With the effect, the very first paint always showed English and then swapped
-  // to Amharic, so a page reload flashed the wrong language before correcting itself.
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window === 'undefined') return 'en';
+export function LanguageProvider({
+  children,
+  initialLanguage = 'en',
+}: {
+  children: React.ReactNode;
+  /**
+   * Read from the `app_lang` cookie by the server layout and passed in here.
+   *
+   * Reading localStorage during the first render instead - which is what this did - means
+   * the client's first render uses the stored language while the server's used the
+   * default, and React rejects the result as a hydration mismatch. Persisting to a cookie
+   * gives the server the same answer, so the two agree and there is nothing to correct.
+   */
+  initialLanguage?: Language;
+}) {
+  const [language, setLanguageState] = useState<Language>(initialLanguage);
+
+  // One-time migration for anyone who set a language before it was stored in a cookie:
+  // adopt the old localStorage value so nobody silently drops back to English.
+  useEffect(() => {
     const saved = localStorage.getItem('app_lang');
-    return saved === 'am' || saved === 'en' ? saved : 'en';
-  });
+    if ((saved === 'am' || saved === 'en') && saved !== initialLanguage) {
+      setLanguageState(saved);
+    }
+    // Runs once, on mount: this is only about inheriting a pre-cookie preference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      document.documentElement.lang = language;
-    }
+    document.documentElement.lang = language;
   }, [language]);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('app_lang', lang);
-    }
+    localStorage.setItem('app_lang', lang);
+    // Read by the server on the next request, so the page renders in the right
+    // language from the first byte instead of swapping after hydration.
+    document.cookie = `app_lang=${lang}; path=/; max-age=31536000; samesite=lax`;
   };
 
   const toggleLanguage = () => {
