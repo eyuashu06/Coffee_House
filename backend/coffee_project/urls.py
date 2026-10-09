@@ -10,6 +10,7 @@ v1_patterns = [
     path('', include('apps.payments.urls')),
     path('', include('apps.menu.urls')),
     path('', include('apps.assistant.urls')),
+    path('', include('apps.cart.urls')),
     path('', include('api.urls')),
 ]
 
