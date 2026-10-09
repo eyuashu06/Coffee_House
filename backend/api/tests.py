@@ -7,7 +7,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from api.models import TableReservation
+from api.models import Order as LegacyOrder, TableReservation
 from apps.assistant import reservations as reservation_rules
 
 User = get_user_model()
@@ -142,3 +142,55 @@ class ReservationAvailabilityTests(TestCase):
         self.assertFalse(TableReservation.objects.exists())
 
 
+class LegacyOrderLeakTests(TestCase):
+    """The legacy /orders/ endpoint used to hand every order to anonymous callers."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.customer = User.objects.create_user(
+            username='legacycustomer', email='legacy@coffeereceipts.com',
+            phone='+251911000123', password='Password123!', role='CUSTOMER',
+        )
+        LegacyOrder.objects.create(
+            user=self.customer,
+            customer_name='Selam Bekele',
+            customer_email='legacy@coffeereceipts.com',
+            total_amount=Decimal('200.00'),
+            status='PENDING',
+        )
+
+    def test_anonymous_caller_sees_no_orders(self):
+        # Reads are open to anonymous callers (global IsAuthenticatedOrReadOnly), so the
+        # protection is the queryset: it used to fall back to Order.objects.all().
+        res = self.client.get('/api/v1/legacy-orders/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['results'], [])
+        self.assertEqual(LegacyOrder.objects.count(), 1)
+
+    def test_customer_sees_only_their_own_orders(self):
+        other = User.objects.create_user(
+            username='othercustomer', email='other@coffeereceipts.com',
+            phone='+251911000456', password='Password123!', role='CUSTOMER',
+        )
+        LegacyOrder.objects.create(
+            user=other,
+            customer_name='Marta Tesfaye',
+            customer_email='other@coffeereceipts.com',
+            total_amount=Decimal('300.00'),
+            status='PENDING',
+        )
+        self.client.force_authenticate(self.customer)
+        res = self.client.get('/api/v1/legacy-orders/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        names = [row['customer_name'] for row in res.data['results']]
+        self.assertEqual(names, ['Selam Bekele'])
+
+    def test_manager_sees_every_legacy_order(self):
+        manager = User.objects.create_user(
+            username='legacymanager', email='legacymanager@coffeereceipts.com',
+            phone='+251911000999', password='Password123!', role='MANAGER',
+        )
+        self.client.force_authenticate(manager)
+        res = self.client.get('/api/v1/legacy-orders/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data['results']), 1)

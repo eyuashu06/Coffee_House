@@ -51,7 +51,10 @@ class OrderViewSet(viewsets.ModelViewSet):
             if user.role in ['MANAGER', 'ADMIN'] or user.is_superuser:
                 return Order.objects.all().order_by('-created_at')
             return Order.objects.filter(user=user).order_by('-created_at')
-        return Order.objects.all().order_by('-created_at') # Fallback to all if not auth, since guest might have orders in session, though frontend blocks it.
+        # Anonymous callers get nothing: "guest orders live in the session" is not a
+        # thing here, and returning every order to an unauthenticated caller leaked
+        # every customer's name, phone and address.
+        return Order.objects.none()
 
     def perform_create(self, serializer):
         if self.request.user.is_authenticated:
