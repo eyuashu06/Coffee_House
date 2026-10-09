@@ -9,6 +9,12 @@ from datetime import date, timedelta
 from .models import Category, CoffeeItem, Order, KnowledgeBase, TableReservation
 from .serializers import CategorySerializer, CoffeeItemSerializer, OrderSerializer, KnowledgeBaseSerializer, TableReservationSerializer
 from .rag_engine import CoffeeSommelierRAG
+from apps.assistant.reservations import (
+    check_availability,
+    max_guests,
+    parse_iso_datetime,
+    suggest_alternative_times,
+)
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
@@ -184,9 +190,84 @@ class TableReservationViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         from rest_framework import permissions
-        if self.action == 'create':
-            return [permissions.IsAuthenticated()] # Only auth users can book now as requested
         return [permissions.IsAuthenticated()]
+
+    @action(detail=False, methods=['get'])
+    def availability(self, request):
+        """
+        Is a table free at this time? The booking form calls this before it lets someone
+        submit, and the assistant already refuses - without it the web path could
+        double-book every slot the assistant protected.
+        """
+        date_str = request.query_params.get('date')
+        time_str = request.query_params.get('time')
+        guests = request.query_params.get('guests')
+
+        try:
+            guests = int(guests) if guests not in (None, '') else None
+        except (TypeError, ValueError):
+            return Response({'available': False, 'reason': 'invalid_guests'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        ok, reason = check_availability(date_str, time_str, guests)
+        payload = {'available': ok, 'reason': reason}
+        if not ok and reason == 'fully_booked':
+            payload['alternatives'] = suggest_alternative_times(date_str, time_str, guests)
+        return Response(payload, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Availability is enforced on the write path too: the form being bypassable must
+        not mean the database accepts a booking for a slot that is already full.
+        """
+        from django.utils import timezone as dj_timezone
+        from rest_framework import status as drf_status
+        from rest_framework.response import Response as DRFResponse
+
+        party_size = request.data.get('party_size')
+        try:
+            party_size = int(party_size)
+        except (TypeError, ValueError):
+            return DRFResponse(
+                {'party_size': ['Enter how many guests are coming.']},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+        if party_size < 1:
+            return DRFResponse(
+                {'party_size': ['A table needs at least one guest.']},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+
+        when = parse_iso_datetime(request.data.get('date_time'))
+        if when is None:
+            message = (['Use the format YYYY-MM-DDTHH:MM.'] if request.data.get('date_time')
+                       else ['Choose a date and time for the table.'])
+            return DRFResponse({'date_time': message}, status=drf_status.HTTP_400_BAD_REQUEST)
+
+        if when < dj_timezone.now():
+            return DRFResponse(
+                {'date_time': ['That time has already passed. Pick a slot in the future.']},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+
+        ok, reason = check_availability(
+            when.date().isoformat(), when.strftime('%H:%M'), party_size,
+        )
+        if not ok:
+            message = {
+                'too_large': f'We seat up to {max_guests()} guests per table. '
+                             'Please book two tables or contact us for a group.',
+                'fully_booked': 'That slot is fully booked.',
+                'invalid_datetime': 'That date and time could not be read.',
+            }.get(reason, 'That slot is not available.')
+            response = {'date_time': [message], 'reason': reason}
+            if reason == 'fully_booked':
+                response['alternatives'] = suggest_alternative_times(
+                    when.date().isoformat(), when.strftime('%H:%M'), party_size,
+                )
+            return DRFResponse(response, status=drf_status.HTTP_409_CONFLICT)
+
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         if self.request.user.is_authenticated:
