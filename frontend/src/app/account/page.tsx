@@ -35,6 +35,8 @@ interface Order {
   total_amount_etb: string;
   status: string;
   rejection_reason?: string;
+  /** How long the kitchen said this would take, shown as a countdown. */
+  estimated_prep_minutes?: number | null;
   placed_at?: string | null;
   created_at: string;
   items: OrderItem[];
@@ -557,7 +559,12 @@ export default function AccountPage() {
                               </p>
                             </div>
                           ) : (
-                            <OrderTracker status={order.status} />
+                            <OrderTracker
+                              status={order.status}
+                              orderType={order.order_type}
+                              estimatedPrepMinutes={order.estimated_prep_minutes}
+                              placedAt={order.placed_at || order.created_at}
+                            />
                           )}
                           <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-[#514345] pt-4">
                             <div>
