@@ -200,3 +200,67 @@ class ThrottleStandDownTests(TestCase):
 
         self.assertTrue(issubclass(ScopedThrottle, drf_throttling.ScopedRateThrottle))
         self.assertEqual(ScopedThrottle.scope_attr, 'throttle_scope')
+
+
+class PasswordResetTokenExposureTests(TestCase):
+    """
+    A working reset token in the response body is an account takeover.
+
+    It was returned unconditionally, "for testing", which meant anyone who could call
+    the endpoint could reset any registered user's password without touching their
+    mailbox. The local console mail backend already prints the link, so the
+    convenience was never needed.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='victim', email='victim@example.org',
+            password='Password123!', phone='+251911000000',
+        )
+
+    def _request_reset(self):
+        return self.client.post(
+            '/api/v1/auth/password-reset/', {'email': 'victim@example.org'}, format='json')
+
+    def test_the_token_is_not_handed_back_by_default(self):
+        res = self._request_reset()
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertNotIn('token', res.data)
+        self.assertNotIn('uidb64', res.data)
+
+    def test_the_token_is_still_mailed(self):
+        """Withholding it from the response must not break the actual flow."""
+        from django.core import mail
+
+        with self.settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            self._request_reset()
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('reset-password?uid=', mail.outbox[0].body)
+
+    def test_a_developer_can_opt_back_in(self):
+        with override_settings(EXPOSE_PASSWORD_RESET_TOKEN=True):
+            res = self._request_reset()
+        self.assertIn('token', res.data)
+        self.assertIn('uidb64', res.data)
+
+    def test_the_exposed_token_only_resets_that_users_password(self):
+        """Opting in must not hand out a token for somebody else's account."""
+        other = User.objects.create_user(
+            username='bystander', email='bystander@example.org',
+            password='Password123!', phone='+251911000001',
+        )
+        with override_settings(EXPOSE_PASSWORD_RESET_TOKEN=True):
+            res = self._request_reset()
+
+        confirm = self.client.post('/api/v1/auth/password-reset/confirm/', {
+            'uidb64': res.data['uidb64'], 'token': res.data['token'],
+            'new_password': 'Hijacked123!',
+        }, format='json')
+        self.assertEqual(confirm.status_code, status.HTTP_200_OK)
+
+        other.refresh_from_db()
+        self.user.refresh_from_db()
+        # Only the account the link was requested for changed.
+        self.assertTrue(self.user.check_password('Hijacked123!'))
+        self.assertFalse(other.check_password('Hijacked123!'))

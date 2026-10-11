@@ -214,11 +214,17 @@ class PasswordResetRequestView(APIView):
                 fail_silently=True,
             )
 
-            return Response({
+            payload = {
                 'message': 'Password reset instructions have been sent to your email address.',
-                'uidb64': uidb64,  # Provided for testing/dev environments
-                'token': token
-            }, status=status.HTTP_200_OK)
+            }
+            # A working reset token in the response body means anyone who can call this
+            # endpoint can take over any account - no mailbox access needed. It was
+            # there for local development, where the console mail backend prints the
+            # link anyway, so it is opt-in now rather than on by default.
+            if getattr(settings, 'EXPOSE_PASSWORD_RESET_TOKEN', False):
+                payload['uidb64'] = uidb64
+                payload['token'] = token
+            return Response(payload, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class PasswordResetConfirmView(APIView):
