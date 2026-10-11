@@ -102,6 +102,8 @@ INSTALLED_APPS = [
     'apps.orders',
     'apps.payments',
     'apps.assistant',
+    # Cross-cutting helpers (rate limiting) that belong to no single app.
+    'apps.core',
     'api',
 ]
 
@@ -309,6 +311,22 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_PAGINATION_CLASS': 'api.pagination.StandardPagination',
     'PAGE_SIZE': 12,
+    # No global throttle. The dashboard polls orders, analytics and reservations every
+    # five seconds from one tablet, and a blanket per-IP limit would take the live
+    # board offline mid-shift. Endpoints opt in with `throttle_scope` instead - see
+    # apps/core/throttling.py for which ones and why those.
+    'DEFAULT_THROTTLE_RATES': {
+        # Sign-in. 20/minute is far above any human and far below a guessing script.
+        'auth_login': '20/min',
+        'auth_register': '5/hour',
+        # Each attempt mails somebody. Rare by nature, so the limit is tight.
+        'auth_password_reset': '5/hour',
+        'order_create': '15/min',
+        'payment_init': '15/min',
+        # The account page re-checks a settling payment every 5 seconds (12/min),
+        # so this has to sit comfortably above that to avoid breaking a normal flow.
+        'payment_verify': '60/min',
+    },
 }
 
 SPECTACULAR_SETTINGS = {

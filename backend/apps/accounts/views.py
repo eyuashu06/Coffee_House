@@ -20,6 +20,7 @@ from .serializers import (
     PasswordResetConfirmSerializer,
 )
 from .permissions import IsCustomer, IsOwnerOrManager
+from apps.core.throttling import ScopedThrottle
 
 User = get_user_model()
 
@@ -66,6 +67,8 @@ def clear_auth_cookies(response):
 
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'auth_register'
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -81,7 +84,16 @@ class RegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
+    """
+    Sign-in, rate limited per address.
+
+    The view answers differently for an unknown address and a wrong password, so it
+    doubles as an account-existence oracle - which is precisely what an unlimited
+    endpoint should not be. DRF answers 429 once the limit is hit.
+    """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'auth_login'
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -180,6 +192,8 @@ class AddressViewSet(viewsets.ModelViewSet):
 
 class PasswordResetRequestView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'auth_password_reset'
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -209,6 +223,8 @@ class PasswordResetRequestView(APIView):
 
 class PasswordResetConfirmView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'auth_password_reset'
 
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)

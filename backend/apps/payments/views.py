@@ -19,6 +19,7 @@ from .serializers import PaymentSerializer, InitializePaymentSerializer
 from apps.orders.models import Order
 from apps.accounts.models import normalize_ethiopian_phone
 from apps.accounts.validators import is_deliverable_email
+from apps.core.throttling import ScopedThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,16 @@ def _can_manage_order(request, order):
 
 
 class InitializePaymentView(APIView):
+    """
+    Start a payment, rate limited per caller.
+
+    Each call creates a transaction with the gateway, so an unbounded endpoint is both
+    an abuse vector and a way to fill up the cafe's payment records with attempts that
+    were never meant to be paid.
+    """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'payment_init'
 
     def post(self, request):
         serializer = InitializePaymentSerializer(data=request.data)
@@ -337,6 +347,8 @@ class VerifyPaymentView(APIView):
     """
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'payment_verify'
 
     def get(self, request, tx_ref):
         try:

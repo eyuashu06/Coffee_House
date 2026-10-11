@@ -13,10 +13,14 @@ from .serializers import (
 )
 from .workflow import assert_transition, InvalidTransition
 from apps.accounts.permissions import IsManager, IsOwnerOrManager
+from apps.core.throttling import ScopedThrottle
 
 
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
+    #: Listing the kitchen's order queue is the app's core poll and must never be
+    #: throttled, so only `create` opts in below.
+    throttle_classes = []
 
     #: Actions that only managers/admins may perform
     MANAGER_ACTIONS = {'update_status', 'update', 'partial_update', 'destroy'}
@@ -33,6 +37,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         if self.action in self.MANAGER_ACTIONS:
             return [IsManager()]
         return [permissions.IsAuthenticated()]
+
+    def get_throttles(self):
+        """Order creation only. Every read and staff action is left unlimited."""
+        if self.action != 'create':
+            return super().get_throttles()
+        self.throttle_scope = 'order_create'
+        return [ScopedThrottle()]
 
     def create(self, request, *args, **kwargs):
         # A closed cafe must not accept web orders (FR-C5). The assistant already
