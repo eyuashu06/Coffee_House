@@ -182,6 +182,86 @@ class OrderViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def reorder(self, request, pk=None):
+        """
+        One-tap reorder (SRS FR-O8).
+
+        Duplicates an existing order's items and configuration into a new PENDING_PAYMENT order.
+        """
+        venue = RestaurantSettings.get_settings()
+        if not venue.is_open:
+            return Response(
+                {'error': 'We are closed right now and are not accepting orders. '
+                          'Our opening hours are ' + venue.opening_hours},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+        original_order = self.get_object()
+
+        if not request.user.is_manager_or_admin() and original_order.customer != request.user:
+            return Response(
+                {'error': 'You do not have permission to reorder this order.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        import uuid
+        from django.db import transaction
+        from apps.orders.models import OrderItem, OrderItemAddOn
+
+        today_str = timezone.now().strftime('%Y%m%d')
+        unique_suffix = uuid.uuid4().hex[:4].upper()
+        order_number = f"ORD-{today_str}-{unique_suffix}"
+
+        with transaction.atomic():
+            new_order = Order.objects.create(
+                order_number=order_number,
+                customer=request.user,
+                order_type=original_order.order_type,
+                table_number=original_order.table_number,
+                delivery_zone=original_order.delivery_zone,
+                delivery_address=original_order.delivery_address,
+                contact_name=original_order.contact_name or (request.user.get_full_name() if hasattr(request.user, 'get_full_name') else '') or request.user.username,
+                contact_phone=original_order.contact_phone or getattr(request.user, 'phone', ''),
+                notes=original_order.notes,
+                status='PENDING_PAYMENT',
+                subtotal_etb=original_order.subtotal_etb,
+                delivery_fee_etb=original_order.delivery_fee_etb,
+                total_amount_etb=original_order.total_amount_etb,
+            )
+
+            for item in original_order.items.all():
+                new_item = OrderItem.objects.create(
+                    order=new_order,
+                    menu_item=item.menu_item,
+                    item_name=item.item_name,
+                    variant_name=item.variant_name,
+                    unit_price_etb=item.unit_price_etb,
+                    quantity=item.quantity,
+                    subtotal_etb=item.subtotal_etb,
+                    temperature=item.temperature,
+                    milk_choice=item.milk_choice,
+                    notes=item.notes,
+                )
+                for add_on in item.add_ons.all():
+                    OrderItemAddOn.objects.create(
+                        order_item=new_item,
+                        add_on_name=add_on.add_on_name,
+                        price_etb=add_on.price_etb,
+                    )
+
+            OrderStatusHistory.objects.create(
+                order=new_order,
+                status='PENDING_PAYMENT',
+                changed_by=request.user,
+                notes=f'Reordered from {original_order.order_number}'
+            )
+
+        return Response(
+            OrderSerializer(new_order, context={'request': request}).data,
+            status=status.HTTP_201_CREATED
+        )
+
 
 class DeliveryZoneViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = DeliveryZone.objects.filter(is_active=True)

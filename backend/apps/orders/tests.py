@@ -1,12 +1,15 @@
+from datetime import timedelta
 from decimal import Decimal
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.menu.models import Category, MenuItem
-from apps.orders.models import DeliveryZone, Order, OrderItem, RestaurantSettings
+from apps.orders.models import DeliveryZone, Order, OrderItem, OrderStatusHistory, RestaurantSettings
 from apps.orders.workflow import ALLOWED_TRANSITIONS, InvalidTransition, can_transition
 
 User = get_user_model()
@@ -401,3 +404,60 @@ class OrderSearchTests(TestCase):
         self.client.force_authenticate(user=None)
         res = self.client.get('/api/v1/orders/?search=ORD-SEARCH')
         self.assertNotEqual(res.status_code, status.HTTP_200_OK)
+
+
+
+class ReorderApiTests(TestCase):
+    """One-tap reorder (SRS FR-O8)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.customer = User.objects.create_user(
+            username='reordercust', email='reorder@coffeereceipts.com',
+            phone='+251911777000', password='Password123!', role='CUSTOMER',
+        )
+        self.other_customer = User.objects.create_user(
+            username='othercust', email='other@coffeereceipts.com',
+            phone='+251911777111', password='Password123!', role='CUSTOMER',
+        )
+        self.item = make_menu_item('Espresso Roast', Decimal('150.00'))
+        self.order = Order.objects.create(
+            order_number='ORD-REORDER-1', customer=self.customer,
+            order_type='PICKUP', contact_name='Reorder Test',
+            contact_phone='+251911777000', subtotal_etb=Decimal('300.00'),
+            total_amount_etb=Decimal('300.00'), status='COMPLETED',
+        )
+        OrderItem.objects.create(
+            order=self.order, menu_item=self.item, item_name='Espresso Roast',
+            unit_price_etb=Decimal('150.00'), quantity=2, subtotal_etb=Decimal('300.00'),
+        )
+
+    def test_customer_can_reorder_own_order(self):
+        self.client.force_authenticate(self.customer)
+        res = self.client.post(f'/api/v1/orders/{self.order.id}/reorder/')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertIn('order_number', res.data)
+        self.assertNotEqual(res.data['order_number'], self.order.order_number)
+        self.assertEqual(res.data['status'], 'PENDING_PAYMENT')
+        self.assertEqual(len(res.data['items']), 1)
+        self.assertEqual(res.data['items'][0]['item_name'], 'Espresso Roast')
+
+    def test_customer_cannot_reorder_someone_elses_order(self):
+        self.client.force_authenticate(self.other_customer)
+        res = self.client.post(f'/api/v1/orders/{self.order.id}/reorder/')
+
+        self.assertIn(res.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
+
+    def test_reorder_blocked_when_cafe_closed(self):
+        venue = RestaurantSettings.get_settings()
+        venue.is_open = False
+        venue.save()
+
+        self.client.force_authenticate(self.customer)
+        res = self.client.post(f'/api/v1/orders/{self.order.id}/reorder/')
+
+        self.assertEqual(res.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        venue.is_open = True
+        venue.save()
+
