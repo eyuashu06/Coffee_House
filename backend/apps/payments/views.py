@@ -157,6 +157,16 @@ class InitializePaymentView(APIView):
 
         # An order that is already paid must not be paid twice.
         if order.status != 'PENDING_PAYMENT':
+            if order.status == 'EXPIRED':
+                # Saying "already been paid for" here would be a lie the customer can
+                # disprove from their bank statement. The order is dead because the
+                # window closed, and the way back is a fresh order, not this one.
+                return Response(
+                    {'error': 'This order expired before payment was received. '
+                              'Please place a new order so the kitchen can make it.',
+                     'order_status': order.status},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             return Response(
                 {'error': 'This order has already been paid for.',
                  'order_status': order.status,

@@ -455,8 +455,53 @@ class PaymentStateDerivationTests(TestCase):
         self.assertEqual(self.state(), 'paid')
 
 
+class LatePaymentAfterExpiryTests(TestCase):
+    """
+    Money that arrives after the order closed still has to reach the kitchen.
+
+    The expiry job closes unpaid orders on a timer, and a webhook can land after it.
+    Treating that as a closed order would leave a confirmed payment sitting on an
+    order nobody will ever make - the cafe has the money and not the drink.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='latepayer', email='late@example.org', password='Password123!')
+        self.order = Order.objects.create(
+            customer=self.user, order_number='ORD-LATE-1', order_type='PICKUP',
+            contact_name='Late', contact_phone='+251911000000',
+            subtotal_etb=Decimal('90.00'), delivery_fee_etb=Decimal('0.00'),
+            total_amount_etb=Decimal('90.00'), status='EXPIRED',
+            rejection_reason='Payment was not received before the order expired.')
+
+    def test_a_confirmed_payment_reinstates_an_expired_order(self):
+        payment = Payment.objects.create(
+            order=self.order, tx_ref='TX-LATE-1', amount_etb=Decimal('90.00'),
+            status='PENDING', checkout_url='https://checkout.chapa.co/x')
+
+        payment.mark_as_success(chapa_ref='chapa-ref-9')
+
+        self.payment = Payment.objects.get(pk=payment.pk)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'PLACED')
+        self.assertIsNotNone(self.order.placed_at)
+        self.assertEqual(self.order.rejection_reason, '')
+        self.assertTrue(OrderStatusHistory.objects.filter(
+            order=self.order, status='PLACED').exists())
+
+    def test_a_failed_late_payment_leaves_the_order_expired(self):
+        """Only money reopens an order. A decline must not resurrect it."""
+        payment = Payment.objects.create(
+            order=self.order, tx_ref='TX-LATE-2', amount_etb=Decimal('90.00'),
+            status='PENDING', checkout_url='https://checkout.chapa.co/x')
+
+        payment.mark_as_failed(reason='Insufficient balance')
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'EXPIRED')
+
+
 class ReconcileCommandTests(TestCase):
-    """The recovery path for payments a bug left behind."""
 
     def setUp(self):
         from django.core.management import call_command

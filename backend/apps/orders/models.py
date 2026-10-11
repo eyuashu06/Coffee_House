@@ -51,6 +51,7 @@ class Order(models.Model):
         ('COMPLETED', 'Completed'),
         ('CANCELLED', 'Cancelled by Customer'),
         ('REJECTED', 'Rejected by Manager'),
+        ('EXPIRED', 'Expired (never paid)'),
     )
 
     order_number = models.CharField(max_length=50, unique=True, db_index=True)
