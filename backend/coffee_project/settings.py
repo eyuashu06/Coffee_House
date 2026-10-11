@@ -102,6 +102,8 @@ INSTALLED_APPS = [
     'apps.orders',
     'apps.payments',
     'apps.assistant',
+    # No models: reporting is read-only aggregation over the orders tables.
+    'apps.reports',
     # Cross-cutting helpers (rate limiting) that belong to no single app.
     'apps.core',
     'api',
