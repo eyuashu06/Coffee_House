@@ -65,7 +65,10 @@ const ACTIVE_STATUSES = ['PENDING_PAYMENT', 'PLACED', 'ACCEPTED', 'PREPARING', '
 // Chapa can take a few seconds to settle after the customer leaves the checkout page.
 const VERIFY_INTERVAL_MS = 5000;
 const MAX_VERIFY_ATTEMPTS = 24;
-const PAST_STATUSES = ['COMPLETED', 'CANCELLED', 'REJECTED'];
+// EXPIRED belongs here rather than with the active orders: the order is closed, but
+// unlike a cancellation nobody chose it, so it must not sit in the live list waiting
+// for a kitchen that is never going to receive it.
+const PAST_STATUSES = ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'];
 
 /**
  * A receipt only exists once the money has actually been captured.
@@ -108,6 +111,7 @@ const STATUS_LABELS: Record<string, string> = {
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
   REJECTED: 'Rejected',
+  EXPIRED: 'Expired — never paid',
 };
 
 interface Address {
@@ -146,6 +150,7 @@ export default function AccountPage() {
   const [banner, setBanner] = useState<Banner | null>(null);
   const [payOrder, setPayOrder] = useState<Order | null>(null);
   const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
+  const [reorderingId, setReorderingId] = useState<number | null>(null);
   const verifiedPaymentRef = useRef<string | null>(null);
   const settledPaymentsRef = useRef<Set<string>>(new Set());
   const paymentTimerRef = useRef<number | null>(null);
@@ -183,6 +188,38 @@ export default function AccountPage() {
       if (!silent) setIsLoadingOrders(false);
     }
   }, [reportUnauthorized]);
+
+  const handleReorder = async (orderId: number) => {
+    setReorderingId(orderId);
+    try {
+      const res = await apiFetch(`/api/v1/orders/${orderId}/reorder/`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBanner({
+          type: 'success',
+          message: t('Order recreated successfully! Pay now to complete your order.'),
+        });
+        await fetchOrders(true);
+        if (data && data.status === 'PENDING_PAYMENT') {
+          setPayOrder(data);
+        }
+      } else {
+        setBanner({
+          type: 'error',
+          message: data.error || t('Failed to reorder. Please try again.'),
+        });
+      }
+    } catch (err) {
+      setBanner({
+        type: 'error',
+        message: t('Failed to reorder. Please check your network connection.'),
+      });
+    } finally {
+      setReorderingId(null);
+    }
+  };
 
   // After returning from the Chapa gateway the payment is often not settled yet, and
   // the webhook cannot reach localhost - so keep re-checking until the gateway answers.
@@ -607,16 +644,37 @@ export default function AccountPage() {
                               <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
                                 order.status === 'COMPLETED' ? 'bg-green-950 text-green-300 border border-green-900' :
                                 order.status === 'CANCELLED' || order.status === 'REJECTED' ? 'bg-red-950 text-red-300 border border-red-900' :
-                                'bg-[#3b141c] text-[#f7b5be] border border-[#683941]'
+                                'bg-yellow-950 text-yellow-300 border border-yellow-900'
                               }`}>{t(STATUS_LABELS[order.status] || order.status)}</span>
                             </div>
                             <p className="text-[14.5px] text-[#d5c2c3] mb-1">{new Date(order.created_at).toLocaleDateString(locale)} • {order.items.length} {t('items')}</p>
-                            {(order.status === 'REJECTED' || order.status === 'CANCELLED') && order.rejection_reason ? (
+                            {order.status === 'EXPIRED' ? (
+                              <p className="text-[13px] text-yellow-300/90 mb-1">
+                                {t('This order expired before we received payment. Place it again below and we will make it fresh.')}
+                              </p>
+                            ) : (order.status === 'REJECTED' || order.status === 'CANCELLED') && order.rejection_reason ? (
                               <p className="text-[13px] text-red-300/80 mb-1">{order.rejection_reason}</p>
                             ) : null}
                             <p className="text-[16px] font-bold text-[#e5e2e1]">{Number(order.total_amount_etb).toFixed(2)} {birr}</p>
                           </div>
-                          <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              onClick={() => handleReorder(order.id)}
+                              disabled={reorderingId === order.id}
+                              className="h-9 px-4 rounded-full bg-[#f7b5be] text-[#4e232b] text-[14px] font-bold hover:brightness-110 transition-colors flex items-center gap-1.5 disabled:opacity-50 w-full sm:w-auto justify-center"
+                            >
+                              {reorderingId === order.id ? (
+                                <>
+                                  <i className="ph ph-spinner-gap animate-spin"></i>
+                                  {t('Reordering…')}
+                                </>
+                              ) : (
+                                <>
+                                  <i className="ph ph-arrows-counter-clockwise"></i>
+                                  {t('Reorder')}
+                                </>
+                              )}
+                            </button>
                             {isOrderPaid(order) ? (
                               <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[#514345] text-[#d5c2c3] text-[14px] hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors w-full sm:w-auto">{t('View Receipt')}</button>
                             ) : (
