@@ -19,6 +19,7 @@ from .serializers import PaymentSerializer, InitializePaymentSerializer
 from apps.orders.models import Order
 from apps.accounts.models import normalize_ethiopian_phone
 from apps.accounts.validators import is_deliverable_email
+from apps.core.throttling import ScopedThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,16 @@ def _can_manage_order(request, order):
 
 
 class InitializePaymentView(APIView):
+    """
+    Start a payment, rate limited per caller.
+
+    Each call creates a transaction with the gateway, so an unbounded endpoint is both
+    an abuse vector and a way to fill up the cafe's payment records with attempts that
+    were never meant to be paid.
+    """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'payment_init'
 
     def post(self, request):
         serializer = InitializePaymentSerializer(data=request.data)
@@ -147,6 +157,16 @@ class InitializePaymentView(APIView):
 
         # An order that is already paid must not be paid twice.
         if order.status != 'PENDING_PAYMENT':
+            if order.status == 'EXPIRED':
+                # Saying "already been paid for" here would be a lie the customer can
+                # disprove from their bank statement. The order is dead because the
+                # window closed, and the way back is a fresh order, not this one.
+                return Response(
+                    {'error': 'This order expired before payment was received. '
+                              'Please place a new order so the kitchen can make it.',
+                     'order_status': order.status},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             return Response(
                 {'error': 'This order has already been paid for.',
                  'order_status': order.status,
@@ -337,6 +357,8 @@ class VerifyPaymentView(APIView):
     """
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'payment_verify'
 
     def get(self, request, tx_ref):
         try:

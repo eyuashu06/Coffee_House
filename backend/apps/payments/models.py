@@ -82,6 +82,25 @@ class Payment(models.Model):
                 status='PLACED',
                 notes=f'Payment confirmed ({self.payment_method})',
             )
+        elif order.status == 'EXPIRED':
+            # The order aged out before the answer arrived. The money is real, so the
+            # kitchen has to know - silently keeping it EXPIRED would have us holding
+            # a confirmed payment on an order nobody will ever make. This is the one
+            # path out of EXPIRED and it is deliberately not a status transition: the
+            # expiry job must never be undone by a stale confirmation, only by money.
+            order.status = 'PLACED'
+            order.rejection_reason = ''
+            if not order.placed_at:
+                order.placed_at = timezone.now()
+            order.save()
+            OrderStatusHistory.objects.create(
+                order=order,
+                status='PLACED',
+                notes=(
+                    'Payment confirmed after the order expired; it was reinstated '
+                    f'({self.payment_method})'
+                ),
+            )
 
     def mark_as_failed(self, reason='Payment Failed', raw_data='', gateway_status=''):
         self.status = 'FAILED'

@@ -1,12 +1,16 @@
+from datetime import timedelta
 from decimal import Decimal
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.menu.models import Category, MenuItem
-from apps.orders.models import DeliveryZone, Order, OrderItem, RestaurantSettings
+from apps.orders.expiry import EXPIRY_REASON, expire_unpaid_orders
+from apps.orders.models import DeliveryZone, Order, OrderItem, OrderStatusHistory, RestaurantSettings
 from apps.orders.workflow import ALLOWED_TRANSITIONS, InvalidTransition, can_transition
 
 User = get_user_model()
@@ -401,3 +405,258 @@ class OrderSearchTests(TestCase):
         self.client.force_authenticate(user=None)
         res = self.client.get('/api/v1/orders/?search=ORD-SEARCH')
         self.assertNotEqual(res.status_code, status.HTTP_200_OK)
+
+
+class ExpireUnpaidOrderTests(TestCase):
+    """
+    FR-P7: an order nobody pays for has to close on its own.
+
+    Before this there was no terminal unpaid state at all, so a customer who closed
+    the payment tab left the order sitting in PENDING_PAYMENT for good - invisible to
+    nobody, counted against the manager's live queue, and payable again forever.
+    """
+
+    def setUp(self):
+        self.customer = User.objects.create_user(
+            username='expirycustomer', email='expiry@coffeereceipts.com',
+            phone='+251911777000', password='Password123!', role='CUSTOMER',
+        )
+
+    def _order(self, number, *, age_minutes=45, status='PENDING_PAYMENT'):
+        order = Order.objects.create(
+            order_number=number, customer=self.customer,
+            contact_name='Selam Bekele', contact_phone='+251911777111',
+            subtotal_etb=Decimal('120.00'), total_amount_etb=Decimal('120.00'),
+            status=status,
+        )
+        # created_at is auto_now_add, so it is written directly to age the fixture.
+        Order.objects.filter(pk=order.pk).update(
+            created_at=timezone.now() - timedelta(minutes=age_minutes)
+        )
+        order.refresh_from_db()
+        return order
+
+    def _payment(self, order, status='PENDING'):
+        from apps.payments.models import Payment
+
+        return Payment.objects.create(
+            order=order, tx_ref=f'TX-{order.order_number}', status=status,
+            amount_etb=order.total_amount_etb,
+            checkout_url='https://checkout.chapa.co/x',
+        )
+
+    def test_overdue_unpaid_order_expires(self):
+        order = self._order('ORD-EXPIRE-1')
+
+        self.assertEqual(expire_unpaid_orders(), 1)
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'EXPIRED')
+        self.assertEqual(order.rejection_reason, EXPIRY_REASON)
+        self.assertTrue(OrderStatusHistory.objects.filter(
+            order=order, status='EXPIRED').exists())
+
+    def test_a_fresh_order_is_left_alone(self):
+        """Thirty minutes is a promise; expiring at twenty would break it."""
+        order = self._order('ORD-EXPIRE-FRESH', age_minutes=5)
+
+        self.assertEqual(expire_unpaid_orders(), 0)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'PENDING_PAYMENT')
+
+    def test_an_order_that_was_paid_is_never_expired(self):
+        order = self._order('ORD-EXPIRE-PAID', status='PLACED')
+        self._payment(order, status='SUCCESS')
+
+        self.assertEqual(expire_unpaid_orders(), 0)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'PLACED')
+
+    def test_running_twice_expires_nothing_the_second_time(self):
+        """The job runs on a timer, so it has to be safe to repeat."""
+        self._order('ORD-EXPIRE-IDEMPOTENT')
+
+        self.assertEqual(expire_unpaid_orders(), 1)
+        self.assertEqual(expire_unpaid_orders(), 0)
+        self.assertEqual(
+            OrderStatusHistory.objects.filter(status='EXPIRED').count(), 1)
+
+    def test_a_payment_the_gateway_has_not_answered_is_not_a_failure_to_pay(self):
+        """
+        The window closed while a payment was still in flight.
+
+        Expiring here would close an order the customer is about to be charged for,
+        so the job asks the gateway first. An unreachable gateway is not an answer,
+        and the order stays open for the next run.
+        """
+        order = self._order('ORD-EXPIRE-INFLIGHT')
+        self._payment(order)
+
+        with mock.patch('apps.payments.views.reconcile_payment', return_value='unknown'):
+            self.assertEqual(expire_unpaid_orders(), 0)
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'PENDING_PAYMENT')
+
+    def test_a_late_confirmed_payment_saves_the_order(self):
+        """The answer arrives inside the run: the order must survive it."""
+        order = self._order('ORD-EXPIRE-LATEPAID')
+        self._payment(order)
+
+        def gateway_confirms(payment):
+            payment.mark_as_success(chapa_ref='chapa-ref-1')
+            return 'success'
+
+        with mock.patch('apps.payments.views.reconcile_payment', side_effect=gateway_confirms):
+            self.assertEqual(expire_unpaid_orders(), 0)
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'PLACED')
+
+    def test_a_declined_payment_does_expire_the_order(self):
+        order = self._order('ORD-EXPIRE-DECLINED')
+        self._payment(order)
+
+        def gateway_declines(payment):
+            payment.mark_as_failed(reason='Insufficient balance')
+            return 'failed'
+
+        with mock.patch('apps.payments.views.reconcile_payment', side_effect=gateway_declines):
+            self.assertEqual(expire_unpaid_orders(), 1)
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'EXPIRED')
+
+    def test_the_window_comes_from_settings_and_can_be_overridden(self):
+        order = self._order('ORD-EXPIRE-WINDOW', age_minutes=45)
+
+        self.assertEqual(expire_unpaid_orders(older_than_minutes=90), 0)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'PENDING_PAYMENT')
+
+        self.assertEqual(expire_unpaid_orders(older_than_minutes=30), 1)
+
+    def test_the_management_command_reports_what_it_did(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        self._order('ORD-EXPIRE-CMD')
+        out = StringIO()
+        call_command('expire_unpaid_orders', stdout=out)
+
+        self.assertIn('Expired 1', out.getvalue())
+        self.assertEqual(
+            Order.objects.get(order_number='ORD-EXPIRE-CMD').status, 'EXPIRED')
+
+    def test_dry_run_changes_nothing(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        self._order('ORD-EXPIRE-DRY')
+        out = StringIO()
+        call_command('expire_unpaid_orders', '--dry-run', stdout=out)
+
+        self.assertIn('1 order(s) are past the window', out.getvalue())
+        self.assertEqual(
+            Order.objects.get(order_number='ORD-EXPIRE-DRY').status, 'PENDING_PAYMENT')
+
+
+class ExpiredOrderApiTests(TestCase):
+    """An expired order must be read-only: no payment, no reopening."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.customer = User.objects.create_user(
+            username='expiredowner', email='expired@coffeereceipts.com',
+            phone='+251911888000', password='Password123!', role='CUSTOMER',
+        )
+        self.manager = User.objects.create_user(
+            username='expiredmgr', email='expiredmgr@coffeereceipts.com',
+            phone='+251911888111', password='Password123!', role='MANAGER',
+        )
+        self.order = Order.objects.create(
+            order_number='ORD-EXPIRED-API', customer=self.customer,
+            contact_name='Selam Bekele', contact_phone='+251911888222',
+            subtotal_etb=Decimal('120.00'), total_amount_etb=Decimal('120.00'),
+            status='EXPIRED', rejection_reason=EXPIRY_REASON,
+        )
+        self.client.force_authenticate(self.customer)
+
+    def test_payment_cannot_be_started_on_an_expired_order(self):
+        res = self.client.post('/api/v1/payments/initialize/', {
+            'order_id': self.order.id, 'payment_method': 'telebirr',
+            'phone_number': '251900000000',
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('expired', res.data['error'].lower())
+        # "Already been paid for" would be a lie the customer can disprove.
+        self.assertNotIn('already been paid', res.data['error'])
+
+    def test_the_manager_cannot_reopen_it(self):
+        self.client.force_authenticate(self.manager)
+        res = self.client.post(
+            f'/api/v1/orders/{self.order.id}/update_status/',
+            {'status': 'PENDING_PAYMENT'}, format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'EXPIRED')
+
+
+class ReorderApiTests(TestCase):
+    """One-tap reorder (SRS FR-O8)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.customer = User.objects.create_user(
+            username='reordercust', email='reorder@coffeereceipts.com',
+            phone='+251911777000', password='Password123!', role='CUSTOMER',
+        )
+        self.other_customer = User.objects.create_user(
+            username='othercust', email='other@coffeereceipts.com',
+            phone='+251911777111', password='Password123!', role='CUSTOMER',
+        )
+        self.item = make_menu_item('Espresso Roast', Decimal('150.00'))
+        self.order = Order.objects.create(
+            order_number='ORD-REORDER-1', customer=self.customer,
+            order_type='PICKUP', contact_name='Reorder Test',
+            contact_phone='+251911777000', subtotal_etb=Decimal('300.00'),
+            total_amount_etb=Decimal('300.00'), status='COMPLETED',
+        )
+        OrderItem.objects.create(
+            order=self.order, menu_item=self.item, item_name='Espresso Roast',
+            unit_price_etb=Decimal('150.00'), quantity=2, subtotal_etb=Decimal('300.00'),
+        )
+
+    def test_customer_can_reorder_own_order(self):
+        self.client.force_authenticate(self.customer)
+        res = self.client.post(f'/api/v1/orders/{self.order.id}/reorder/')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertIn('order_number', res.data)
+        self.assertNotEqual(res.data['order_number'], self.order.order_number)
+        self.assertEqual(res.data['status'], 'PENDING_PAYMENT')
+        self.assertEqual(len(res.data['items']), 1)
+        self.assertEqual(res.data['items'][0]['item_name'], 'Espresso Roast')
+
+    def test_customer_cannot_reorder_someone_elses_order(self):
+        self.client.force_authenticate(self.other_customer)
+        res = self.client.post(f'/api/v1/orders/{self.order.id}/reorder/')
+
+        self.assertIn(res.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
+
+    def test_reorder_blocked_when_cafe_closed(self):
+        venue = RestaurantSettings.get_settings()
+        venue.is_open = False
+        venue.save()
+
+        self.client.force_authenticate(self.customer)
+        res = self.client.post(f'/api/v1/orders/{self.order.id}/reorder/')
+
+        self.assertEqual(res.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        venue.is_open = True
+        venue.save()
+

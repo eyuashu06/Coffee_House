@@ -20,6 +20,7 @@ from .serializers import (
     PasswordResetConfirmSerializer,
 )
 from .permissions import IsCustomer, IsOwnerOrManager
+from apps.core.throttling import ScopedThrottle
 
 User = get_user_model()
 
@@ -66,6 +67,8 @@ def clear_auth_cookies(response):
 
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'auth_register'
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -81,7 +84,16 @@ class RegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
+    """
+    Sign-in, rate limited per address.
+
+    The view answers differently for an unknown address and a wrong password, so it
+    doubles as an account-existence oracle - which is precisely what an unlimited
+    endpoint should not be. DRF answers 429 once the limit is hit.
+    """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'auth_login'
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -180,6 +192,8 @@ class AddressViewSet(viewsets.ModelViewSet):
 
 class PasswordResetRequestView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'auth_password_reset'
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -200,15 +214,23 @@ class PasswordResetRequestView(APIView):
                 fail_silently=True,
             )
 
-            return Response({
+            payload = {
                 'message': 'Password reset instructions have been sent to your email address.',
-                'uidb64': uidb64,  # Provided for testing/dev environments
-                'token': token
-            }, status=status.HTTP_200_OK)
+            }
+            # A working reset token in the response body means anyone who can call this
+            # endpoint can take over any account - no mailbox access needed. It was
+            # there for local development, where the console mail backend prints the
+            # link anyway, so it is opt-in now rather than on by default.
+            if getattr(settings, 'EXPOSE_PASSWORD_RESET_TOKEN', False):
+                payload['uidb64'] = uidb64
+                payload['token'] = token
+            return Response(payload, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class PasswordResetConfirmView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'auth_password_reset'
 
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)

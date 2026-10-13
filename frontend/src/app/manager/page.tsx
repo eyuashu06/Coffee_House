@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import ReceiptModal from '../../components/ReceiptModal';
@@ -84,6 +84,7 @@ const STATUS_LABELS: Record<string, string> = {
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
   REJECTED: 'Rejected',
+  EXPIRED: 'Expired (unpaid)',
 };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -96,15 +97,18 @@ const STATUS_BADGE: Record<string, string> = {
   COMPLETED: 'bg-emerald-900/40 text-emerald-300 border border-emerald-800',
   CANCELLED: 'bg-red-950 text-red-300 border border-red-900',
   REJECTED: 'bg-red-950 text-red-300 border border-red-900',
+  EXPIRED: 'bg-stone-800 text-stone-400 border border-stone-700',
 };
 
 const STATUS_FILTERS = [
   'ALL', 'PENDING_PAYMENT', 'PLACED', 'ACCEPTED', 'PREPARING',
-  'READY', 'OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED', 'REJECTED',
+  'READY', 'OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED',
 ];
 
-// Terminal states are not counted as "live"
-const CLOSED_STATUSES = ['COMPLETED', 'CANCELLED', 'REJECTED'];
+// Terminal states are not counted as "live". An expired order is one the customer
+// never paid for, so leaving it in the live count told staff there was work waiting
+// that no amount of kitchen time would clear.
+const CLOSED_STATUSES = ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'];
 
 /** How long the kitchen should promise for a status, by order type. */
 const DEFAULT_PREP_MINUTES: Record<string, number> = {
@@ -174,6 +178,43 @@ function MoneyCell({ value, className = '' }: { value: number; className?: strin
   );
 }
 
+interface RevenueReport {
+  generated_at: string;
+  range_days: number;
+  order_type: string;
+  summary: {
+    range_days: number;
+    revenue: number;
+    orders: number;
+    completed_orders: number;
+    delivery_fees: number;
+    average_order_value: number;
+    daily: Array<{ day: string; revenue: number; orders: number }>;
+  };
+  top_items: Array<{
+    item_name: string;
+    quantity: number;
+    revenue: number;
+    orders: number;
+  }>;
+  peak_hours: {
+    hours: Array<{ hour: number; orders: number; revenue: number }>;
+    busiest_hour: number | null;
+  };
+  order_types: Array<{
+    order_type: string;
+    label: string;
+    orders: number;
+    revenue: number;
+    share: number;
+  }>;
+  unpaid: {
+    awaiting_payment: number;
+    awaiting_payment_value: number;
+    expired_last_30_days: number;
+  };
+}
+
 export default function ManagerDashboard() {
   const { user, loading, logout, sessionExpired, reportUnauthorized } = useAuth();
   const { t, tItem, tCategory, locale, language } = useLanguage();
@@ -185,12 +226,50 @@ export default function ManagerDashboard() {
   const [analytics, setAnalytics] = useState<Analytics>(EMPTY_ANALYTICS);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'reservations'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'reservations' | 'reports'>('dashboard');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [isOpen, setIsOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<Order | null>(null);
+
+  // Reports state
+  const [reportData, setReportData] = useState<RevenueReport | null>(null);
+  const [reportRange, setReportRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [reportOrderType, setReportOrderType] = useState<string>('ALL');
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+
+  const fetchReport = useCallback(async () => {
+    setIsLoadingReport(true);
+    try {
+      const typeParam = reportOrderType === 'ALL' ? '' : `&order_type=${reportOrderType}`;
+      const res = await apiFetch(`/api/v1/reports/?range=${reportRange}${typeParam}`);
+      if (res.status === 401) {
+        reportUnauthorized();
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        setReportData(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch report:', e);
+    } finally {
+      setIsLoadingReport(false);
+    }
+  }, [reportOrderType, reportRange, reportUnauthorized]);
+
+  const handleExportCsv = () => {
+    const typeParam = reportOrderType === 'ALL' ? '' : `&order_type=${reportOrderType}`;
+    window.open(`/api/v1/reports/export.csv?range=${reportRange}${typeParam}`, '_blank');
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    if (activeTab === 'reports') {
+      fetchReport();
+    }
+  }, [user, activeTab, fetchReport]);
 
   useEffect(() => {
     if (!user) return;
@@ -219,6 +298,10 @@ export default function ManagerDashboard() {
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
+    // Deliberately keyed on `user` alone. The three fetchers are plain functions,
+    // recreated on every render, so listing them would tear down and rebuild the
+    // 5s interval on every render - a request loop against the API.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const fetchOrders = async () => {
@@ -499,6 +582,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             {reservations.filter(r => r.status === 'PENDING').length > 0 && (
               <span className="ml-auto bg-blue-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">{reservations.filter(r => r.status === 'PENDING').length}</span>
             )}
+          </button>
+          <button onClick={() => setActiveTab('reports')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'reports' ? 'bg-[#3b141c] text-[#f7b5be] font-bold' : 'text-[#d5c2c3] hover:bg-[#514345]/30'}`}>
+            <i className="ph ph-chart-line-up text-xl"></i> {t('Reports & Analytics')}
           </button>
         </nav>
         <div className="p-4 border-t border-[#514345] hidden md:block">
@@ -898,14 +984,283 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             </div>
           </div>
         )}
-        
+
+        {/* REPORTS TAB */}
+        {activeTab === 'reports' && (
+          <div className="animate-fade-in space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="font-display text-[26px] text-white leading-tight">{t('Reports & Analytics')}</h2>
+                <p className="text-[#9e8d8e] text-[14px]">
+                  {t('Comprehensive sales summaries, top sellers, peak hours, and order breakdowns.')}
+                </p>
+              </div>
+
+              {/* Action Buttons: Filter & CSV */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Range Selector */}
+                <div className="flex items-center bg-[#1c1b1b] border border-[#514345] rounded-[12px] p-1 text-[13px]">
+                  {(['7d', '30d', '90d'] as const).map(rng => (
+                    <button
+                      key={rng}
+                      onClick={() => setReportRange(rng)}
+                      className={`px-3 py-1.5 rounded-[8px] font-semibold transition-colors ${
+                        reportRange === rng ? 'bg-[#3b141c] text-[#f7b5be]' : 'text-[#d5c2c3] hover:text-white'
+                      }`}
+                    >
+                      {rng === '7d' ? t('Last 7 Days') : rng === '30d' ? t('Last 30 Days') : t('Last 90 Days')}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Order Type Filter */}
+                <select
+                  value={reportOrderType}
+                  onChange={(e) => setReportOrderType(e.target.value)}
+                  className="bg-[#1c1b1b] border border-[#514345] rounded-[12px] px-3 py-2 text-[13.5px] text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]"
+                >
+                  <option value="ALL">{t('All Types')}</option>
+                  <option value="DELIVERY">{t('Delivery')}</option>
+                  <option value="PICKUP">{t('Pickup')}</option>
+                  <option value="DINE_IN">{t('Dine-In')}</option>
+                </select>
+
+                {/* CSV Export Button */}
+                <button
+                  onClick={handleExportCsv}
+                  className="h-10 px-4 rounded-[12px] bg-[#3b141c] border border-[#683941] text-[#f7b5be] font-bold text-[13.5px] hover:brightness-110 flex items-center gap-2 transition-all shadow-sm"
+                >
+                  <i className="ph ph-download-simple text-lg"></i>
+                  {t('Export CSV')}
+                </button>
+              </div>
+            </div>
+
+            {isLoadingReport ? (
+              <div className="py-20 flex flex-col items-center justify-center text-[#9e8d8e]">
+                <div className="w-8 h-8 border-2 border-[#f7b5be] border-t-transparent rounded-full animate-spin mb-3" />
+                <span>{t('Compiling report data…')}</span>
+              </div>
+            ) : !reportData ? (
+              <div className="py-12 text-center text-[#9e8d8e] bg-[#1c1b1b] border border-[#514345] rounded-[18px]">
+                {t('No report data available.')}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Summary KPI Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[16px] p-5">
+                    <span className="text-[13px] text-[#9e8d8e] uppercase tracking-wider">{t('Total Revenue')}</span>
+                    <div className="mt-2 text-[26px] font-display font-bold text-[#f7b5be]">
+                      {reportData.summary.revenue.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {birr}
+                    </div>
+                    <span className="text-[12px] text-[#9e8d8e] mt-1 block">
+                      {reportData.summary.completed_orders} {t('completed')} / {reportData.summary.orders} {t('orders')}
+                    </span>
+                  </div>
+
+                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[16px] p-5">
+                    <span className="text-[13px] text-[#9e8d8e] uppercase tracking-wider">{t('Total Orders')}</span>
+                    <div className="mt-2 text-[26px] font-display font-bold text-white">
+                      {reportData.summary.orders}
+                    </div>
+                    <span className="text-[12px] text-emerald-400 mt-1 block">
+                      {reportData.summary.completed_orders} {t('served to customers')}
+                    </span>
+                  </div>
+
+                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[16px] p-5">
+                    <span className="text-[13px] text-[#9e8d8e] uppercase tracking-wider">{t('Average Order Value')}</span>
+                    <div className="mt-2 text-[26px] font-display font-bold text-[#e5e2e1]">
+                      {reportData.summary.average_order_value.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {birr}
+                    </div>
+                    <span className="text-[12px] text-[#9e8d8e] mt-1 block">
+                      {t('Per paid checkout')}
+                    </span>
+                  </div>
+
+                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[16px] p-5">
+                    <span className="text-[13px] text-[#9e8d8e] uppercase tracking-wider">{t('Delivery Fees')}</span>
+                    <div className="mt-2 text-[26px] font-display font-bold text-[#e5e2e1]">
+                      {reportData.summary.delivery_fees.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {birr}
+                    </div>
+                    <span className="text-[12px] text-[#9e8d8e] mt-1 block">
+                      {t('Collected from zone deliveries')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Unpaid & Expired Metrics Bar */}
+                <div className="bg-[#241a1c] border border-[#514345] rounded-[16px] p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
+                  <div className="flex items-center gap-2">
+                    <i className="ph ph-warning-circle text-amber-400 text-lg"></i>
+                    <span className="text-[#d5c2c3]">
+                      <strong className="text-white">{t('Awaiting Payment:')}</strong> {reportData.unpaid.awaiting_payment} {t('orders')} ({reportData.unpaid.awaiting_payment_value.toFixed(2)} {birr})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <i className="ph ph-clock-countdown text-red-400 text-lg"></i>
+                    <span className="text-[#d5c2c3]">
+                      <strong className="text-white">{t('Expired Orders (30d):')}</strong> {reportData.unpaid.expired_last_30_days} {t('unpaid orders expired')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Two Column Layout: Top Items & Order Type Split */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Top Items */}
+                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-display text-[20px] text-white flex items-center gap-2">
+                        <i className="ph ph-trophy text-[#f7b5be]"></i>
+                        {t('Top Selling Items')}
+                      </h3>
+                      <span className="text-xs text-[#9e8d8e]">{t('Ranked by revenue')}</span>
+                    </div>
+                    {reportData.top_items.length === 0 ? (
+                      <p className="text-sm text-[#9e8d8e] py-8 text-center">{t('No item sales in this period.')}</p>
+                    ) : (
+                      <div className="divide-y divide-[#514345]/50">
+                        {reportData.top_items.map((item, idx) => (
+                          <div key={idx} className="py-3 flex items-center justify-between gap-3 text-sm">
+                            <div className="flex items-center gap-3">
+                              <span className="w-6 text-center font-bold text-[#f7b5be] text-xs">#{idx + 1}</span>
+                              <div>
+                                <p className="font-semibold text-white">{tItem(item.item_name)}</p>
+                                <p className="text-xs text-[#9e8d8e]">
+                                  {item.quantity} {t('sold')} • {item.orders} {t('orders')}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="font-bold text-[#f7b5be]">
+                              {item.revenue.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {birr}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Order Type Distribution */}
+                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-display text-[20px] text-white flex items-center gap-2">
+                          <i className="ph ph-chart-pie text-[#f7b5be]"></i>
+                          {t('Order Type Split')}
+                        </h3>
+                        <span className="text-xs text-[#9e8d8e]">{t('Volume & share')}</span>
+                      </div>
+                      <div className="space-y-4">
+                        {reportData.order_types.map((ot) => (
+                          <div key={ot.order_type} className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span className="font-semibold text-white">{t(ot.label || ot.order_type)}</span>
+                              <span className="text-[#d5c2c3]">
+                                {ot.orders} {t('orders')} ({(ot.share * 100).toFixed(1)}%) • {ot.revenue.toFixed(2)} {birr}
+                              </span>
+                            </div>
+                            <div className="w-full bg-[#352b2c] h-2 rounded-full overflow-hidden">
+                              <div
+                                className="bg-[#f7b5be] h-full rounded-full transition-all duration-500"
+                                style={{ width: `${Math.min(100, Math.max(0, ot.share * 100))}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Busiest Peak Hour Highlight */}
+                    <div className="mt-6 pt-4 border-t border-[#514345] flex items-center justify-between">
+                      <span className="text-sm text-[#9e8d8e] flex items-center gap-2">
+                        <i className="ph ph-clock text-amber-400 text-base"></i>
+                        {t('Busiest Hour:')}
+                      </span>
+                      <span className="text-base font-bold text-amber-300">
+                        {reportData.peak_hours.busiest_hour !== null
+                          ? `${String(reportData.peak_hours.busiest_hour).padStart(2, '0')}:00 - ${String(
+                              (reportData.peak_hours.busiest_hour + 1) % 24
+                            ).padStart(2, '0')}:00`
+                          : t('N/A')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Peak Hours Hourly Chart */}
+                <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-display text-[20px] text-white flex items-center gap-2">
+                      <i className="ph ph-sun-horizon text-[#f7b5be]"></i>
+                      {t('Peak Hours')} (24h)
+                    </h3>
+                    <span className="text-xs text-[#9e8d8e]">{t('Order frequency across hours')}</span>
+                  </div>
+                  <div className="grid grid-cols-12 md:grid-cols-24 gap-1 items-end h-32 pt-4">
+                    {reportData.peak_hours.hours.map((h) => {
+                      const maxOrders = Math.max(
+                        1,
+                        ...reportData.peak_hours.hours.map((x) => x.orders)
+                      );
+                      const heightPercent = Math.max(4, (h.orders / maxOrders) * 100);
+                      const isBusiest = reportData.peak_hours.busiest_hour === h.hour && h.orders > 0;
+                      return (
+                        <div key={h.hour} className="flex flex-col items-center h-full justify-end group relative">
+                          <div
+                            className={`w-full rounded-t transition-all ${
+                              isBusiest
+                                ? 'bg-amber-400'
+                                : h.orders > 0
+                                ? 'bg-[#f7b5be] hover:brightness-110'
+                                : 'bg-[#352b2c]'
+                            }`}
+                            style={{ height: `${heightPercent}%` }}
+                            title={`${h.hour}:00 - ${h.orders} orders (${h.revenue.toFixed(2)} ${birr})`}
+                          />
+                          <span className="text-[10px] text-[#9e8d8e] mt-1 hidden md:block">
+                            {h.hour % 3 === 0 ? h.hour : ''}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Daily Breakdown */}
+                <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6">
+                  <h3 className="font-display text-[20px] text-white mb-4 flex items-center gap-2">
+                    <i className="ph ph-calendar text-[#f7b5be]"></i>
+                    {t('Daily Sales Breakdown')}
+                  </h3>
+                  <div className="max-h-72 overflow-y-auto space-y-2 pr-2">
+                    {reportData.summary.daily.slice().reverse().map((d) => (
+                      <div
+                        key={d.day}
+                        className="flex items-center justify-between p-3 rounded-[12px] bg-[#241a1c]/60 border border-[#514345]/50 text-sm"
+                      >
+                        <span className="font-semibold text-white">{d.day}</span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs text-[#9e8d8e]">{d.orders} {t('orders')}</span>
+                          <span className="font-bold text-[#f7b5be]">
+                            {d.revenue.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {birr}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* RECEIPT MODAL */}
       {selectedReceiptOrder && (
         <ReceiptModal
           onClose={() => setSelectedReceiptOrder(null)}
-          order={selectedReceiptOrder as any}
+          order={selectedReceiptOrder}
         />
       )}
     </div>

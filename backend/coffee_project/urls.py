@@ -11,6 +11,7 @@ v1_patterns = [
     path('', include('apps.menu.urls')),
     path('', include('apps.assistant.urls')),
     path('', include('apps.cart.urls')),
+    path('', include('apps.reports.urls')),
     path('', include('api.urls')),
 ]
 

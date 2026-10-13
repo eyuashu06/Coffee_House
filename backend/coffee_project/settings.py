@@ -3,11 +3,76 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-artisanal-coffee-reserve-secret-key')
+#: The .env files consulted below, in order. The first one that defines a key wins,
+#: which is what lets a developer keep their own backend/.env without fighting the
+#: project-wide one.
+ENV_FILES = (BASE_DIR / '.env', BASE_DIR.parent / '.env')
 
-# Both were hardcoded, which silently ignored DEBUG/ALLOWED_HOSTS from the environment
-# and docker-compose: a deployment asking for DEBUG=0 still ran in debug mode.
-DEBUG = os.environ.get('DEBUG', 'false').lower() in ('1', 'true', 'yes')
+# Load the local .env file if present. A value already in the environment wins, except
+# when it is blank: an empty `SECRET_KEY=` (an unset shell variable left in place, a
+# compose interpolation of a missing variable) is not a key, and treating it as one
+# would shadow the real value in the file and stop the app from booting.
+for _env_file in ENV_FILES:
+    if _env_file.is_file():
+        try:
+            with open(_env_file) as _f:
+                for _line in _f:
+                    _line = _line.strip()
+                    if _line and not _line.startswith('#') and '=' in _line:
+                        _k, _v = _line.split('=', 1)
+                        _k, _v = _k.strip(), _v.strip().strip("'\"")
+                        if not os.environ.get(_k, '').strip():
+                            os.environ[_k] = _v
+        except OSError:
+            pass
+
+
+def _env_flag(name, default='false'):
+    return os.environ.get(name, default).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+# Read DEBUG from environment or .env; defaults to true for local development.
+# In production, set DEBUG=0 or DEBUG=false to disable and enforce SECRET_KEY.
+DEBUG = _env_flag('DEBUG', 'true')
+
+#: The site is behind HTTPS end to end. Off by default: turning it on in a plain
+#: `runserver` environment redirects every request to a port nothing is listening on.
+SECURE_SSL = _env_flag('SECURE_SSL')
+
+if SECURE_SSL:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+else:
+    SECURE_SSL_REDIRECT = False
+
+# Signed cookies (session, CSRF, JWT) may only travel over HTTPS when they do. The
+# auth views read this same flag, so there is one switch rather than four.
+SESSION_COOKIE_SECURE = SECURE_SSL
+CSRF_COOKIE_SECURE = SECURE_SSL
+SIMPLEJWT_COOKIE_SECURE = SECURE_SSL
+
+SECRET_KEY = os.environ.get('SECRET_KEY', '').strip()
+
+if not SECRET_KEY:
+    if DEBUG:
+        # Nothing in settings.py is a secret worth stealing, and a dev server is not
+        # reachable from outside. Generated per process rather than hardcoded so the
+        # key that reaches production can never be the one in this file.
+        import secrets as _secrets
+
+        SECRET_KEY = _secrets.token_urlsafe(64)
+    else:
+        # Refusing to boot is the point. A deployment that ships the sample key has
+        # every session, reset token and JWT signed with a value that is public.
+        raise RuntimeError(
+            'SECRET_KEY is empty and DEBUG is off, so there is nothing to sign '
+            'sessions, reset tokens and JWTs with. Set it in the environment or in '
+            f'one of: {", ".join(str(p) for p in ENV_FILES)} - for a local dev server '
+            'DEBUG=1 generates a throwaway one instead. Generate a real key with: '
+            'python -c "import secrets; print(secrets.token_urlsafe(64))"'
+        )
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -37,6 +102,10 @@ INSTALLED_APPS = [
     'apps.orders',
     'apps.payments',
     'apps.assistant',
+    # No models: reporting is read-only aggregation over the orders tables.
+    'apps.reports',
+    # Cross-cutting helpers (rate limiting) that belong to no single app.
+    'apps.core',
     'api',
 ]
 
@@ -183,6 +252,12 @@ CHAPA_FALLBACK_EMAIL = os.environ.get('CHAPA_FALLBACK_EMAIL', 'customer@gmail.co
 # Reject signups whose email domain cannot receive mail (sendgrid/chapa need it).
 REQUIRE_EMAIL_MX = os.environ.get('REQUIRE_EMAIL_MX', 'True').lower() in ('1', 'true', 'yes')
 
+# How long an unpaid order stays alive before the expiry job closes it (FR-P7).
+# Measured from when the order was created. Kept comfortably above the gateway's own
+# settlement time so a customer who pays at the last moment is not closed out on top
+# of their money.
+ORDER_PAYMENT_WINDOW_MINUTES = int(os.environ.get('ORDER_PAYMENT_WINDOW_MINUTES', '30'))
+
 # Console Email for local development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
@@ -208,8 +283,13 @@ CSRF_TRUSTED_ORIGINS = [
 # In development, allow cookies to be sent through the Next.js rewrite proxy
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_HTTPONLY = True
-# JWT cookies set by simplejwt views – keep Lax for local dev
-SIMPLEJWT_COOKIE_SECURE = False  # Set True in production (HTTPS only)
+# SIMPLEJWT_COOKIE_SECURE is set from SECURE_SSL near the top of this file, next to the
+# session and CSRF equivalents, so all four cookies follow one switch.
+
+# Whether the password-reset endpoint may hand back a working reset token in its
+# response body. That convenience makes every registered account takeable by anyone
+# who can call the endpoint, so it is off unless someone deliberately turns it on.
+EXPOSE_PASSWORD_RESET_TOKEN = _env_flag('EXPOSE_PASSWORD_RESET_TOKEN')
 
 from datetime import timedelta
 
@@ -233,6 +313,22 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_PAGINATION_CLASS': 'api.pagination.StandardPagination',
     'PAGE_SIZE': 12,
+    # No global throttle. The dashboard polls orders, analytics and reservations every
+    # five seconds from one tablet, and a blanket per-IP limit would take the live
+    # board offline mid-shift. Endpoints opt in with `throttle_scope` instead - see
+    # apps/core/throttling.py for which ones and why those.
+    'DEFAULT_THROTTLE_RATES': {
+        # Sign-in. 20/minute is far above any human and far below a guessing script.
+        'auth_login': '20/min',
+        'auth_register': '5/hour',
+        # Each attempt mails somebody. Rare by nature, so the limit is tight.
+        'auth_password_reset': '5/hour',
+        'order_create': '15/min',
+        'payment_init': '15/min',
+        # The account page re-checks a settling payment every 5 seconds (12/min),
+        # so this has to sit comfortably above that to avoid breaking a normal flow.
+        'payment_verify': '60/min',
+    },
 }
 
 SPECTACULAR_SETTINGS = {

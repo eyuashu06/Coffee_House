@@ -164,13 +164,36 @@ class AuthAndProfileAPITests(TestCase):
         self.assertEqual(list_res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(list_res.data['results']), 1)
 
+    @staticmethod
+    def _link_params(email_body):
+        """Pull uid and token out of the reset link in the email body."""
+        from urllib.parse import parse_qs, urlparse
+
+        start = email_body.index('http')
+        end = email_body.index('\n', start)
+        query = parse_qs(urlparse(email_body[start:end].strip()).query)
+        return query['uid'][0], query['token'][0]
+
     def test_password_reset_flow(self):
-        req_res = self.client.post('/api/v1/auth/password-reset/', {
-            'email': EXISTING_EMAIL
-        })
-        self.assertEqual(req_res.status_code, status.HTTP_200_OK)
-        uidb64 = req_res.data['uidb64']
-        token = req_res.data['token']
+        """
+        The reset link a customer receives has to actually work.
+
+        Driven from the emailed URL rather than the response body: the endpoint used
+        to hand back a working token in its JSON, which let anyone reset anyone's
+        password without touching their mailbox, and it no longer does.
+        """
+        from django.core import mail
+
+        with self.settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            req_res = self.client.post('/api/v1/auth/password-reset/', {
+                'email': EXISTING_EMAIL
+            })
+            self.assertEqual(req_res.status_code, status.HTTP_200_OK)
+            self.assertEqual(len(mail.outbox), 1)
+
+            body = mail.outbox[0].body
+            self.assertNotIn('uidb64', req_res.data)
+            uidb64, token = self._link_params(body)
 
         confirm_res = self.client.post('/api/v1/auth/password-reset/confirm/', {
             'uidb64': uidb64,

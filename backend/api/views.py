@@ -89,7 +89,6 @@ class AnalyticsAPIView(APIView):
 
     # Money counts only for orders that were actually paid for.
     PAID_STATUSES = ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED']
-    CLOSED_STATUSES = ['COMPLETED', 'CANCELLED', 'REJECTED']
 
     def get(self, request):
         # Distinguish "we don't know who you are" from "we know, and you may not
@@ -108,6 +107,7 @@ class AnalyticsAPIView(APIView):
         from django.db.models.functions import TruncDate
         from django.utils import timezone as dj_timezone
         from apps.orders.models import Order as AppOrder
+        from apps.orders.workflow import CLOSED_STATUSES
 
         now = dj_timezone.localtime()
         today = now.date()
@@ -123,8 +123,8 @@ class AnalyticsAPIView(APIView):
 
         avg_ticket = monthly_orders.aggregate(avg=Avg('total_amount_etb'))['avg'] or 0
 
-        # Orders currently being worked on (not finished, not cancelled)
-        live_orders = AppOrder.objects.exclude(status__in=self.CLOSED_STATUSES)
+        # Orders currently being worked on (not finished, not cancelled, not expired)
+        live_orders = AppOrder.objects.exclude(status__in=CLOSED_STATUSES)
         in_kitchen = AppOrder.objects.filter(status__in=['ACCEPTED', 'PREPARING'])
         awaiting_payment = AppOrder.objects.filter(status='PENDING_PAYMENT').count()
 

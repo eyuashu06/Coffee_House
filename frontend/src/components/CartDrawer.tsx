@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { CoffeeItemData } from './MenuSection';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { apiFetch } from '../lib/api';
@@ -23,12 +22,27 @@ export interface CartLineOption {
   price_modifier_etb?: string;
 }
 
+/**
+ * What a cart line needs to know about its drink.
+ *
+ * Deliberately not the menu's CoffeeItemData: that is the grid's shape and requires
+ * `rating`, which a cart line neither has nor displays. Typing the cart against it
+ * meant a real object could not be built without a cast.
+ */
+export interface CartCoffee {
+  id: number;
+  name: string;
+  /** ETB. Menu items carry a string, the server cart a decimal string; both coerce. */
+  price: string | number;
+  image_url: string;
+}
+
 export interface CartItem {
   /** Stable key so a quantity change finds the same line again after a re-render. */
   lineKey?: string;
   /** Set when the line came from the saved server cart (needed to PATCH/DELETE it). */
   serverLineId?: number;
-  coffee: CoffeeItemData;
+  coffee: CartCoffee;
   quantity: number;
   temperature: string;
   milk: string;

@@ -8,7 +8,10 @@ API, the assistant and the manager panel cannot disagree.
 """
 
 #: Statuses that close an order. Once closed nothing reopens it.
-CLOSED_STATUSES = frozenset({'COMPLETED', 'CANCELLED', 'REJECTED'})
+#: EXPIRED belongs here: an order nobody paid for must not be handed to the kitchen
+#: by a stale link. It is reinstated only when the gateway later confirms money that
+#: really did arrive - see apps.orders.expiry for why that is not a transition.
+CLOSED_STATUSES = frozenset({'COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'})
 
 #: Statuses that mean the money is already in and the kitchen can start.
 PAID_STATUSES = frozenset({
@@ -17,7 +20,7 @@ PAID_STATUSES = frozenset({
 
 #: The only moves the API accepts, keyed by the current status.
 ALLOWED_TRANSITIONS = {
-    'PENDING_PAYMENT': {'PLACED', 'CANCELLED', 'REJECTED'},
+    'PENDING_PAYMENT': {'PLACED', 'CANCELLED', 'REJECTED', 'EXPIRED'},
     'PLACED': {'ACCEPTED', 'CANCELLED', 'REJECTED'},
     'ACCEPTED': {'PREPARING', 'CANCELLED', 'REJECTED'},
     'PREPARING': {'READY', 'CANCELLED', 'REJECTED'},
@@ -26,6 +29,7 @@ ALLOWED_TRANSITIONS = {
     'COMPLETED': set(),
     'CANCELLED': set(),
     'REJECTED': set(),
+    'EXPIRED': set(),
 }
 
 #: Which statuses still count as "work in progress" for the manager dashboard.

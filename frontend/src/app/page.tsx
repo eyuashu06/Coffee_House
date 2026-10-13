@@ -56,10 +56,7 @@ function serverCartToCartItems(
                 name: line.menu_item_name,
                 price: menuItem?.base_price_etb ?? menuItem?.price ?? line.unit_price_etb,
                 image_url: menuItem?.image_url ?? '',
-                category_slug: menuItem?.category_slug ?? '',
-                description: menuItem?.description ?? '',
-                is_signature: menuItem?.is_signature ?? false,
-            } as never,
+            },
             quantity: line.quantity,
             temperature: line.temperature,
             milk: line.milk_choice,
@@ -67,7 +64,7 @@ function serverCartToCartItems(
                 ? { id: line.variant ?? 0, name: line.variant_label, price_modifier_etb: '0' }
                 : null,
             addOns: line.add_on_labels.map((name, index) => ({ id: index, name })),
-        } as CartItem;
+        };
     });
 }
 
@@ -260,10 +257,7 @@ export default function Home() {
                 name: item.name,
                 price: parseFloat(item.base_price_etb ?? item.price),
                 image_url: item.image_url,
-                category_slug: item.category_slug,
-                description: item.description,
-                is_signature: item.is_signature
-            } as never,
+            },
             quantity,
             temperature,
             milk,

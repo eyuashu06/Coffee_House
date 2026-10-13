@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   translations,
   categoryTranslations,
@@ -58,23 +58,38 @@ export function LanguageProvider({
     document.documentElement.lang = language;
   }, [language]);
 
-  const setLanguage = (lang: Language) => {
+  // Stable across renders: these only touch a state setter and the DOM, so they can be
+  // listed as effect dependencies without causing anything to re-run spuriously.
+  const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('app_lang', lang);
     // Read by the server on the next request, so the page renders in the right
     // language from the first byte instead of swapping after hydration.
     document.cookie = `app_lang=${lang}; path=/; max-age=31536000; samesite=lax`;
-  };
+  }, []);
 
-  const toggleLanguage = () => {
+  const toggleLanguage = useCallback(() => {
     const next = language === 'en' ? 'am' : 'en';
     setLanguage(next);
-  };
+  }, [language, setLanguage]);
 
-  const t = (key: string, fallback?: string): string => {
-    if (language === 'en') return fallback || key;
-    return translations[key] || fallback || key;
-  };
+  /**
+   * The translation helpers are memoised on `language`.
+   *
+   * They were plain functions, so a new identity was created on every render of the
+   * provider. Anything that captured one - a useCallback with [] deps, a polling
+   * effect - then held the *old* function forever: switch to Amharic and a payment
+   * banner raised afterwards would still be built from the English strings. It also
+   * made them unsafe to list as effect dependencies, because that would have made
+   * every effect re-run on every render.
+   */
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      if (language === 'en') return fallback || key;
+      return translations[key] || fallback || key;
+    },
+    [language]
+  );
 
   // 'am-ET' rather than plain 'am': Intl needs a region to pick the Ethiopian
   // calendar conventions and the correct time/number separators.
@@ -82,27 +97,36 @@ export function LanguageProvider({
 
   // Database content arrives in English. Look it up by its exact English text and
   // fall back to the original so a new item is never rendered blank.
-  const lookup = (name: string | undefined, table: Record<string, string>): string => {
-    if (!name) return '';
-    if (language === 'en') return name;
-    return table[name] || name;
-  };
-
-  const tCategory = (name?: string) => lookup(name, categoryTranslations);
-  const tItem = (name?: string) =>
-    lookup(name, itemTranslations) !== name
-      ? lookup(name, itemTranslations)
-      : lookup(name, variantTranslations) !== name
-        ? lookup(name, variantTranslations)
-        : lookup(name, addonTranslations);
-
-  return (
-    <LanguageContext.Provider
-      value={{ language, setLanguage, toggleLanguage, t, locale, tCategory, tItem }}
-    >
-      {children}
-    </LanguageContext.Provider>
+  const lookup = useCallback(
+    (name: string | undefined, table: Record<string, string>): string => {
+      if (!name) return '';
+      if (language === 'en') return name;
+      return table[name] || name;
+    },
+    [language]
   );
+
+  const tCategory = useCallback(
+    (name?: string) => lookup(name, categoryTranslations),
+    [lookup]
+  );
+
+  const tItem = useCallback(
+    (name?: string) =>
+      lookup(name, itemTranslations) !== name
+        ? lookup(name, itemTranslations)
+        : lookup(name, variantTranslations) !== name
+          ? lookup(name, variantTranslations)
+          : lookup(name, addonTranslations),
+    [lookup]
+  );
+
+  const value = useMemo(
+    () => ({ language, setLanguage, toggleLanguage, t, locale, tCategory, tItem }),
+    [language, setLanguage, toggleLanguage, t, locale, tCategory, tItem]
+  );
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage() {

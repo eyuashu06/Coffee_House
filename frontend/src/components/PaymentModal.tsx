@@ -13,6 +13,29 @@ interface PaymentModalProps {
   onPaymentComplete: (status: string, txRef: string, message: string) => void;
 }
 
+/** The identifiers Chapa accepts, plus cash on delivery. */
+type PaymentMethodId =
+  | 'card'
+  | 'telebirr'
+  | 'cbebirr'
+  | 'mpesa'
+  | 'awashbirr'
+  | 'ebirr'
+  | 'cash';
+
+// Declared once and typed, so the selector below cannot drift from the state it feeds.
+// It was an inline literal, which widened `m.id` to string and needed an `as any` at
+// the setState call to compile.
+const PAYMENT_METHODS: { id: PaymentMethodId; name: string; icon: string }[] = [
+  { id: 'card', name: 'Chapa Hosted Redirect', icon: 'open_in_new' },
+  { id: 'telebirr', name: 'Telebirr', icon: 'smartphone' },
+  { id: 'cbebirr', name: 'CBE Birr', icon: 'account_balance' },
+  { id: 'mpesa', name: 'M-Pesa', icon: 'send_to_mobile' },
+  { id: 'awashbirr', name: 'Awash Birr', icon: 'payments' },
+  { id: 'ebirr', name: 'E-Birr', icon: 'credit_score' },
+  { id: 'cash', name: 'Cash on Delivery', icon: 'local_atm' },
+];
+
 export default function PaymentModal({
   isOpen,
   onClose,
@@ -22,7 +45,7 @@ export default function PaymentModal({
   onPaymentComplete,
 }: PaymentModalProps) {
   const { t, language } = useLanguage();
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'telebirr' | 'cbebirr' | 'mpesa' | 'awashbirr' | 'ebirr' | 'cash'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('card');
   const [phone, setPhone] = useState('251900000000');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,19 +168,11 @@ export default function PaymentModal({
               {t('Select Payment Method')}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {[
-                { id: 'card', name: 'Chapa Hosted Redirect', icon: 'open_in_new' },
-                { id: 'telebirr', name: 'Telebirr', icon: 'smartphone' },
-                { id: 'cbebirr', name: 'CBE Birr', icon: 'account_balance' },
-                { id: 'mpesa', name: 'M-Pesa', icon: 'send_to_mobile' },
-                { id: 'awashbirr', name: 'Awash Birr', icon: 'payments' },
-                { id: 'ebirr', name: 'E-Birr', icon: 'credit_score' },
-                { id: 'cash', name: 'Cash on Delivery', icon: 'local_atm' },
-              ].map((m) => (
+              {PAYMENT_METHODS.map((m) => (
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => setPaymentMethod(m.id as any)}
+                  onClick={() => setPaymentMethod(m.id)}
                   className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all ${
                     paymentMethod === m.id
                       ? 'bg-[#2b1b1e] border-tertiary text-[#f7b5be] shadow-sm'
