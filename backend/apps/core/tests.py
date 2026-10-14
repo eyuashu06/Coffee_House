@@ -264,3 +264,46 @@ class PasswordResetTokenExposureTests(TestCase):
         # Only the account the link was requested for changed.
         self.assertTrue(self.user.check_password('Hijacked123!'))
         self.assertFalse(other.check_password('Hijacked123!'))
+
+class UrlMountTests(TestCase):
+    """
+    `/api/v1/` is the API and `/api/` is a legacy alias for the same routes.
+
+    The alias used to be included without a namespace, so its route names landed in
+    the global reverse dict alongside the versioned ones. Whichever include was
+    registered last won every reverse() - and that was the alias - so anything
+    building a URL by name produced `/api/...` for an API documented as
+    `/api/v1/...`. Namespacing each mount makes the choice explicit at every call
+    site instead of leaving it to include order.
+    """
+
+    def test_the_versioned_mount_wins_the_default_reverse(self):
+        """Both mounts are namespaced, so an unqualified name resolves to neither."""
+        from django.urls import NoReverseMatch, reverse
+
+        with self.assertRaises(NoReverseMatch):
+            reverse('order-list')
+        self.assertTrue(reverse('v1:order-list').startswith('/api/v1/orders'))
+
+    def test_each_mount_resolves_to_its_own_prefix(self):
+        from django.urls import reverse
+
+        for name in ('order-list', 'auth-me', 'menu-items-list'):
+            self.assertTrue(reverse(f'v1:{name}').startswith('/api/v1/'), name)
+            self.assertTrue(reverse(f'unversioned:{name}').startswith('/api/'), name)
+            self.assertFalse(reverse(f'unversioned:{name}').startswith('/api/v1/'), name)
+
+    def test_both_mounts_still_serve_the_whole_api(self):
+        for prefix in ('/api/v1/', '/api/'):
+            for path in ('menu/items/', 'delivery-zones/', 'restaurant-settings/',
+                         'auth/me/', 'assistant/quick-actions/'):
+                res = self.client.get(f'{prefix}{path}')
+                # 401 would mean "needs a sign-in", which is a working route; 404
+                # would mean the alias lost a branch somewhere.
+                self.assertNotEqual(res.status_code, status.HTTP_404_NOT_FOUND,
+                                    f'{prefix}{path}')
+
+    def test_the_openapi_schema_still_generates(self):
+        """Two namespaced mounts of one app list is unusual; the schema must cope."""
+        res = self.client.get('/api/schema/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
