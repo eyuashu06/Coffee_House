@@ -249,7 +249,7 @@ export default function CartDrawer({
         {/* Overlay Backdrop */}
         <div 
           onClick={onClose}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity" 
+          className="fixed inset-0 bg-black/70 transition-opacity" 
         />
 
         {/* Slide-over Drawer Panel */}

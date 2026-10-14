@@ -399,7 +399,7 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 <div className="bg-[#131313] text-[#e5e2e1] font-body overflow-x-clip">
 
   {/* ======================= NAV ======================= */}
-  <header className="sticky top-0 z-50 bg-[#131313]/90 backdrop-blur-sm border-b border-[#514345]/60">
+  <header className="sticky top-0 z-50 bg-[#131313] border-b border-[#514345]/60">
     <div className="flex items-center justify-between px-6 h-14">
       <a href="#" className="flex items-center gap-2.5">
         <span className="w-8 h-8 rounded-full bg-[#3b141c] border border-[#683941] flex items-center justify-center text-[#f7b5be] text-[16px]"><i className="ph ph-coffee-bean"></i></span>

@@ -127,7 +127,7 @@ export default function NotificationsDropdown() {
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 max-h-[420px] overflow-y-auto bg-primary-container border border-white/10 rounded-xl shadow-2xl py-2 z-50 animate-fade-in">
           {/* Header */}
-          <div className="px-4 py-2.5 border-b border-white/10 flex justify-between items-center sticky top-0 bg-primary-container/95 backdrop-blur-sm z-10">
+          <div className="px-4 py-2.5 border-b border-white/10 flex justify-between items-center sticky top-0 bg-primary-container z-10">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-on-surface text-sm">{t('Notifications')}</h3>
               {unreadCount > 0 && (

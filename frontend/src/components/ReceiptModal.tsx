@@ -89,7 +89,7 @@ ${t('Thank you for visiting Artisanal Cafe!')}
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-surface-container border border-[#514345] rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-[#e5e2e1] relative">
         {/* Header Bar */}
         <div className="flex items-center justify-between border-b border-dashed border-[#514345] pb-3">

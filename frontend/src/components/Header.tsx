@@ -23,7 +23,7 @@ export default function Header({ cartCount, onOpenCart, onOpenSommelier }: Heade
 
   return (
     <>
-      <header className="fixed top-0 w-full z-50 pt-safe bg-[#1c1b1b]/90 backdrop-blur-xl border-b border-[#514345] shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
+      <header className="fixed top-0 w-full z-50 pt-safe bg-[#1c1b1b] border-b border-[#514345] shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
         <div className="max-w-7xl mx-auto h-16 px-4 sm:px-6 flex items-center justify-between gap-4">
           {/* Brand Emblem */}
           <Link href="/?welcome=1" className="flex items-center gap-3 min-w-0 cursor-pointer group">
