@@ -208,3 +208,155 @@ class AuthAndProfileAPITests(TestCase):
             'password': 'NewPassword123!'
         })
         self.assertEqual(login_res.status_code, status.HTTP_200_OK)
+
+
+@override_settings(REQUIRE_EMAIL_MX=False)
+class ExpiredAccessCookieTests(TestCase):
+    """
+    An hour-old access cookie with a live refresh cookie is the normal case.
+
+    JWTCookieAuthentication deliberately degrades an unusable access token to
+    anonymous instead of raising, so that public endpoints stay reachable and the
+    client has a chance to recover. That left /auth/me/ unable to tell "nobody is
+    signed in" from "your access cookie expired", and it answered 200 to both. The
+    frontend only attempts a refresh on a 401, so the session bootstrap never
+    recovered and every customer was silently signed out once their access token
+    ran out - with a perfectly valid refresh cookie still in the jar.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='sessioncustomer',
+            email='sessioncustomer@coffeereceipts.com',
+            phone='+251911000042',
+            password='Password123!',
+            role='CUSTOMER',
+        )
+
+    def _expire_access_cookie(self):
+        """Sign a real, already-expired access token and keep the refresh one live."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        refresh = RefreshToken.for_user(self.user)
+        refresh['role'] = self.user.role
+        refresh['username'] = self.user.username
+        access = refresh.access_token
+        access.set_exp(from_time=timezone.now() - timedelta(hours=2),
+                       lifetime=timedelta(seconds=1))
+
+        self.client.cookies['access_token'] = str(access)
+        self.client.cookies['refresh_token'] = str(refresh)
+
+    def test_a_stale_access_cookie_asks_the_client_to_refresh(self):
+        self._expire_access_cookie()
+        res = self.client.get('/api/v1/auth/me/')
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_the_refresh_then_serves_the_profile(self):
+        """401 must be recoverable: the whole point is that it drives a refresh."""
+        self._expire_access_cookie()
+
+        refresh_res = self.client.post('/api/v1/auth/refresh/')
+        self.assertEqual(refresh_res.status_code, status.HTTP_200_OK)
+
+        # Replay of the original request, exactly as the frontend does it.
+        me_res = self.client.get('/api/v1/auth/me/')
+        self.assertEqual(me_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(me_res.data['username'], 'sessioncustomer')
+
+    def test_a_visitor_with_no_cookies_is_not_chased_to_refresh(self):
+        """200, not 401 - a first-time visitor has no refresh token to retry with."""
+        res = self.client.get('/api/v1/auth/me/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data, {'authenticated': False})
+
+    def test_a_protected_endpoint_agrees_with_the_profile(self):
+        """
+        Both have to say 401 for the refresh path to trigger.
+
+        A protected endpoint answering 401 while /auth/me/ answered 200 was the
+        inconsistency that let the session die quietly.
+        """
+        self._expire_access_cookie()
+        self.assertEqual(self.client.get('/api/v1/orders/').status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.client.get('/api/v1/auth/me/').status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+
+    def test_patching_the_profile_with_a_stale_cookie_also_asks_for_a_refresh(self):
+        self._expire_access_cookie()
+        res = self.client.patch('/api/v1/auth/me/', {'first_name': 'Still'})
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.user.refresh_from_db()
+        self.assertNotEqual(self.user.first_name, 'Still')
+
+
+class AuthCookieSecureFlagTests(TestCase):
+    """
+    `Secure` is a statement about the transport, so SECURE_SSL decides it.
+
+    It used to be `not DEBUG`, which is a statement about the deployment instead,
+    and that is wrong in both directions: an HTTPS deployment still running
+    DEBUG=1 sent the auth cookies with no Secure flag at all, and a DEBUG=0
+    deployment behind a plain-HTTP load balancer had its cookies dropped by the
+    browser, so sign-in appeared to succeed while nothing was stored.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        User.objects.create_user(
+            username='cookiecustomer', email='cookiecustomer@coffeereceipts.com',
+            phone='+251911000043', password='Password123!', role='CUSTOMER',
+        )
+
+    def _login(self):
+        res = self.client.post('/api/v1/auth/login/', {
+            'username_or_email': 'cookiecustomer', 'password': 'Password123!',
+        })
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        return res
+
+    @staticmethod
+    def _has_secure_flag(response, cookie_name):
+        header = response.cookies[cookie_name].OutputString()
+        return 'secure' in header.lower()
+
+    @override_settings(DEBUG=True, SECURE_SSL=True)
+    def test_https_deployment_marks_the_cookies_secure_even_in_debug(self):
+        for cookie in ('access_token', 'refresh_token'):
+            self.assertTrue(
+                self._has_secure_flag(self._login(), cookie),
+                f'{cookie} must carry the Secure flag when SECURE_SSL is on',
+            )
+
+    @override_settings(DEBUG=False, SECURE_SSL=False)
+    def test_plain_http_deployment_does_not_mark_the_cookies_secure(self):
+        for cookie in ('access_token', 'refresh_token'):
+            self.assertFalse(
+                self._has_secure_flag(self._login(), cookie),
+                f'{cookie} must not carry Secure when the site is not on HTTPS, '
+                'or the browser drops it and sign-in silently stops working',
+            )
+
+    @override_settings(DEBUG=False, SECURE_SSL=True)
+    def test_a_refreshed_cookie_uses_the_same_rules_as_a_signin_cookie(self):
+        """The refresh endpoint used to build its own dict, so the two could drift."""
+        login = self._login()
+        self.client.cookies['refresh_token'] = login.cookies['refresh_token'].value
+
+        res = self.client.post('/api/v1/auth/refresh/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(self._has_secure_flag(res, 'access_token'))
+
+    @override_settings(DEBUG=True, SECURE_SSL=False)
+    def test_a_refreshed_cookie_is_not_secure_on_plain_http(self):
+        login = self._login()
+        self.client.cookies['refresh_token'] = login.cookies['refresh_token'].value
+
+        res = self.client.post('/api/v1/auth/refresh/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertFalse(self._has_secure_flag(res, 'access_token'))

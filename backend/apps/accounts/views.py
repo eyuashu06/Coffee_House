@@ -36,13 +36,28 @@ def issue_tokens_for_user(user):
     return refresh, access
 
 
-def set_auth_cookies(response, refresh_token, access_token):
-    """Utility to attach httpOnly JWT cookies to response."""
-    cookie_kwargs = {
+def auth_cookie_kwargs():
+    """Flags shared by every cookie this module sets.
+
+    `Secure` is driven by SECURE_SSL, not by DEBUG. DEBUG answers "is this a
+    developer machine", SECURE_SSL answers "does this site speak HTTPS" - only the
+    second one is a fact about the transport. Keying off DEBUG broke in both
+    directions: an HTTPS deployment still running DEBUG=1 sent auth cookies without
+    the Secure flag, and a DEBUG=0 deployment over plain HTTP had its cookies
+    silently dropped by the browser, so sign-in looked like it worked while nothing
+    was stored. settings.py already derives the session/CSRF/JWT cookie flags from
+    SECURE_SSL for exactly this reason.
+    """
+    return {
         'httponly': True,
         'samesite': 'Lax',
-        'secure': not settings.DEBUG,
+        'secure': bool(getattr(settings, 'SECURE_SSL', False)),
     }
+
+
+def set_auth_cookies(response, refresh_token, access_token):
+    """Utility to attach httpOnly JWT cookies to response."""
+    cookie_kwargs = auth_cookie_kwargs()
     # Set access token cookie (1 hour)
     response.set_cookie(
         'access_token',
@@ -150,12 +165,10 @@ class CookieTokenRefreshView(APIView):
                 access['username'] = username
 
             res = Response({'message': 'Token refreshed successfully.'}, status=status.HTTP_200_OK)
-            cookie_kwargs = {
-                'httponly': True,
-                'samesite': 'Lax',
-                'secure': not settings.DEBUG,
-            }
-            res.set_cookie('access_token', str(access), max_age=3600, **cookie_kwargs)
+            # Same flags as sign-in: one helper, so the refreshed access cookie
+            # cannot end up with different transport rules than the original.
+            res.set_cookie('access_token', str(access), max_age=3600,
+                           **auth_cookie_kwargs())
             return res
         except (TokenError, InvalidToken) as e:
             res = Response({'error': 'Invalid or expired refresh token.'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -164,15 +177,43 @@ class CookieTokenRefreshView(APIView):
 class UserProfileView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    def _unauthenticated(self, request):
+        """
+        The answer for a caller we could not identify.
+
+        "Nobody is signed in" and "your access cookie has expired" are different
+        situations and they need different answers, because the client only knows to
+        try /auth/refresh/ when it gets a 401.
+
+        JWTCookieAuthentication deliberately degrades an expired token to anonymous
+        rather than raising, so that public endpoints stay reachable (see its
+        comment). The consequence is that this view cannot tell the two apart from
+        `request.user` alone - it has to look at the cookie.
+
+        Answering 200 {'authenticated': false} to *both* meant the session bootstrap
+        never triggered a refresh, so every customer was silently signed out once
+        their hour-long access token ran out even though their 7-day refresh cookie
+        was still valid. A stale access cookie therefore gets 401: the frontend
+        refreshes, replays, and lands on the real profile.
+        """
+        if request.COOKIES.get('access_token'):
+            return Response(
+                {'detail': 'Authentication credentials were not provided.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        # Genuinely no session: a first-time visitor. 200, not 401, or the client
+        # would try to refresh a refresh token it never had.
+        return Response({'authenticated': False}, status=status.HTTP_200_OK)
+
     def get(self, request):
         if not request.user.is_authenticated:
-            return Response({'authenticated': False}, status=status.HTTP_200_OK)
+            return self._unauthenticated(request)
         serializer = UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request):
         if not request.user.is_authenticated:
-            return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return self._unauthenticated(request)
         serializer = UserSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
