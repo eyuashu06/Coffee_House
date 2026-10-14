@@ -271,13 +271,26 @@ class DeliveryZoneViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RestaurantSettingsView(APIView):
     permission_classes = [permissions.AllowAny]
+    #: Named so the OpenAPI schema describes the response instead of skipping the view
+    #: (drf-spectacular cannot infer a serializer for a bare APIView). Same reason
+    #: apps.cart.views names its own.
+    serializer_class = RestaurantSettingsSerializer
 
     def get(self, request):
         settings_obj = RestaurantSettings.get_settings()
         return Response(RestaurantSettingsSerializer(settings_obj).data, status=status.HTTP_200_OK)
 
     def patch(self, request):
-        if not request.user or not request.user.is_manager_or_admin():
+        # AnonymousUser has no is_manager_or_admin(). `not request.user` is False for
+        # it - AnonymousUser is truthy - so the old check went straight to the method
+        # call and every signed-out PATCH raised AttributeError, i.e. HTTP 500.
+        # is_authenticated is the test that works for both kinds of caller.
+        if not (request.user and request.user.is_authenticated):
+            return Response(
+                {'detail': 'Authentication credentials were not provided.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if not request.user.is_manager_or_admin():
             return Response(
                 {'error': 'Manager permission required.'},
                 status=status.HTTP_403_FORBIDDEN
