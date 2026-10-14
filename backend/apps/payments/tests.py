@@ -399,6 +399,41 @@ class PaymentEndpointOwnershipTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
 
+class MissingGatewayKeyTests(TestCase):
+    """
+    No key is baked into the source any more, so an unconfigured server must say
+    so plainly instead of sending an empty Bearer token to Chapa.
+    """
+
+    def setUp(self):
+        from django.test import override_settings
+
+        self.override = override_settings(CHAPA_SECRET_KEY='')
+        self.override.enable()
+        self.addCleanup(self.override.disable)
+
+        self.client = APIClient()
+        self.owner = User.objects.create_user(
+            username='nokey', email='nokey@example.org', password='Password123!')
+        self.order = Order.objects.create(
+            customer=self.owner, order_number='ORD-NOKEY-1', order_type='PICKUP',
+            contact_name='No Key', contact_phone='+251911000000',
+            subtotal_etb=Decimal('200.00'), delivery_fee_etb=Decimal('0.00'),
+            total_amount_etb=Decimal('200.00'), status='PENDING_PAYMENT')
+        self.client.force_authenticate(self.owner)
+
+    def test_card_payment_without_a_key_fails_loudly(self):
+        res = self.client.post('/api/v1/payments/initialize/', {
+            'order_id': self.order.id, 'payment_method': 'card',
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn('CHAPA_SECRET_KEY', res.data['error'])
+        payment = Payment.objects.get(order=self.order)
+        self.assertEqual(payment.status, 'FAILED')
+        self.assertIn('CHAPA_SECRET_KEY', payment.failure_reason)
+
+
 class PaymentStateDerivationTests(TestCase):
     """
     `payment_state` is what the UI asks instead of guessing from one attempt.

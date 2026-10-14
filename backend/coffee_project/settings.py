@@ -230,10 +230,11 @@ APPEND_SLASH = False
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
-# Chapa Payment Gateway Credentials (Test Mode)
-CHAPA_SECRET_KEY = os.environ.get('CHAPA_SECRET_KEY', 'CHASECK_TEST-UMHsYkPPXIFHkoPbm38QkV9OpBh0y4vD')
-CHAPA_PUBLIC_KEY = os.environ.get('CHAPA_PUBLIC_KEY', 'CHAPUBK_TEST-GYDsYiZ6dmnDWjiYLCbe7JMIm6R52LYD')
-CHAPA_ENCRYPTION_KEY = os.environ.get('CHAPA_ENCRYPTION_KEY', 'NkU1iFiDH7h9MB7mhOclw4cN')
+# Chapa Payment Gateway Credentials. They live only in .env (git-ignored) - never
+# as literals here, so a checkout of this repo cannot leak a live merchant key.
+CHAPA_SECRET_KEY = os.environ.get('CHAPA_SECRET_KEY', '').strip()
+CHAPA_PUBLIC_KEY = os.environ.get('CHAPA_PUBLIC_KEY', '').strip()
+CHAPA_ENCRYPTION_KEY = os.environ.get('CHAPA_ENCRYPTION_KEY', '').strip()
 CHAPA_API_URL = os.environ.get('CHAPA_API_URL', 'https://api.chapa.co/v1')
 # Chapa signs webhooks with the webhook secret. Unsigned webhooks are rejected:
 # the endpoint is public, so accepting them would let anyone POST a fake
