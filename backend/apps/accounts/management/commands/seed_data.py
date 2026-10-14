@@ -88,103 +88,103 @@ class Command(BaseCommand):
                 'category': cat_coffee, 'name': 'Yirgacheffe Grade 1 Anaerobic',
                 'slug': 'yirgacheffe-grade-1-anaerobic',
                 'description': 'Complex jasmine aromas, vibrant bergamot acidity, and a silky honeycomb body from Gedeo region.',
-                'base_price_etb': Decimal('350.00'), 'is_signature': True,
+                'base_price_etb': Decimal('85.00'), 'is_signature': True,
                 'image_url': 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800',
                 'tasting_notes': 'Jasmine, Bergamot, Honeycomb',
-                'variants': [('250ml', 0), ('400ml Large', 80)],
-                'addons': [('Extra Espresso Shot', 70), ('Oat Milk Upgrade', 60)],
+                'variants': [('250ml', 0), ('400ml Large', 15)],
+                'addons': [('Extra Espresso Shot', 20), ('Oat Milk Upgrade', 20)],
             },
             {
                 'category': cat_coffee, 'name': 'Guji Hambela Natural Process',
                 'slug': 'guji-hambela-natural-process',
                 'description': 'Wild blueberry sweetness, dark chocolate undertones, and a velvet mouthfeel from Guji highlands.',
-                'base_price_etb': Decimal('320.00'), 'is_signature': True,
+                'base_price_etb': Decimal('80.00'), 'is_signature': True,
                 'image_url': 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800',
                 'tasting_notes': 'Wild Blueberry, Dark Chocolate, Velvet',
-                'variants': [('250ml', 0), ('400ml Large', 80)],
-                'addons': [('Extra Espresso Shot', 70), ('Almond Milk Upgrade', 60)],
+                'variants': [('250ml', 0), ('400ml Large', 15)],
+                'addons': [('Extra Espresso Shot', 20), ('Almond Milk Upgrade', 20)],
             },
             {
                 'category': cat_coffee, 'name': 'Sidama Bombe Washed',
                 'slug': 'sidama-bombe-washed',
                 'description': 'Crisp peach and lemon acidity with a clean, tea-like finish. Sourced from high-altitude Bombe kebele.',
-                'base_price_etb': Decimal('300.00'), 'is_signature': False,
+                'base_price_etb': Decimal('75.00'), 'is_signature': False,
                 'image_url': 'https://images.unsplash.com/photo-1497636577773-f1231844b336?w=800',
                 'tasting_notes': 'Peach, Lemon Zest, Tea-Like',
-                'variants': [('250ml', 0), ('400ml Large', 80)],
-                'addons': [('Extra Shot', 70)],
+                'variants': [('250ml', 0), ('400ml Large', 15)],
+                'addons': [('Extra Shot', 20)],
             },
             # ── ESPRESSO & INFUSIONS ──────────────────
             {
                 'category': cat_espresso, 'name': 'Smoked Cardamom Cappuccino',
                 'slug': 'smoked-cardamom-cappuccino',
                 'description': 'Double shot Geisha espresso infused with artisanal Ethiopian green cardamom and velvety steamed milk.',
-                'base_price_etb': Decimal('280.00'), 'is_signature': True,
+                'base_price_etb': Decimal('70.00'), 'is_signature': True,
                 'image_url': 'https://images.unsplash.com/photo-1534778101976-62847782c213?w=800',
                 'tasting_notes': 'Green Cardamom, Velvety Milk, Caramel',
-                'variants': [('Single Shot', 0), ('Double Shot', 50)],
-                'addons': [('Extra Cardamom', 30), ('Oat Milk', 60)],
+                'variants': [('Single Shot', 0), ('Double Shot', 15)],
+                'addons': [('Extra Cardamom', 10), ('Oat Milk', 20)],
             },
             {
                 'category': cat_espresso, 'name': 'Hazelnut Truffle Mocha',
                 'slug': 'hazelnut-truffle-mocha',
                 'description': 'Rich espresso, house-made hazelnut truffle syrup, steamed oat milk, dark chocolate shavings on top.',
-                'base_price_etb': Decimal('310.00'), 'is_signature': True,
+                'base_price_etb': Decimal('80.00'), 'is_signature': True,
                 'image_url': 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=800',
                 'tasting_notes': 'Hazelnut, Dark Chocolate, Caramel',
-                'variants': [('Regular', 0), ('Large', 70)],
-                'addons': [('Extra Chocolate Shavings', 40), ('Whipped Cream', 50)],
+                'variants': [('Regular', 0), ('Large', 20)],
+                'addons': [('Extra Chocolate Shavings', 15), ('Whipped Cream', 15)],
             },
             {
                 'category': cat_espresso, 'name': 'Cold Brew Reserve',
                 'slug': 'cold-brew-reserve',
                 'description': '18-hour slow cold-steep using Guji Natural. Whiskey-like oak notes, incredibly smooth and low acid.',
-                'base_price_etb': Decimal('340.00'), 'is_signature': False,
+                'base_price_etb': Decimal('75.00'), 'is_signature': False,
                 'image_url': 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=800',
                 'tasting_notes': 'Whiskey Oak, Dark Cacao, Black Cherry',
-                'variants': [('300ml', 0), ('500ml', 90)],
-                'addons': [('Simple Syrup', 30), ('Cream Float', 50)],
+                'variants': [('300ml', 0), ('500ml', 20)],
+                'addons': [('Simple Syrup', 10), ('Cream Float', 15)],
             },
             # ── PREMIUM TEA ───────────────────────────
             {
                 'category': cat_tea, 'name': 'Ethiopian Ginger & Lemon Spice Tea',
                 'slug': 'ethiopian-ginger-lemon-spice-tea',
                 'description': 'Fresh ginger root, lemon zest, and wild Ethiopian honey steeped in boiling spring water. Warming and vibrant.',
-                'base_price_etb': Decimal('180.00'), 'is_signature': True,
+                'base_price_etb': Decimal('45.00'), 'is_signature': True,
                 'image_url': 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800',
                 'tasting_notes': 'Ginger, Lemon, Wild Honey',
-                'variants': [('300ml', 0), ('600ml Pot', 120)],
-                'addons': [('Extra Honey', 30), ('Cinnamon Stick', 20)],
+                'variants': [('300ml', 0), ('600ml Pot', 25)],
+                'addons': [('Extra Honey', 10), ('Cinnamon Stick', 10)],
             },
             {
                 'category': cat_tea, 'name': 'Moroccan Mint Green Tea',
                 'slug': 'moroccan-mint-green-tea',
                 'description': 'Gunpowder green tea leaves brewed with fresh spearmint. Traditionally sweetened with rock sugar.',
-                'base_price_etb': Decimal('160.00'), 'is_signature': False,
+                'base_price_etb': Decimal('40.00'), 'is_signature': False,
                 'image_url': 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800',
                 'tasting_notes': 'Spearmint, Gunpowder Green, Rock Sugar',
-                'variants': [('300ml', 0), ('600ml Pot', 100)],
-                'addons': [('Extra Sugar', 20), ('Fresh Mint Leaves', 30)],
+                'variants': [('300ml', 0), ('600ml Pot', 25)],
+                'addons': [('Extra Sugar', 5), ('Fresh Mint Leaves', 10)],
             },
             {
                 'category': cat_tea, 'name': 'Masala Chai Latte',
                 'slug': 'masala-chai-latte',
                 'description': 'Assam CTC black tea simmered with whole spices — cardamom, cloves, ginger, black pepper — steamed with whole milk.',
-                'base_price_etb': Decimal('200.00'), 'is_signature': True,
+                'base_price_etb': Decimal('55.00'), 'is_signature': True,
                 'image_url': 'https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=800',
                 'tasting_notes': 'Cardamom, Clove, Black Pepper, Ginger',
-                'variants': [('Regular', 0), ('Large', 60)],
-                'addons': [('Oat Milk', 50), ('Extra Spice', 30)],
+                'variants': [('Regular', 0), ('Large', 15)],
+                'addons': [('Oat Milk', 15), ('Extra Spice', 10)],
             },
             {
                 'category': cat_tea, 'name': 'Hibiscus & Rosehip Iced Tea',
                 'slug': 'hibiscus-rosehip-iced-tea',
                 'description': 'Vibrant crimson blend of dried hibiscus flowers and rosehip, served chilled with honey and citrus.',
-                'base_price_etb': Decimal('170.00'), 'is_signature': False,
+                'base_price_etb': Decimal('50.00'), 'is_signature': False,
                 'image_url': 'https://images.unsplash.com/photo-1499638673689-79a0b5115d87?w=800',
                 'tasting_notes': 'Hibiscus, Rosehip, Citrus, Honey',
-                'variants': [('400ml', 0), ('600ml', 70)],
-                'addons': [('Extra Honey', 30), ('Mint Garnish', 20)],
+                'variants': [('400ml', 0), ('600ml', 20)],
+                'addons': [('Extra Honey', 10), ('Mint Garnish', 10)],
             },
             # ── ARTISANAL BURGERS ─────────────────────
             {
@@ -404,24 +404,33 @@ class Command(BaseCommand):
                 defaults={**item_info, 'category': category, 'is_available': True}
             )
             if not created:
-                # Update existing item's category in case it changed
+                # Update existing item's category and fields in case prices or details changed
                 item.category = category
+                item.base_price_etb = item_info['base_price_etb']
+                item.name = item_info['name']
+                item.description = item_info.get('description', item.description)
+                item.image_url = item_info.get('image_url', item.image_url)
+                item.is_signature = item_info.get('is_signature', item.is_signature)
                 item.save()
 
             if created:
                 created_count += 1
 
             for v_name, v_mod in variants:
-                ItemVariant.objects.get_or_create(
+                variant, _ = ItemVariant.objects.get_or_create(
                     menu_item=item, name=v_name,
                     defaults={'price_modifier_etb': Decimal(str(v_mod))}
                 )
+                variant.price_modifier_etb = Decimal(str(v_mod))
+                variant.save()
 
             for a_name, a_price in addons:
-                AddOn.objects.get_or_create(
+                addon, _ = AddOn.objects.get_or_create(
                     menu_item=item, name=a_name,
                     defaults={'price_etb': Decimal(str(a_price))}
                 )
+                addon.price_etb = Decimal(str(a_price))
+                addon.save()
 
         self.stdout.write(self.style.SUCCESS(
             f'✔ Seeded {created_count} new menu items across 8 categories '
