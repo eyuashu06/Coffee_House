@@ -19,7 +19,34 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
-class CoffeeItemViewSet(viewsets.ModelViewSet):
+class LegacyWritePermissionMixin:
+    """
+    The legacy menu/order tables are read-only to everyone but staff.
+
+    These viewsets are bare `ModelViewSet`s, so with no `permission_classes` they
+    inherited the project default of `IsAuthenticatedOrReadOnly` - a rule written for
+    the live endpoints, where each view overrides it per action. The result was that
+    any signed-in customer could POST a row into `api.CoffeeItem` or `api.Order` with
+    a price entirely of their own choosing (this app resolves nothing server-side,
+    unlike apps.orders), or DELETE one. The live menu and orders are unaffected, but
+    it is a free write surface on a money table and nothing needs it: the tables are
+    seeded, not edited, through the running app.
+
+    Reads stay as they were - public for the menu, owner-scoped for orders - so
+    `get_permissions` only narrows the write actions.
+    """
+
+    WRITE_ACTIONS = {'create', 'update', 'partial_update', 'destroy'}
+
+    def get_permissions(self):
+        from apps.accounts.permissions import IsManager
+
+        if self.action in self.WRITE_ACTIONS:
+            return [IsManager()]
+        return super().get_permissions()
+
+
+class CoffeeItemViewSet(LegacyWritePermissionMixin, viewsets.ModelViewSet):
     queryset = CoffeeItem.objects.all()
     serializer_class = CoffeeItemSerializer
 
@@ -41,7 +68,7 @@ class CoffeeItemViewSet(viewsets.ModelViewSet):
             )
         return queryset
 
-class OrderViewSet(viewsets.ModelViewSet):
+class OrderViewSet(LegacyWritePermissionMixin, viewsets.ModelViewSet):
     serializer_class = OrderSerializer
 
     def get_queryset(self):
