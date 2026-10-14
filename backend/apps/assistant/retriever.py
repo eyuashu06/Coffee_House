@@ -155,14 +155,15 @@ def detect_intent(text):
         seen = set()
         for lang in ('en', 'am'):
             for kw in groups.get(lang, []):
-                if ' ' in kw:
-                    if kw in low and kw not in seen:
+                kw_low = kw.lower()
+                if ' ' in kw_low:
+                    if kw_low in low and kw_low not in seen:
                         score += 3
-                        seen.add(kw)
+                        seen.add(kw_low)
                 else:
-                    if _hits(kw, token_set) and kw not in seen:
+                    if _hits(kw_low, token_set) and kw_low not in seen:
                         score += 2
-                        seen.add(kw)
+                        seen.add(kw_low)
         if score:
             scores[intent] = score
 
@@ -173,10 +174,11 @@ def detect_intent(text):
         cat_score = 0
         for lang in ('en', 'am'):
             for kw in groups.get(lang, []):
-                if ' ' in kw:
-                    if kw in low:
+                kw_low = kw.lower()
+                if ' ' in kw_low:
+                    if kw_low in low:
                         cat_score += 2
-                elif _hits(kw, token_set):
+                elif _hits(kw_low, token_set):
                     cat_score += 2
         if cat_score > best:
             best, category = cat_score, slug
@@ -671,12 +673,21 @@ def product_reference_tokens(text, item_names=None):
     """
     names = [n.lower() for n in (item_names or [])]
     result = []
+    GENERIC_MENU_WORDS = {
+        'drink', 'drinks', 'beverage', 'beverages', 'food', 'foods', 'meal', 'meals',
+        'snack', 'snacks', 'dish', 'dishes', 'menu', 'menus', 'item', 'items', 'option', 'options',
+        'system', 'assistant', 'bot', 'service', 'help', 'buna', 'hub', 'house',
+        'መጠጥ', 'መጠጦች', 'ምግብ', 'ምግቦች', 'ሜኑ', 'አማራጭ', 'አማራጮች',
+        'ስርዓት', 'ስርዓቱ', 'ሲስተም', 'ሲስተሙ', 'ረዳት', 'ረዳቱ', 'ምንነው', 'ምንድነው', 'ምንድን', 'ሁብ',
+    }
     for token in tokenize(text):
         if len(token) < 3:
             continue
         if token.isascii() and token in STOPWORDS:
             continue
-        if token in QUESTION_WORDS:
+        if token in QUESTION_WORDS or token.lower() in QUESTION_WORDS:
+            continue
+        if token in GENERIC_MENU_WORDS or token.lower() in GENERIC_MENU_WORDS:
             continue
 
         is_category_word = any(form in CATEGORY_KEYWORD_WORDS for form in _plural_forms(token))

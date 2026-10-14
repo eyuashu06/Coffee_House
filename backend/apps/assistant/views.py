@@ -57,9 +57,9 @@ class AssistantMessageView(APIView):
 
         if not str(query).strip():
             return Response({
-                'answer': "**English 🇬🇧**\n\nPlease type a question first.\n\n**አማርኛ 🇪🇹**\n\nእባክዎ መጀመሪያ ጥያቄ ያጻፉ።",
+                'answer': "**English 🇬🇧**\n\nPlease type a question first.\n\n**አማርኛ 🇪🇹**\n\nእባክዎን መጀመሪያ ጥያቄዎን ይጻፉ።",
                 'answer_en': 'Please type a question first.',
-                'answer_am': 'እባክዎ መጀመሪያ ጥያቄ ያጻፉ።',
+                'answer_am': 'እባክዎን መጀመሪያ ጥያቄዎን ይጻፉ።',
                 'intent': 'empty', 'language': 'en', 'items': [], 'reservations': [],
                 'orders': [], 'action': {'action': 'none'}, 'sources': [],
                 'engine': 'deterministic',
@@ -71,9 +71,6 @@ class AssistantMessageView(APIView):
             return Response(result, status=status.HTTP_200_OK)
         except DatabaseError:
             logger.exception('Assistant database error')
-            return Response(_bilingual_error(), status=status.HTTP_200_OK)
-        except Exception:
-            logger.exception('Assistant failure')
             return Response(_bilingual_error(), status=status.HTTP_200_OK)
         except Exception:
             logger.exception('Assistant failure')
