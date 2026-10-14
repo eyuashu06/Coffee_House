@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import Header from '../../components/Header';
 import OrderTracker from '../../components/OrderTracker';
 import ReceiptModal from '../../components/ReceiptModal';
 import PaymentModal from '../../components/PaymentModal';
@@ -151,6 +150,9 @@ export default function AccountPage() {
   const [payOrder, setPayOrder] = useState<Order | null>(null);
   const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
   const [reorderingId, setReorderingId] = useState<number | null>(null);
+  const ordersRef = useRef<Order[]>([]);
+  ordersRef.current = orders;
+  const initialFetchDone = useRef<string | null>(null);
   const verifiedPaymentRef = useRef<string | null>(null);
   const settledPaymentsRef = useRef<Set<string>>(new Set());
   const paymentTimerRef = useRef<number | null>(null);
@@ -180,6 +182,7 @@ export default function AccountPage() {
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data) ? data : (data.results || []);
+        ordersRef.current = list;
         setOrders(list);
       }
     } catch (e) {
@@ -253,7 +256,7 @@ export default function AccountPage() {
    * the abandoned one as the only thing being confirmed.
    */
   const reconcileUnsettled = useCallback(async (): Promise<number> => {
-    const unsettled = orders
+    const unsettled = ordersRef.current
       .filter(o => o.status === 'PENDING_PAYMENT' && o.latest_payment?.status === 'PENDING')
       .filter(o => o.latest_payment && !settledPaymentsRef.current.has(o.latest_payment.tx_ref));
     if (!unsettled.length) return 0;
@@ -271,7 +274,7 @@ export default function AccountPage() {
       announcePaymentResult({ ...order.latest_payment, status, order_number: order.order_number });
     }
     return changed;
-  }, [orders, verifyPaymentOnce, announcePaymentResult]);
+  }, [verifyPaymentOnce, announcePaymentResult]);
 
   const verifyPendingPayment = useCallback(async () => {
     const params = new URLSearchParams(window.location.search);
@@ -328,16 +331,26 @@ export default function AccountPage() {
     // in the language now on screen, not the one in force when the poll started.
   }, [fetchOrders, announcePaymentResult, reconcileUnsettled, t]);
 
+  // Support direct navigation to a tab, e.g. /account?tab=reservations
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab === 'orders' || tab === 'reservations' || tab === 'addresses' || tab === 'profile') {
+      setActiveTab(tab);
+    }
+  }, []);
+
   // Safety net: any order whose payment is still settling gets re-checked too, so a
   // customer who closed the Chapa tab still sees the confirmation when they come back.
   // This also runs on mount, so a paid order is recognised even without the gateway
   // ever reaching the webhook.
+  const userKey = user?.id || user?.username;
   useEffect(() => {
-    if (!user) return;
+    if (!userKey) return;
     const interval = setInterval(reconcileUnsettled, 8000);
     reconcileUnsettled();
     return () => clearInterval(interval);
-  }, [user, reconcileUnsettled]);
+  }, [userKey, reconcileUnsettled]);
 
   const fetchAddresses = useCallback(async () => {
     try {
@@ -370,17 +383,31 @@ export default function AccountPage() {
     }
   }, [reportUnauthorized]);
 
+  // Initial data load: runs once when user is authenticated, not on every order update
   useEffect(() => {
-    if (user) {
-      setFirstName(user.first_name || '');
-      setLastName(user.last_name || '');
-      setPhone(user.phone || '');
-      fetchOrders();
-      fetchAddresses();
+    if (!userKey) return;
+    if (initialFetchDone.current === String(userKey)) return;
+    initialFetchDone.current = String(userKey);
+
+    setFirstName(user?.first_name || '');
+    setLastName(user?.last_name || '');
+    setPhone(user?.phone || '');
+    fetchOrders();
+    fetchAddresses();
+    fetchReservations();
+    verifyPendingPayment();
+  }, [userKey, user?.first_name, user?.last_name, user?.phone, fetchOrders, fetchAddresses, fetchReservations, verifyPendingPayment]);
+
+  const handleTabChange = (tab: 'orders' | 'reservations' | 'addresses' | 'profile') => {
+    setActiveTab(tab);
+    if (tab === 'orders') {
+      fetchOrders(ordersRef.current.length > 0);
+    } else if (tab === 'reservations') {
       fetchReservations();
-      verifyPendingPayment();
+    } else if (tab === 'addresses') {
+      fetchAddresses();
     }
-  }, [user, fetchOrders, fetchAddresses, fetchReservations, verifyPendingPayment, reportUnauthorized]);
+  };
 
   // Poll order statuses so the customer sees kitchen/delivery updates live
   useEffect(() => {
@@ -494,7 +521,7 @@ export default function AccountPage() {
   return (
     <div className="bg-surface text-[#e5e2e1] font-body min-h-screen pb-24">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-surface/90 backdrop-blur-sm border-b border-[#514345]/60">
+      <header className="sticky top-0 z-50 bg-[#1b1212] border-b border-[#514345]/60">
         <div className="flex items-center justify-between px-6 h-14">
           <Link href="/?welcome=1" className="flex items-center gap-2.5 group">
             <span className="w-8 h-8 rounded-full bg-[#3b141c] border border-[#683941] flex items-center justify-center text-[#f7b5be] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
@@ -534,10 +561,10 @@ export default function AccountPage() {
         
         {/* TABS */}
         <div className="flex flex-wrap gap-2 mb-8 border-b border-[#514345] pb-4">
-          <button onClick={() => setActiveTab('orders')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'orders' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('My Orders')}</button>
-          <button onClick={() => setActiveTab('reservations')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'reservations' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('Table Reservations')}</button>
-          <button onClick={() => setActiveTab('addresses')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'addresses' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('Delivery Addresses')}</button>
-          <button onClick={() => setActiveTab('profile')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'profile' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('Profile Settings')}</button>
+          <button onClick={() => handleTabChange('orders')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'orders' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('My Orders')}</button>
+          <button onClick={() => handleTabChange('reservations')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'reservations' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('Table Reservations')}</button>
+          <button onClick={() => handleTabChange('addresses')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'addresses' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('Delivery Addresses')}</button>
+          <button onClick={() => handleTabChange('profile')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'profile' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('Profile Settings')}</button>
         </div>
 
         {/* TAB: ORDERS */}
@@ -608,7 +635,7 @@ export default function AccountPage() {
                           <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-[#514345] pt-4">
                             <div>
                               <p className="text-[13px] text-[#9e8d8e] uppercase tracking-wider">{order.order_number}</p>
-                              <p className="text-[16px] font-semibold mt-0.5">{Number(order.total_amount_etb).toFixed(2)} {birr} • {order.items.length} {t('item', 'ንብሥ')}{order.items.length !== 1 ? (language === 'am' ? 'ዎች' : 's') : ''}</p>
+                              <p className="text-[16px] font-semibold mt-0.5">{Number(order.total_amount_etb).toFixed(2)} {birr} • {order.items.length} {order.items.length === 1 ? t('item', 'item') : t('items', 'items')}</p>
                             </div>
                             <div className="flex gap-2">
                               {order.status === 'PENDING_PAYMENT' && (
@@ -712,12 +739,13 @@ export default function AccountPage() {
                     <div>
                       <p className="text-[14px] text-[#9e8d8e] mb-1">{t('Reservation for')} {res.name}</p>
                       <p className="text-[16px] font-semibold">{new Date(res.date_time).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                      <p className="text-[14px] text-[#d5c2c3] mt-1">{res.party_size} {t('People')} • {res.contact_phone}</p>
+                      <p className="text-[14px] text-[#d5c2c3] mt-1">{res.party_size} {t('People')}{res.contact_phone ? ` • ${res.contact_phone}` : ''}</p>
                     </div>
                     <div>
                       <span className={`px-3 py-1 rounded-full text-[12px] font-semibold tracking-wide uppercase ${
                         res.status === 'CONFIRMED' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' :
                         res.status === 'CANCELLED' ? 'bg-red-950 text-red-300 border border-red-900' :
+                        res.status === 'PENDING' ? 'bg-blue-950 text-blue-300 border border-blue-900' :
                         'bg-yellow-950 text-yellow-300 border border-yellow-900'
                       }`}>
                         {t(res.status)}

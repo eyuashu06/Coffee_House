@@ -49,6 +49,7 @@ interface ChatMessage {
   from: 'user' | 'assistant';
   en?: string;
   am?: string;
+  queryLang?: string;
   error?: boolean;
   items?: AssistantItem[];
   reservations?: Record<string, unknown>[];
@@ -63,12 +64,12 @@ const FALLBACK_QUICK_ACTIONS: QuickAction[] = [
   { id: 'reservation', label_en: 'Make Reservation', label_am: 'ቦታ ማስያዝ', icon: '📅', query_en: 'I want to reserve a table', query_am: 'ቦታ ማስያዝ እፈልጋለሁ' },
   { id: 'order', label_en: 'Start an Order', label_am: 'ትዕዛዝ ጀምር', icon: '🧾', query_en: 'I would like to place an order', query_am: 'ትዕዛዝ ለመስጠት እፈልጋለሁ' },
   { id: 'prices', label_en: 'Check Prices', label_am: 'ዋጋ ይመልከቱ', icon: '💰', query_en: 'How much is Masala Chai Latte?', query_am: 'Masala Chai Latte ዋጋው ስንት ነው?' },
-  { id: 'about', label_en: 'About Coffee House', label_am: 'ስለ Coffee House', icon: 'ℹ️', query_en: 'What is this system?', query_am: 'ይህ ስርዓት ምንነው?' },
+  { id: 'about', label_en: 'About Buna Hub', label_am: 'ስለ ቡና ሁብ', icon: 'ℹ️', query_en: 'What is Buna Hub?', query_am: 'ቡና ሁብ ምንድነው?' },
 ];
 
 const GENERIC_ERROR = {
   en: "Sorry, I'm having trouble retrieving that information right now. Please try again shortly.",
-  am: 'ይቅርታ፣ ያንን መረጃ አሁን ማግኘት አልቻልኩም። እባክዎ እንደገና በትንሹ ዆ይተው ይሞክሩ።',
+  am: 'ይቅርታ፣ ያንን መረጃ አሁን ማግኘት አልቻልኩም። እባክዎን ትንሽ ቆይተው እንደገና ይሞክሩ።',
 };
 
 /**
@@ -86,12 +87,12 @@ const RESUME_PROMPTS: Record<string, string> = {
 };
 
 const RESUME_PROMPTS_AM: Record<string, string> = {
-  reservation_create: 'አሁን ተግባር ላይ ነኝ፣ የቦታ ማስያዣዬን ይቀጥሉ።',
-  reservation_cancel: 'አሁን ተግባር ላይ ነኝ፣ የመሰረዙን ይቀጥሉ።',
-  reservation_status: 'አሁን ተግባር ላይ ነኝ፣ የቦታ ማስያዣዎቼን ያሳዩኝ።',
-  order_create: 'አሁን ተግባር ላይ ነኝ፣ ትዕዛዤን ይላኩ።',
-  order_status: 'አሁን ተግባር ላይ ነኝ፣ ትዕዛዞቼን ያሳዩኝ።',
-  default: 'አሁን ተግባር ላይ ነኝ፣ ይቀጥሉ።',
+  reservation_create: 'አሁን በመለያዬ ገብቻለሁ፣ እባክዎን የቦታ ማስያዣዬን ይቀጥሉ።',
+  reservation_cancel: 'አሁን በመለያዬ ገብቻለሁ፣ እባክዎን ማሰረዙን ይቀጥሉ።',
+  reservation_status: 'አሁን በመለያዬ ገብቻለሁ፣ እባክዎን የቦታ ማስያዣዎቼን ያሳዩኝ።',
+  order_create: 'አሁን በመለያዬ ገብቻለሁ፣ እባክዎን ትዕዛዜን ያስገቡ።',
+  order_status: 'አሁን በመለያዬ ገብቻለሁ፣ እባክዎን ትዕዛዞቼን ያሳዩኝ።',
+  default: 'አሁን በመለያዬ ገብቻለሁ፣ እባክዎን ይቀጥሉ።',
 };
 
 let messageCounter = 0;
@@ -182,6 +183,7 @@ export default function AssistantChat() {
           from: 'assistant',
           en: data.answer_en || data.answer || '',
           am: data.answer_am || '',
+          queryLang: data.language,
           items: data.items || [],
           reservations: data.reservations || [],
           orders: data.orders || [],
@@ -289,8 +291,7 @@ export default function AssistantChat() {
             </div>
             <div className="flex items-center gap-1">
               <LanguageToggle
-                compact
-                className="w-8 h-8 rounded-full text-[#d5c2c3] hover:text-[#f7b5be] hover:bg-white/10 transition-colors flex items-center justify-center"
+                className="h-7 px-2 rounded-full text-[#d5c2c3] hover:text-[#f7b5be] hover:bg-white/10 transition-colors flex items-center gap-1 text-[11px] font-semibold border border-[#514345] hover:border-[#f7b5be]"
               />
               <button
                 onClick={startFresh}
@@ -335,10 +336,10 @@ export default function AssistantChat() {
                         : 'bg-[#1c1b1b] border-[#514345]'
                     }`}
                   >
-                    {/* One language per bubble, chosen by the customer. */}
+                    {/* One language per bubble, matching question language or customer selection. */}
                     <div className="space-y-1">
                       <p className="text-[#e5e2e1] text-sm leading-relaxed whitespace-pre-line">
-                        {language === 'am' ? (msg.am || msg.en) : msg.en}
+                        {language === 'am' || msg.queryLang === 'am' ? (msg.am || msg.en) : msg.en}
                       </p>
                     </div>
                     {msg.items && msg.items.length > 0 && (
