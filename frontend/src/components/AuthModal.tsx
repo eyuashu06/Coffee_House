@@ -25,9 +25,9 @@ interface AuthModalProps {
 const SHOW_DEMO_ACCOUNTS = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === 'true';
 
 const DEMO_ACCOUNTS = [
-  { label: 'Administrator', role: 'Admin', email: 'admin@gmail.com', password: 'AdminPassword123!' },
-  { label: 'Manager / Staff', role: 'Manager', email: 'manager@gmail.com', password: 'ManagerPassword123!' },
-  { label: 'Customer', role: 'Customer', email: 'customer@gmail.com', password: 'CustomerPassword123!' },
+  { label: 'Administrator', role: 'Admin', email: 'admin@gmail.com', password: 'password' },
+  { label: 'Manager / Staff', role: 'Manager', email: 'manager@gmail.com', password: 'password' },
+  { label: 'Customer', role: 'Customer', email: 'customer@gmail.com', password: 'password' },
 ];
 
 export default function AuthModal({
