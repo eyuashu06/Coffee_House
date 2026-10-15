@@ -132,7 +132,7 @@ export default function PaymentModal({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--accent)] hover:bg-outline-variant/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--accent)] hover:bg-[var(--border)]/20 transition-colors"
           >
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
@@ -176,7 +176,7 @@ export default function PaymentModal({
                   className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all ${
                     paymentMethod === m.id
                       ? 'bg-[var(--accent-soft)] border-tertiary text-[var(--accent)] shadow-sm'
-                      : ' bg-surface-2 border-[var(--border)] text-[var(--muted)] hover:bg-outline-variant/10'
+                      : ' bg-surface-2 border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
                   }`}
                 >
                   <span className="material-symbols-outlined text-xl">{m.icon}</span>
@@ -199,7 +199,7 @@ export default function PaymentModal({
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
                     phone === '251900000000'
                       ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300'
-                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-outline-variant/10'
+                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
                   }`}
                 >
                   <p className="font-bold">🟢 251900000000</p>
@@ -212,7 +212,7 @@ export default function PaymentModal({
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
                     phone === '251911111111'
                       ? 'bg-red-950/60 border-red-500 text-red-300'
-                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-outline-variant/10'
+                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
                   }`}
                 >
                   <p className="font-bold">🔴 251911111111</p>
@@ -225,7 +225,7 @@ export default function PaymentModal({
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
                     phone === '251922222222'
                       ? 'bg-amber-950/60 border-amber-500 text-amber-300'
-                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-outline-variant/10'
+                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
                   }`}
                 >
                   <p className="font-bold">🟡 251922222222</p>
@@ -238,7 +238,7 @@ export default function PaymentModal({
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
                     phone === '251933333333'
                       ? 'bg-blue-950/60 border-blue-500 text-blue-300'
-                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-outline-variant/10'
+                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
                   }`}
                 >
                   <p className="font-bold">⏱️ 251933333333</p>

@@ -76,7 +76,7 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
       {/* Section Heading */}
       <div className="flex flex-col items-start gap-2 mb-8">
         <div className="relative inline-block">
-          <h2 className="font-headline text-3xl sm:text-4xl text-on-surface font-semibold tracking-tight">{t('Our Curated Menu')}</h2>
+          <h2 className="font-headline text-3xl sm:text-4xl text-[var(--text)] font-semibold tracking-tight">{t('Our Curated Menu')}</h2>
           <span className="absolute -bottom-1.5 left-0 w-20 h-1 rounded-full bg-secondary-container shadow-[0_0_12px_rgba(223,134,0,0.8)]" />
         </div>
         <p className="text-sm text-outline max-w-md">
@@ -85,19 +85,19 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
 
         {/* Search Input Bar */}
         <div className="w-full max-w-md relative mt-4">
-          <div className="relative flex items-center bg-surface-container-high/70 backdrop-blur-md rounded-xl p-1 shadow-inner border border-white/5">
+          <div className="relative flex items-center bg-surface-2/70 backdrop-blur-md rounded-xl p-1 shadow-inner border border-white/5">
             <span className="material-symbols-outlined text-outline ml-3 text-lg">search</span>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('Search coffee, burgers, pizza...')}
-              className="w-full bg-transparent px-3 py-2 text-on-surface placeholder:text-outline text-sm focus:outline-none"
+              className="w-full bg-transparent px-3 py-2 text-[var(--text)] placeholder:text-outline text-sm focus:outline-none"
             />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="p-1 mr-2 text-outline hover:text-on-surface"
+                className="p-1 mr-2 text-outline hover:text-[var(--text)]"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
@@ -114,7 +114,7 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
               className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
                 activeCategory === cat.slug
                   ? 'bg-secondary text-on-secondary shadow-[0_2px_10px_rgba(223,134,0,0.3)] font-bold'
-                  : 'bg-surface-container text-on-surface-variant hover:text-on-surface border border-white/5'
+                  : 'bg-surface-2 text-[var(--muted)] hover:text-[var(--text)] border border-white/5'
               }`}
             >
               <span className="material-symbols-outlined text-sm">{cat.icon}</span>
@@ -136,23 +136,23 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
           return (
             <article 
               key={item.id}
-              className="bg-surface-container rounded-2xl p-5 shadow-xl border border-white/5 flex flex-col justify-between hover:border-secondary/30 transition-all duration-300"
+              className="bg-surface-2 rounded-2xl p-5 shadow-xl border border-white/5 flex flex-col justify-between hover:border-secondary/30 transition-all duration-300"
             >
               <div>
                 {/* Image Container */}
-                <div className="relative w-full h-48 rounded-xl overflow-hidden mb-4 bg-surface-container-highest">
+                <div className="relative w-full h-48 rounded-xl overflow-hidden mb-4 bg-surface-2">
                   <img
                     src={item.image_url}
                     alt={item.name}
                     className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/80 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-deep)]/80 via-transparent to-transparent" />
                   
                   {/* Rating Tag */}
                   {item.rating > 0 && (
-                    <div className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center gap-1 border border-white/10 shadow-md">
+                    <div className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full bg-surface-2/80 backdrop-blur-md flex items-center gap-1 border border-white/10 shadow-md">
                       <span className="material-symbols-outlined text-secondary text-xs">star</span>
-                      <span className="text-xs text-on-surface font-semibold">{item.rating}</span>
+                      <span className="text-xs text-[var(--text)] font-semibold">{item.rating}</span>
                     </div>
                   )}
 
@@ -167,7 +167,7 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
                 {/* Details */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-headline text-lg text-on-surface font-semibold">{tItem(item.name)}</h3>
+                    <h3 className="font-headline text-lg text-[var(--text)] font-semibold">{tItem(item.name)}</h3>
                     <p className="text-xs text-outline mt-1 leading-relaxed">{item.description}</p>
                   </div>
                   <span className="font-headline text-lg text-secondary font-bold whitespace-nowrap">{Number(item.price).toFixed(2)} ETB</span>
@@ -188,12 +188,12 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
                 {isDrink && (
                   <div className="grid grid-cols-2 gap-2 mt-4 pt-2 border-t border-white/5">
                     {/* Temp Toggle */}
-                    <div className="bg-surface-container-high rounded-lg p-1 flex items-center justify-between text-xs">
+                    <div className="bg-surface-2 rounded-lg p-1 flex items-center justify-between text-xs">
                       <button
                         type="button"
                         onClick={() => handleTempChange(item.id, 'Hot')}
                         className={`w-1/2 py-1 rounded font-semibold transition-all ${
-                          currentOpt.temp === 'Hot' ? 'bg-secondary text-on-secondary shadow-sm' : 'text-on-surface-variant'
+                          currentOpt.temp === 'Hot' ? 'bg-secondary text-on-secondary shadow-sm' : 'text-[var(--muted)]'
                         }`}
                       >
                         {t('Hot')}
@@ -202,7 +202,7 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
                         type="button"
                         onClick={() => handleTempChange(item.id, 'Iced')}
                         className={`w-1/2 py-1 rounded font-semibold transition-all ${
-                          currentOpt.temp === 'Iced' ? 'bg-secondary text-on-secondary shadow-sm' : 'text-on-surface-variant'
+                          currentOpt.temp === 'Iced' ? 'bg-secondary text-on-secondary shadow-sm' : 'text-[var(--muted)]'
                         }`}
                       >
                         {t('Iced')}
@@ -210,16 +210,16 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
                     </div>
 
                     {/* Milk Selector */}
-                    <div className="relative bg-surface-container-high rounded-lg flex items-center text-xs">
+                    <div className="relative bg-surface-2 rounded-lg flex items-center text-xs">
                       <select
                         value={currentOpt.milk}
                         onChange={(e) => handleMilkChange(item.id, e.target.value)}
-                        className="w-full bg-transparent px-2 py-1 text-on-surface appearance-none focus:outline-none cursor-pointer pr-6"
+                        className="w-full bg-transparent px-2 py-1 text-[var(--text)] appearance-none focus:outline-none cursor-pointer pr-6"
                       >
-                        <option value="Oat Silk (Barista)" className="bg-surface-container-high text-on-surface">{t('Oat Silk (Barista)')}</option>
-                        <option value="Whole Farmstead" className="bg-surface-container-high text-on-surface">{t('Whole Farmstead')}</option>
-                        <option value="Sprouted Almond" className="bg-surface-container-high text-on-surface">{t('Sprouted Almond')}</option>
-                        <option value="Macadamia Cream" className="bg-surface-container-high text-on-surface">{t('Macadamia Cream')}</option>
+                        <option value="Oat Silk (Barista)" className="bg-surface-2 text-[var(--text)]">{t('Oat Silk (Barista)')}</option>
+                        <option value="Whole Farmstead" className="bg-surface-2 text-[var(--text)]">{t('Whole Farmstead')}</option>
+                        <option value="Sprouted Almond" className="bg-surface-2 text-[var(--text)]">{t('Sprouted Almond')}</option>
+                        <option value="Macadamia Cream" className="bg-surface-2 text-[var(--text)]">{t('Macadamia Cream')}</option>
                       </select>
                       <span className="material-symbols-outlined text-outline absolute right-1.5 pointer-events-none text-sm">expand_more</span>
                     </div>

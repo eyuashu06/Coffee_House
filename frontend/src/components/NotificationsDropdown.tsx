@@ -114,7 +114,7 @@ export default function NotificationsDropdown() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         aria-label={t('Notifications')}
-        className="relative w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:text-tertiary transition-colors bg-surface-container/60 border border-white/5"
+        className="relative w-10 h-10 flex items-center justify-center rounded-full text-[var(--muted)] hover:text-tertiary transition-colors bg-surface-2/60 border border-white/5"
       >
         <span className="material-symbols-outlined text-[22px]">notifications</span>
         {unreadCount > 0 && (
@@ -129,7 +129,7 @@ export default function NotificationsDropdown() {
           {/* Header */}
           <div className="px-4 py-2.5 border-b border-white/10 flex justify-between items-center sticky top-0 bg-primary-container z-10">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-on-surface text-sm">{t('Notifications')}</h3>
+              <h3 className="font-semibold text-[var(--text)] text-sm">{t('Notifications')}</h3>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
                   {unreadCount}
@@ -146,8 +146,8 @@ export default function NotificationsDropdown() {
           <div className="flex flex-col">
             {notifications.length === 0 ? (
               <div className="px-4 py-8 text-center space-y-2">
-                <span className="material-symbols-outlined text-3xl text-on-surface-variant/40">notifications_none</span>
-                <p className="text-on-surface-variant text-xs">{t('No notifications yet')}.</p>
+                <span className="material-symbols-outlined text-3xl text-[var(--muted)]/40">notifications_none</span>
+                <p className="text-[var(--muted)] text-xs">{t('No notifications yet')}.</p>
               </div>
             ) : (
               notifications.map(notification => (
@@ -162,7 +162,7 @@ export default function NotificationsDropdown() {
                   <span className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${
                     !notification.is_read
                       ? 'bg-tertiary/20 text-tertiary'
-                      : 'bg-surface-container text-on-surface-variant'
+                      : 'bg-surface-2 text-[var(--muted)]'
                   }`}>
                     <span className="material-symbols-outlined text-[16px]">
                       {getNotificationIcon(notification.title)}
@@ -172,15 +172,15 @@ export default function NotificationsDropdown() {
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start gap-1 mb-0.5">
                       <h4 className={`text-xs font-semibold leading-tight ${
-                        !notification.is_read ? 'text-tertiary' : 'text-on-surface'
+                        !notification.is_read ? 'text-tertiary' : 'text-[var(--text)]'
                       }`}>
                         {notification.title}
                       </h4>
-                      <span className="text-[10px] text-on-surface-variant shrink-0">
+                      <span className="text-[10px] text-[var(--muted)] shrink-0">
                         {new Date(notification.created_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    <p className="text-xs text-on-surface-variant line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-[var(--muted)] line-clamp-2 leading-relaxed">
                       {notification.message}
                     </p>
                     {notification.link && (
