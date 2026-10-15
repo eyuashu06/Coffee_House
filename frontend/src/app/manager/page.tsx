@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
+import ThemeToggle from '../../components/ThemeToggle';
 import ReceiptModal from '../../components/ReceiptModal';
 import NotificationsDropdown from '../../components/NotificationsDropdown';
 import { apiFetch } from '../../lib/api';
@@ -621,6 +622,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             <div className="relative flex items-center">
               <NotificationsDropdown />
             </div>
+            <ThemeToggle className="h-10 w-10" />
             <div className="flex items-center gap-2">
               <span className={`w-3 h-3 rounded-full ${isOpen ? 'bg-green-500' : 'bg-red-500'}`}></span>
               <span className="text-[15.5px] font-semibold">{isOpen ? t('STORE OPEN') : t('STORE CLOSED')}</span>

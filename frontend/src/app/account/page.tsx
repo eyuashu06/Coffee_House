@@ -6,6 +6,7 @@ import OrderTracker from '../../components/OrderTracker';
 import ReceiptModal from '../../components/ReceiptModal';
 import PaymentModal from '../../components/PaymentModal';
 import Link from 'next/link';
+import ThemeToggle from '../../components/ThemeToggle';
 import { useLanguage } from '../../context/LanguageContext';
 import { apiFetch } from '../../lib/api';
 
@@ -535,6 +536,7 @@ export default function AccountPage() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-[#d5c2c3] text-[15px] hidden sm:block">{t('Hello,')} {user.first_name || user.username}</span>
+            <ThemeToggle className="h-8 w-8" />
             <Link href="/?welcome=1" className="h-8 px-4 rounded-full border border-[#514345] text-[#d5c2c3] text-[14px] flex items-center gap-2 hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors" aria-label="Back to Home">
               <i className="ph ph-house"></i>
               <span>{t('Home')}</span>
