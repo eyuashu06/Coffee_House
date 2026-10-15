@@ -120,7 +120,7 @@ export default function PaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-fade-in">
-      <div className="relative w-[95%] sm:w-full max-w-lg my-auto  bg-surface-2 border border-[var(--border)] rounded-2xl shadow-2xl p-5 sm:p-7 text-[var(--text)] max-h-[92vh] overflow-y-auto">
+      <div className="relative w-[95%] sm:w-full max-w-lg my-auto bg-surface-2 border border-[var(--border)] rounded-2xl shadow-2xl p-5 sm:p-7 text-[var(--text)] max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-[var(--border)]">
           <div className="flex items-center gap-2.5">
@@ -247,7 +247,7 @@ export default function PaymentModal({
               </div>
 
               {/* Phone Input */}
-              <div className="flex items-center rounded-lg  bg-surface-2 border border-[var(--border)] focus-within:border-tertiary overflow-hidden">
+              <div className="flex items-center rounded-lg bg-surface-2 border border-[var(--border)] focus-within:border-tertiary overflow-hidden">
                 <span className="px-3 py-2 bg-transparent border-r border-[var(--border)] text-[var(--accent)] font-bold text-xs shrink-0">
                   🇪🇹
                 </span>
@@ -264,7 +264,7 @@ export default function PaymentModal({
           )}
 
           {paymentMethod === 'card' && (
-            <div className="p-3.5 rounded-xl  bg-surface-2-high/70 border border-tertiary/20 text-xs space-y-1.5">
+            <div className="p-3.5 rounded-xl bg-surface-2/70 border border-tertiary/20 text-xs space-y-1.5">
               <p className="font-bold text-[var(--accent)] flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-base">open_in_new</span>
                 {t('Redirect to Chapa Hosted Checkout')}

@@ -120,7 +120,7 @@ ${t('Thank you for visiting Artisanal Cafe!')}
             </p>
           </div>
         ) : (
-        <div className=" bg-surface-2-lowest border border-[var(--border)] rounded-xl p-4 font-mono text-xs text-[var(--muted)] space-y-3 shadow-inner">
+        <div className=" bg-surface-2 border border-[var(--border)] rounded-xl p-4 font-mono text-xs text-[var(--muted)] space-y-3 shadow-inner">
           <div className="text-center border-b border-dashed border-[var(--border)] pb-2">
             <p className="font-bold text-sm text-[var(--accent)]">{t('Artisanal Reserve Cafe')}</p>
             <p className="text-[10px] text-outline">{t('Bole Medhanialem, Addis Ababa')}</p>

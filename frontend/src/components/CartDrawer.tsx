@@ -253,7 +253,7 @@ export default function CartDrawer({
         />
 
         {/* Slide-over Drawer Panel */}
-        <div className="relative w-full max-w-md  bg-surface-2 h-full shadow-2xl flex flex-col justify-between z-10 border-l border-[var(--border)]">
+        <div className="relative w-full max-w-md bg-surface-2 h-full shadow-2xl flex flex-col justify-between z-10 border-l border-[var(--border)]">
           {/* Header */}
           <div className="p-5 bg-surface-2 border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2 text-[var(--accent)]">
@@ -336,7 +336,7 @@ export default function CartDrawer({
               </div>
             ) : (
               cartItems.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-3 rounded-xl  bg-surface-2-high/60 border border-[var(--border)]/50">
+                <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-surface-2/60 border border-[var(--border)]/50">
                   <img
                     src={item.coffee.image_url}
                     alt={tItem(item.coffee.name)}
@@ -366,7 +366,7 @@ export default function CartDrawer({
                   </div>
 
                   {/* Quantity Controller */}
-                  <div className="flex items-center gap-2  bg-surface-2 px-2 py-1 rounded-lg border border-[var(--border)]/50">
+                  <div className="flex items-center gap-2 bg-surface-2 px-2 py-1 rounded-lg border border-[var(--border)]/50">
                     <button 
                       onClick={() => onUpdateQty(idx, -1)}
                       className="w-5 h-5 rounded bg-surface-bright flex items-center justify-center text-xs font-bold hover:text-[var(--accent)] text-[var(--text)]"
@@ -396,7 +396,7 @@ export default function CartDrawer({
 
           {/* Footer Checkout */}
           {cartItems.length > 0 && !orderSuccess && (
-            <div className="p-5  bg-surface-2-lowest border-t border-[var(--border)] space-y-4">
+            <div className="p-5 bg-surface-2 border-t border-[var(--border)] space-y-4">
               {/* Fulfillment: delivery, pickup at the counter, or a table */}
               <div className="space-y-2">
                 <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold">
@@ -434,7 +434,7 @@ export default function CartDrawer({
                   <select
                     value={deliveryZoneId}
                     onChange={(e) => setDeliveryZoneId(e.target.value ? Number(e.target.value) : '')}
-                    className="w-full px-3 py-2.5 rounded-xl  bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:border-[#f7b5be] focus:outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:border-[#f7b5be] focus:outline-none"
                   >
                     <option value="">{t('Choose your zone...')}</option>
                     {zones.map((zone) => (
@@ -451,7 +451,7 @@ export default function CartDrawer({
                     onChange={(e) => setDeliveryAddress(e.target.value)}
                     rows={2}
                     placeholder={t('House, street, landmark...')}
-                    className="w-full px-3 py-2.5 rounded-xl  bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[#6f6162] focus:border-[#f7b5be] focus:outline-none resize-none"
+                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[#6f6162] focus:border-[#f7b5be] focus:outline-none resize-none"
                   />
                   {missingFulfillmentMessage && (
                     <p className="text-[11px] text-[#fbbb50] leading-relaxed">{missingFulfillmentMessage}</p>
@@ -470,7 +470,7 @@ export default function CartDrawer({
                     value={tableNumber}
                     onChange={(e) => setTableNumber(e.target.value)}
                     placeholder={t('Which table are you at?')}
-                    className="w-full px-3 py-2.5 rounded-xl  bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[#6f6162] focus:border-[#f7b5be] focus:outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[#6f6162] focus:border-[#f7b5be] focus:outline-none"
                   />
                 </div>
               )}
