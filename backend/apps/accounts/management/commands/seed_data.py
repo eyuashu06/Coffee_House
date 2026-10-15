@@ -20,28 +20,28 @@ class Command(BaseCommand):
             'is_staff': True, 'is_superuser': True,
             'phone': '+251911000001', 'first_name': 'System', 'last_name': 'Admin'
         })
-        admin.set_password('AdminPassword123!')
+        admin.set_password('password')
         admin.role = 'ADMIN'; admin.is_staff = True; admin.is_superuser = True
         admin.save()
-        self.stdout.write(self.style.SUCCESS('✔ Admin: admin@gmail.com / AdminPassword123!'))
+        self.stdout.write(self.style.SUCCESS('✔ Admin: admin@gmail.com / password'))
 
         manager, _ = User.objects.get_or_create(username='manager', defaults={
             'email': 'manager@gmail.com', 'role': 'MANAGER',
             'is_staff': True, 'phone': '+251911000002',
             'first_name': 'Hotel', 'last_name': 'Manager'
         })
-        manager.set_password('ManagerPassword123!')
+        manager.set_password('password')
         manager.role = 'MANAGER'; manager.is_staff = True
         manager.save()
-        self.stdout.write(self.style.SUCCESS('✔ Manager: manager@gmail.com / ManagerPassword123!'))
+        self.stdout.write(self.style.SUCCESS('✔ Manager: manager@gmail.com / password'))
 
         customer, _ = User.objects.get_or_create(username='customer', defaults={
             'email': 'customer@gmail.com', 'role': 'CUSTOMER',
             'phone': '+251911000003', 'first_name': 'Abebe', 'last_name': 'Bikila'
         })
-        customer.set_password('CustomerPassword123!')
+        customer.set_password('password')
         customer.save()
-        self.stdout.write(self.style.SUCCESS('✔ Customer: customer@gmail.com / CustomerPassword123!'))
+        self.stdout.write(self.style.SUCCESS('✔ Customer: customer@gmail.com / password'))
 
         # ─────────────────────────────────────────────
         # 2. Restaurant Settings

@@ -393,7 +393,10 @@ def answer_query(query, session_id=None, user=None, use_agent=None):
             session.staged_order.clear()
             session.pending_auth_intent = None
         session.remember(query, intent)
-        result = _finalize(query, answer, intent, [], [], meta, language, session)
+        # Menu cards for suggested items ride along in the meta, so the chat can
+        # show what we actually sell next to the text.
+        items = list((meta or {}).pop('items', []) or [])
+        result = _finalize(query, answer, intent, items, [], meta, language, session)
         result['orders'] = orders
         return result
 

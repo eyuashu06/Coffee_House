@@ -268,49 +268,61 @@ export default function CartDrawer({
             </button>
           </div>
 
+          {/* Closed-store notice: at the top of the drawer so the customer sees why
+              checkout is blocked the moment the cart opens, not after scrolling. */}
+          {isClosedStore && (
+            <div className="px-5 py-3 bg-red-950/80 border-b border-red-500/40 text-red-200 text-xs leading-relaxed flex items-start gap-2">
+              <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">schedule</span>
+              <p>
+                {t('We are closed right now and are not accepting orders.')}
+                {openingHours ? ` ${t('Our opening hours:')} ${openingHours}` : ''}
+              </p>
+            </div>
+          )}
+
           {/* Content Body */}
           <div className="flex-1 p-5 overflow-y-auto space-y-4">
             {orderSuccess ? (
-              <div className="text-center py-12 px-4 space-y-4">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/40">
-                  <span className="material-symbols-outlined text-3xl">check</span>
+                <div className="text-center py-12 px-4 space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/40">
+                    <span className="material-symbols-outlined text-3xl">check</span>
+                  </div>
+                  <h4 className="font-display text-xl text-white font-bold">{t('Order Placed!')}</h4>
+                  <p className="text-sm text-[#9e8d8e] leading-relaxed">{orderSuccess}</p>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => { setOrderSuccess(null); onClose(); }}
+                      className="py-2.5 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-bold text-xs uppercase tracking-wider shadow-md hover:brightness-110"
+                    >
+                      {t('Back to Menu')}
+                    </button>
+                    <a
+                      href="/?welcome=1"
+                      className="py-2 px-6 rounded-full border border-[#683941] text-[#f7b5be] font-semibold text-xs text-center hover:bg-[#f7b5be]/10 transition-all"
+                    >
+                      {t('Back to Home')}
+                    </a>
+                  </div>
                 </div>
-                <h4 className="font-display text-xl text-white font-bold">{t('Order Placed!')}</h4>
-                <p className="text-sm text-[#9e8d8e] leading-relaxed">{orderSuccess}</p>
-                <div className="flex flex-col gap-2">
+            ) : orderError ? (
+                <div className="py-8 px-4 space-y-4">
+                  <div className="p-4 rounded-xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs leading-relaxed flex items-start gap-2">
+                    <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">error</span>
+                    <span>{orderError}</span>
+                  </div>
                   <button
-                    onClick={() => { setOrderSuccess(null); onClose(); }}
-                    className="py-2.5 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-bold text-xs uppercase tracking-wider shadow-md hover:brightness-110"
+                    onClick={() => setOrderError(null)}
+                    className="w-full py-3 px-6 rounded-full border border-[#514345] text-[#9e8d8e] font-bold text-xs uppercase tracking-wider hover:bg-outline-variant/10 transition-all"
                   >
-                    {t('Back to Menu')}
+                    {t('Try Again')}
                   </button>
                   <a
-                    href="/account"
-                    className="py-2 px-6 rounded-full border border-[#683941] text-[#f7b5be] font-semibold text-xs text-center hover:bg-[#f7b5be]/10 transition-all"
+                    href="/?welcome=1"
+                    className="block w-full py-3 px-6 rounded-full border border-[#683941] text-[#f7b5be] font-bold text-xs uppercase tracking-wider text-center hover:bg-[#f7b5be]/10 transition-all"
                   >
-                    {t('View My Orders')}
+                    {t('Back to Home')}
                   </a>
                 </div>
-              </div>
-            ) : orderError ? (
-              <div className="py-8 px-4 space-y-4">
-                <div className="p-4 rounded-xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs leading-relaxed flex items-start gap-2">
-                  <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">error</span>
-                  <span>{orderError}</span>
-                </div>
-                <button
-                  onClick={() => setOrderError(null)}
-                  className="w-full py-3 px-6 rounded-full border border-[#514345] text-[#9e8d8e] font-bold text-xs uppercase tracking-wider hover:bg-outline-variant/10 transition-all"
-                >
-                  {t('Try Again')}
-                </button>
-                <a
-                  href="/account"
-                  className="block w-full py-3 px-6 rounded-full border border-[#683941] text-[#f7b5be] font-bold text-xs uppercase tracking-wider text-center hover:bg-[#f7b5be]/10 transition-all"
-                >
-                  {t('View My Account & Retry Payment')}
-                </a>
-              </div>
             ) : cartItems.length === 0 ? (
               <div className="text-center py-16 text-outline space-y-3">
                 <span className="material-symbols-outlined text-5xl text-[#f7b5be]/60">local_cafe</span>
@@ -460,13 +472,6 @@ export default function CartDrawer({
                     placeholder={t('Which table are you at?')}
                     className="w-full px-3 py-2.5 rounded-xl bg-surface-container border border-[#514345] text-[#e5e2e1] text-sm placeholder:text-[#6f6162] focus:border-[#f7b5be] focus:outline-none"
                   />
-                </div>
-              )}
-
-              {isClosedStore && (
-                <div className="p-3 rounded-xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs leading-relaxed">
-                  {t('We are closed right now and are not accepting orders.')}
-                  {openingHours ? ` ${t('Our opening hours:')} ${openingHours}` : ''}
                 </div>
               )}
 

@@ -2,65 +2,322 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Theme palettes ─────────────────────────────────────────────────────
+   Warm coffee tones on both sides — light mode is cream/porcelain, dark
+   mode is espresso (never pure black). Components reference these through
+   var() so one class on <html> repaints the whole site.                    */
+:root {
+  --bg: #f6efe6;
+  --bg-deep: #ede0d1;
+  --surface: #fffdf9;
+  --surface-2: #f3e8db;
+  --text: #2c1b14;
+  --muted: #6f5a4e;
+  --border: #e2d1c1;
+  --accent: #a4443f;
+  --accent-contrast: #fff7f5;
+  --accent-soft: #f6d9d7;
+  --gold: #96650f;
+  --shadow: 0 18px 40px -22px rgba(80, 45, 25, 0.35);
+  --glow-a: rgba(196, 122, 74, 0.16);
+  --glow-b: rgba(164, 68, 63, 0.1);
+  --overlay: rgba(255, 250, 244, 0.78);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #1a1210;
+  --bg-deep: #120c0a;
+  --surface: #241a16;
+  --surface-2: #2e211c;
+  --text: #f3ece6;
+  --muted: #c9b8ae;
+  --border: #423029;
+  --accent: #f7b5be;
+  --accent-contrast: #4e232b;
+  --accent-soft: #3b141c;
+  --gold: #fbbb50;
+  --shadow: 0 22px 44px -20px rgba(0, 0, 0, 0.65);
+  --glow-a: rgba(251, 184, 110, 0.14);
+  --glow-b: rgba(247, 181, 190, 0.1);
+  --overlay: rgba(20, 13, 11, 0.72);
+  color-scheme: dark;
+}
+
 @layer base {
-  html, body {
+  html,
+  body {
     width: 100%;
     min-height: 100vh;
     margin: 0;
     padding: 0;
-    background-color: #1b1212;
-    color: #d5c2c3;
   }
 
-  /* Placeholder text must stay readable on the dark inputs (Tailwind's default is
-     60%-opacity gray, which all but disappears on #131313). */
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    transition: background-color 0.35s ease, color 0.35s ease;
+  }
+
+  /* The old-style serifs read "dated" on a modern storefront; the whole app
+     now uses Playfair Display (display) + Inter (body). */
   input::placeholder,
   textarea::placeholder {
-    color: #b3a3a4 !important;
-    opacity: 1 !important;
+    color: var(--muted) !important;
+    opacity: 0.85 !important;
     font-style: italic;
   }
 
-  /* Keep autofilled values visible too */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus {
-    -webkit-text-fill-color: #e5e2e1;
-    -webkit-box-shadow: 0 0 0 1000px #1c1b1b inset;
+    -webkit-text-fill-color: var(--text);
+    -webkit-box-shadow: 0 0 0 1000px var(--surface-2) inset;
     transition: background-color 9999s ease-in-out 0s;
   }
 }
 
 @layer utilities {
   .font-display {
-    font-family: 'Old Standard TT', serif;
+    font-family: 'Playfair Display', 'Georgia', serif;
   }
+
   .font-body {
-    font-family: 'Crimson Text', serif;
+    font-family: 'Inter', 'Helvetica Neue', system-ui, sans-serif;
+  }
+
+  /* Page backdrop: layered warm radial glows over a soft vertical gradient
+     instead of a flat near-black slab. */
+  .site-bg {
+    background-image:
+      radial-gradient(42% 38% at 12% 8%, var(--glow-a), transparent 70%),
+      radial-gradient(38% 34% at 88% 22%, var(--glow-b), transparent 70%),
+      radial-gradient(50% 40% at 50% 100%, var(--glow-a), transparent 72%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
+  .glass-bar {
+    background: var(--overlay);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
   }
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ── Scroll-reveal + entrance animations ────────────────────────────── */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-::-webkit-scrollbar-track {
-  background: #131313;
+
+@keyframes wordIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.6em) rotate(2deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
 }
-::-webkit-scrollbar-thumb {
-  background: #3b141c;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #fbbb50;
+
+@keyframes kenBurns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.1);
+  }
 }
 
 @keyframes floatSmooth {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes slideFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .animate-float {
   animation: floatSmooth 4s ease-in-out infinite;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.word-in {
+  display: inline-block;
+  opacity: 0;
+  animation: wordIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.ken-burns {
+  animation: kenBurns 9s ease-in-out alternate infinite;
+}
+
+.slide-fade {
+  animation: slideFade 1s ease forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .word-in,
+  .ken-burns,
+  .animate-float,
+  .slide-fade {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ── Page components ────────────────────────────────────────────────── */
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
+}
+
+.hero-haze {
+  background-image:
+    radial-gradient(38% 55% at 22% 30%, var(--glow-a), transparent 62%),
+    radial-gradient(45% 60% at 78% 68%, var(--glow-b), transparent 60%);
+  background-size: 280% 280%;
+  mix-blend-mode: screen;
+  animation: hazeDrift 16s ease-in-out infinite alternate;
+}
+
+@keyframes hazeDrift {
+  from {
+    background-position: 0% 0%;
+  }
+  to {
+    background-position: 100% 100%;
+  }
+}
+
+.dish-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.dish-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--accent);
+}
+
+.dish-card-signature {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.dish-well {
+  box-shadow: inset 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chip-active {
+  background: var(--accent) !important;
+  color: var(--accent-contrast) !important;
+  border-color: var(--accent) !important;
+}
+
+.field {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.grain {
+  position: relative;
+}
+
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.linen-sheet {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0 100%);
+}
+
+/* Hide scrollbar on horizontal chip rails while keeping them swipeable */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

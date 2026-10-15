@@ -35,6 +35,14 @@ STOPWORDS = {
     'how', 'much', 'many', 'what', 'which', 'who', 'can', 'could', 'would', 'please',
     'have', 'has', 'had', 'with', 'about', 'any', 'some', 'get', 'give', 'tell', 'know',
     'available', 'price', 'want', 'need', 'like', 'best', 'good', 'day', 'today', 'now',
+    # Conversational filler that names no product. Left in, "i wanna cheese burger
+    # for me and my friend" scored 'wanna' and 'friend' as product words, every
+    # menu item was discarded as a mismatch, and the customer was told we had no
+    # such information.
+    'wanna', 'let', 'us', 'friend', 'friends', 'buddy', 'plus', 'together', 'also',
+    'well', 'just', 'really', 'maybe', 'actually', 'tonight', 'soon', 'ordering',
+    'ordered', 'buy', 'purchase', 'grab', 'love', 'prefer', 'instead', 'anything',
+    'else', 'something', 'everything', 'ok', 'okay', 'yeah', 'yep', 'sure',
 }
 
 
@@ -190,6 +198,12 @@ def detect_intent(text):
         # price/detail lookup.
         if _looks_like_order(low, token_set) or _looks_like_order_step(low, token_set):
             return 'order_create', tokens, category
+        # An indirect buy request with no quantity ("i wanna cheese burger for me
+        # and my friend", "i wanna sushi") is an order, not a dead end - the
+        # order flow then explains what we do sell. Anything asking for
+        # information is excluded by _looks_like_buy_request itself.
+        if _looks_like_buy_request(low, token_set):
+            return 'order_create', tokens, category
         if category or find_menu_items(text, limit=1):
             return 'price', tokens, category
         return 'unknown', tokens, category
@@ -249,9 +263,9 @@ _ORDER_STEP_WORDS = {
 
 def _looks_like_order_step(low, token_set):
     """True for a message that continues an existing order rather than asks."""
-    if re.search(r'\d', low):
-        # A number here is a quantity or an address, not an instruction.
-        return False
+    # "delivery to Bole Road, house 12" carries a number but is still the
+    # fulfilment step of an order, not a quantity question. A bare number
+    # ("9") or a time ("tomorrow at 9") matches no step word and stays out.
     return bool(token_set & _ORDER_STEP_WORDS)
 
 
@@ -259,10 +273,13 @@ def _looks_like_order_step(low, token_set):
 #: request to buy something.
 _INFO_WORDS = {'price', 'prices', 'cost', 'costs', 'how', 'much', 'many', 'available',
                'availability', 'is', 'are', 'does', 'do', 'what', 'which', 'have',
-               'ingredient', 'ingredients', 'recommend', 'cheapest', 'sell', 'stock'}
+               'ingredient', 'ingredients', 'recommend', 'cheapest', 'sell', 'stock',
+               'question', 'questions'}
 
 #: Words that mean "buy", as opposed to "tell me".
-_ORDER_WORDS = {'order', 'add', 'cart', "i'll", 'ill', 'give', 'want', 'like', 'have'}
+_ORDER_WORDS = {'order', 'add', 'cart', "i'll", 'ill', 'give', 'want', 'like', 'have',
+                'wanna', 'get', 'take', 'buy',
+                'እፈልጋለሁ', 'ይስጡኝ', 'አምጣልኝ'}
 
 
 def _looks_like_order(low, token_set):
@@ -276,6 +293,19 @@ def _looks_like_order(low, token_set):
     if token_set & _INFO_WORDS:
         return False
     if not re.search(r'\b\d{1,2}\b', low):
+        return False
+    return bool(token_set & _ORDER_WORDS)
+
+
+def _looks_like_buy_request(low, token_set):
+    """
+    An indirect order with no quantity digit: "i wanna cheese burger for me and
+    my friend".
+
+    Requires a buy word and rules out anything asking for information, so
+    "i want to know the price" and "do you have tea" are still questions.
+    """
+    if token_set & _INFO_WORDS:
         return False
     return bool(token_set & _ORDER_WORDS)
 
@@ -348,7 +378,13 @@ def find_menu_items(text, limit=5, category_slug=None, available_only=False, min
             forms = _variants(token)
             if any(_contains_word(doc, form) for form in forms):
                 score += 2
+            elif len(token) >= 4 and token in doc:
+                # Compound words: "cheese burger" has to find "Cheeseburger",
+                # whose parts sit inside one word with no boundary between them.
+                score += 2
             if any(_contains_word(name_low, form) for form in forms):
+                score += 3
+            elif len(token) >= 4 and token in name_low:
                 score += 3
             # Amharic / typo tolerance on the item name
             if len(token) >= 4:
@@ -370,9 +406,11 @@ def find_menu_items(text, limit=5, category_slug=None, available_only=False, min
             forms = _variants(token)
             hit = any(_contains_word(doc, f) or _contains_word(name_low, f) for f in forms)
             if not hit and len(token) >= 4:
-                # A typo of this item's name is a plausible match, a different
-                # product name is not.
-                if SequenceMatcher(None, token, name_low).ratio() >= 0.6:
+                # A part of a compound name ("cheese" in "Cheeseburger") is a
+                # plausible match; a different product name is not.
+                if token in name_low or token in doc:
+                    hit = True
+                elif SequenceMatcher(None, token, name_low).ratio() >= 0.6:
                     hit = True
             if not hit:
                 unmatched = True

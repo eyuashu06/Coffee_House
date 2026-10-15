@@ -500,6 +500,132 @@ def _detect_order_type_and_address(text):
     return detect_order_type(text), extract_address(text)
 
 
+#: Words that talk about ordering rather than name a product. Quoted back in the
+#: reply, "i wanna cheese burger for me and my friend" must read "cheese burger",
+#: not the whole sentence.
+_ORDER_PHRASE_NOISE = {
+    'deliver', 'delivery', 'deliveries', 'pickup', 'takeaway', 'collect', 'collection',
+    'dine', 'dinein', 'table', 'restaurant', 'reservation', 'reserve', 'book', 'booking',
+    'one', 'two', 'three', 'some', 'extra', 'also', 'tonight', 'today', 'soon',
+    'እባክዎ', 'እባክልኝ', 'ለእኔ', 'አንድ', 'ሁለት', 'ሦስት',
+    'ማድረስ', 'መደብር', 'መረከብ', 'እዛው', 'መመገብ', 'ቦታ', 'ትዕዛዝ',
+}
+
+
+def _requested_product_phrase(text):
+    """The product words the customer used, for quoting back in the reply."""
+    from .retriever import STOPWORDS, tokenize
+
+    words = []
+    for token in tokenize(text):
+        if token in STOPWORDS or token in _ORDER_PHRASE_NOISE:
+            continue
+        if not token.isalpha():
+            continue
+        # English filler is short and already filtered above; Amharic product
+        # words can be two characters ("ቡና"), so only English gets a length floor.
+        if token.isascii() and len(token) < 3:
+            continue
+        words.append(token)
+    return ' '.join(words[:4])
+
+
+def _pick_named_items(text, items):
+    """
+    Narrow several matching menu items down to the ones the customer named.
+
+    "i wanna cheese burger" must add the cheeseburger, not every burger whose
+    description happens to mention cheese. A bare "a burger" names no product
+    beyond the category, so nothing is added and the customer chooses instead.
+
+    Returns (chosen, contested): `chosen` is the unique best match, `contested`
+    the equally good options to offer back.
+    """
+    from .retriever import CATEGORY_KEYWORD_WORDS, STOPWORDS, _plural_forms, tokenize
+
+    words = [t for t in tokenize(text)
+             if t.isalpha() and t not in STOPWORDS
+             and (not t.isascii() or len(t) >= 3)]
+    # A word that only names a category ("burger", "coffee") does not single an
+    # item out; anything else ("cheese", "masala") does.
+    meaningful = [w for w in words
+                  if not any(form in CATEGORY_KEYWORD_WORDS for form in _plural_forms(w))]
+
+    def hits(item):
+        name = item.name.lower()
+        return sum(1 for w in words if w in name)
+
+    if len(items) == 1 or not meaningful:
+        # One match is already the answer; only a category word was given, so
+        # every match is as good as the next and the customer picks.
+        return ([items[0]] if len(items) == 1 else []), ([] if len(items) == 1 else items[:4])
+
+    ranked = sorted(items, key=lambda i: (-hits(i), i.name))
+    best = hits(ranked[0])
+    if best <= 0:
+        return [], items[:4]
+    top = [i for i in ranked if hits(i) == best]
+    if len(top) == 1:
+        return top, []
+    return [], top
+
+
+def _order_opening_reply(text, contested=None):
+    """
+    The customer started an order; turn whatever they said into the next step.
+
+    An indirect request ("i wanna cheese burger for me and my friend") is read
+    as an order: say plainly when the product is not on the menu, show the
+    closest things we do sell, and give every way an order can be fulfilled -
+    or offer to book a table instead. The customer can then simply choose.
+    """
+    from .retriever import detect_intent, list_menu
+
+    phrase = _requested_product_phrase(text)
+    _, _, category = detect_intent(text)
+    suggestions = list_menu(category_slug=category, limit=4) if category else []
+
+    if contested:
+        quoted = f' "{phrase}"' if phrase else ''
+        en = [f"We have a few that match{quoted}. Which one would you like?"]
+        am = [f"በጥቂት ተመሳሳዮች አልቋል{quoted}. የትኛውን ይፈልጋሉ?"]
+        suggestions = contested
+    elif phrase and not category:
+        en = [f"I understand you would like to order {phrase}, but we do not have "
+              f"{phrase} on our menu."]
+        am = [f"{phrase} ለማዘዝ እንደሚፈልጉ ተረድቻለሁ፤ ግን {phrase} በሜኑአችን ውስጥ የለም።"]
+        if not suggestions:
+            suggestions = list_menu(limit=4)
+        if suggestions:
+            en.append("Here is what we do have that is closest:")
+            am.append("በጣም ተመሳሳይ የምንቀርባቸው፦")
+    elif category and suggestions:
+        category_name = suggestions[0].category.name
+        en = [f"Happy to take your order. These are our {category_name} items:"]
+        am = [f"ትዕዛዝዎን በደስታ እንቀበላለን። የ{category_name} ምርቶችአችን፦"]
+    else:
+        en = ["Happy to take your order. Which items from the menu would you like?"]
+        am = ["ትዕዛዝዎን በደስታ እንቀበላለን። ከሜኑ ምን አይነት ምርት ይፈልጋሉ?"]
+
+    payload = []
+    if suggestions:
+        cat_en, cat_am = _catalog(suggestions, limit=4)
+        en.append(cat_en)
+        am.append(cat_am)
+        payload = [_item_payload(i) for i in suggestions[:4]]
+        en.append("Would you like one of these? You can order for delivery, collect from "
+                  "the shop, or dine in - or if you would rather book a table, I can help "
+                  "with a reservation.")
+        am.append("አንዱን ይፈልጋሉ? ለማድረስ፣ ከመደብር መረከብ ወይም እዛው መመገብ በማዘዝ ይችላሉ - "
+                  "ወይም ጠረጴዛ ማስያዝ ከፈለጉ ልረዳዎት እችላለሁ።")
+    else:
+        en.append("Would that be delivery, store pickup, or dining in - or would you rather "
+                  "book a table?")
+        am.append("እንዲደርስዎ፣ ከመደብር መረከብ ወይስ እዛው መመገብ ይፈልጋሉ - ወይም ጠረጴዛ ማስያዝ ይፈልጋሉ?")
+
+    return bilingual('\n'.join(en), '\n'.join(am)), payload, {'action': 'collect_order_details'}
+
+
 def handle_order_intent(intent, text, staged, user=None):
     """
     Deterministic ordering: add items, read back the order, place it, or list
@@ -551,15 +677,24 @@ def handle_order_intent(intent, text, staged, user=None):
     if not named:
         named = find_menu_items(_strip_fulfilment_words(text), limit=4)
 
-    # A bare "I want to order" with no product named yet: ask what they want
-    # rather than inventing a suggestion.
+    # Several items can match one message ("a burger" matches every burger). Only
+    # add them all when the customer clearly named more than one; otherwise keep
+    # the single item their own words pick out, or ask them to choose.
+    contested = []
+    if len(named) > 1:
+        named, contested = _pick_named_items(text, named)
+
+    if contested:
+        answer, payload, meta = _order_opening_reply(text, contested=contested)
+        return answer, [], {**meta, 'items': payload}
+
+    # A bare "I want to order", a product we do not stock, or a category too
+    # broad to pick from ("i want coffee"): move the order forward with the real
+    # options instead of dead-ending.
     if not named:
         if staged.is_empty():
-            en = ("Happy to take your order. Which items from the menu would you like, and would "
-                  "that be delivery, store pickup or dining in?")
-            am = ("ትዕዛዝዎን በደስታ እንቀበላለን። ከሜኑ ምን አይነት ምርት ይፈልጋሉ? "
-                  "እንዲሁም እንዲደርስዎ፣ በመደብር መረከብ ወይስ እዛው መመገብ ይፈልጋሉ?")
-            return bilingual(en, am), [], {'action': 'collect_order_details'}
+            answer, payload, meta = _order_opening_reply(text)
+            return answer, [], {**meta, 'items': payload}
 
         summary = staged.summary()
         if order_type:

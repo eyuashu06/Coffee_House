@@ -330,7 +330,7 @@ def detect_order_type(text):
 #: here: in "I want to order a croissant" they are part of the order phrase, and
 #: treating them as an address marker swallowed the item name as the address.
 _ADDRESS_MARKERS = (
-    r'address|my address is|send it to|deliver (?:it |the order )?to|'
+    r'address|my address is|send it to|deliver(?:y)? (?:it |the order )?to|'
     r'አድራሻ|ወደ\s*\S+\s*አድራሻ'
 )
 

@@ -123,6 +123,7 @@ interface Address {
 
 interface Reservation {
   id: number;
+  order_code: string;
   name: string;
   date_time: string;
   party_size: number;
@@ -523,12 +524,21 @@ export default function AccountPage() {
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-[#1b1212] border-b border-[#514345]/60">
         <div className="flex items-center justify-between px-6 h-14">
-          <Link href="/?welcome=1" className="flex items-center gap-2.5 group">
-            <span className="w-8 h-8 rounded-full bg-[#3b141c] border border-[#683941] flex items-center justify-center text-[#f7b5be] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
-            <span className="font-display text-[21px] tracking-wide">Buna Hub</span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/?welcome=1" className="flex items-center gap-2 group text-[#d5c2c3] hover:text-[#f7b5be] transition-colors" aria-label="Back to Home">
+              <i className="ph ph-arrow-left text-[20px]"></i>
+            </Link>
+            <Link href="/?welcome=1" className="flex items-center gap-2.5 group">
+              <span className="w-8 h-8 rounded-full bg-[#3b141c] border border-[#683941] flex items-center justify-center text-[#f7b5be] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
+              <span className="font-display text-[21px] tracking-wide">Buna Hub</span>
+            </Link>
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-[#d5c2c3] text-[15px] hidden sm:block">{t('Hello,')} {user.first_name || user.username}</span>
+            <Link href="/?welcome=1" className="h-8 px-4 rounded-full border border-[#514345] text-[#d5c2c3] text-[14px] flex items-center gap-2 hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors" aria-label="Back to Home">
+              <i className="ph ph-house"></i>
+              <span>{t('Home')}</span>
+            </Link>
             <button onClick={logout} className="h-8 px-4 rounded-full border border-[#514345] text-[#d5c2c3] text-[14px] flex items-center hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">{t('Sign Out')}</button>
           </div>
         </div>
@@ -737,7 +747,8 @@ export default function AccountPage() {
                 {reservations.map(res => (
                   <div key={res.id} className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-5 flex flex-wrap gap-4 items-center justify-between">
                     <div>
-                      <p className="text-[14px] text-[#9e8d8e] mb-1">{t('Reservation for')} {res.name}</p>
+                      <p className="text-[12px] font-mono text-[#9e8d8e] mb-1 tracking-wide">{res.order_code || `#${res.id}`}</p>
+                      <p className="text-[14px] text-[#d5c2c3] mb-1">{t('Reservation for')} {res.name}</p>
                       <p className="text-[16px] font-semibold">{new Date(res.date_time).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</p>
                       <p className="text-[14px] text-[#d5c2c3] mt-1">{res.party_size} {t('People')}{res.contact_phone ? ` • ${res.contact_phone}` : ''}</p>
                     </div>

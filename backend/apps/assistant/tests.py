@@ -736,6 +736,83 @@ class OrderingTests(AssistantTestBase):
         self.assertTrue(r['answer_am'])
 
 
+class IndirectOrderTests(AssistantTestBase):
+    """
+    An order phrased indirectly ("i wanna cheese burger for me and my friend")
+    must be read as an order: match the real item, or explain what we do sell
+    and offer the cafe's choices instead of a dead end.
+    """
+
+    def test_wanna_cheeseburger_for_a_friend_is_an_order(self):
+        r = self.ask('i wanna cheese burger for me and my friend', session_id='i1')
+        self.assertEqual(r['intent'], 'order_create')
+        self.assertEqual(r['action']['action'], 'collect_order_details')
+        self.assertIn('Added to your order', r['answer_en'])
+        self.assertNotIn("don't have that information", r['answer_en'].lower())
+
+    def test_compound_word_picks_the_cheeseburger(self):
+        """'cheese burger' must pick the Cheeseburger, not every burger mentioning cheese."""
+        burger, _ = Category.objects.get_or_create(
+            slug='artisanal-burgers', defaults={'name': 'Artisanal Burgers', 'icon': 'lunch_dining'})
+        MenuItem.objects.get_or_create(
+            slug='classic-cheeseburger',
+            defaults={'name': 'Classic Cheeseburger', 'category': burger, 'base_price_etb': 450,
+                      'description': 'Beef patty with cheddar.', 'is_available': True})
+        r = self.ask('i wanna cheese burger for me and my friend', session_id='i2')
+        self.assertIn('Classic Cheeseburger', r['answer_en'])
+        self.assertNotIn('Wagyu', r['answer_en'])
+        self.assertEqual(r['answer_en'].count('•'), 1)
+
+    def test_burger_with_no_qualifier_lets_them_choose(self):
+        """A bare 'burger' matches several items; the customer picks one."""
+        burger, _ = Category.objects.get_or_create(
+            slug='artisanal-burgers', defaults={'name': 'Artisanal Burgers', 'icon': 'lunch_dining'})
+        MenuItem.objects.get_or_create(
+            slug='classic-burger',
+            defaults={'name': 'Classic Burger', 'category': burger, 'base_price_etb': 400,
+                      'description': 'Flame-grilled beef patty.', 'is_available': True})
+        r = self.ask('i wanna a burger for me and my friend', session_id='i3')
+        self.assertEqual(r['intent'], 'order_create')
+        self.assertIn('Which one would you like?', r['answer_en'])
+        self.assertGreaterEqual(len(r['items']), 2)
+        self.assertNotIn('Added to your order', r['answer_en'])
+
+    def test_absent_product_explains_and_offers_the_cafe_choices(self):
+        r = self.ask('i wanna sushi for me and my friend', session_id='i4')
+        self.assertEqual(r['intent'], 'order_create')
+        low = r['answer_en'].lower()
+        self.assertIn('sushi', low)
+        self.assertIn('do not have', low)
+        self.assertTrue(r['items'], 'closest real menu items must be suggested')
+        self.assertIn('delivery', low)
+        self.assertTrue('reservation' in low or 'book a table' in low)
+        self.assertEqual(r['action']['action'], 'collect_order_details')
+
+    def test_order_still_completes_after_the_indirect_opening(self):
+        """Choosing an item by name after the chooser must add it and place cleanly."""
+        user = self.customer('indirect')
+        self.ask('i wanna cheese burger for me and my friend', session_id='i5', user=user)
+        r = self.ask('yes, place it for pickup', session_id='i5', user=user)
+        self.assertEqual(r['action']['action'], 'order_placed')
+
+    def test_amharic_want_coffee_lists_the_coffee(self):
+        r = self.ask('ቡና እፈልጋለሁ', session_id='i6')
+        self.assertEqual(r['intent'], 'order_create')
+        self.assertIn('Micro-Lot Coffee', r['answer_en'])
+        self.assertIn('delivery', r['answer_en'].lower())
+
+    def test_delivery_address_with_a_house_number_continues_the_order(self):
+        """'delivery to Bole Road, house 12' is the next step, not a dead end."""
+        from apps.assistant.engine import get_session
+
+        user = self.customer('address-flow')
+        self.ask('i wanna cheese burger for me and my friend', session_id='i7', user=user)
+        r = self.ask('delivery to Bole Road, house 12', session_id='i7', user=user)
+        self.assertEqual(r['intent'], 'order_create')
+        self.assertNotIn("don't have that information", r['answer_en'].lower())
+        self.assertIn('Bole Road', get_session('i7').staged_order.address)
+
+
 class ReservationTests(AssistantTestBase):
     """
     The reservation flow, run as a signed-in customer - a guest is turned away by

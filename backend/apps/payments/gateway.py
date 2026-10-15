@@ -235,7 +235,6 @@ def webhook_signature_is_valid(body_bytes, signature, secret=None):
     candidates = [
         secret or getattr(settings, 'CHAPA_WEBHOOK_SECRET', ''),
         getattr(settings, 'CHAPA_WEBHOOK_SECRET', ''),
-        _secret(),
     ]
 
     for key in (c for c in candidates if c):

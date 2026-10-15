@@ -119,6 +119,7 @@ const DEFAULT_PREP_MINUTES: Record<string, number> = {
 
 interface TableReservation {
   id: number;
+  order_code: string;
   name: string;
   date_time: string;
   party_size: number;
@@ -948,6 +949,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <span className="text-[20px] font-display font-bold text-white">{reservation.name}</span>
+                          <span className="block text-[11px] font-mono text-[#9e8d8e] mt-0.5 tracking-wide">{reservation.order_code || `#${reservation.id}`}</span>
                           <span className="block text-[12px] text-[#9e8d8e] mt-1">{t('Booked on')} {new Date(reservation.created_at).toLocaleDateString(locale)}</span>
                         </div>
                         <span className={`px-2 py-1 rounded text-[11px] font-bold uppercase ${
