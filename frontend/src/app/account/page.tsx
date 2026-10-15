@@ -491,10 +491,10 @@ export default function AccountPage() {
 
   if (!user && sessionExpired) {
     return (
-      <div className="min-h-screen bg-surface text-[#e5e2e1] flex flex-col items-center justify-center gap-4 px-6 text-center font-body">
+      <div className="min-h-screen bg-surface text-[var(--text)] flex flex-col items-center justify-center gap-4 px-6 text-center font-body">
         <span className="material-symbols-outlined text-5xl text-amber-400">lock_clock</span>
         <h2 className="font-display text-[26px] font-bold">{t('Session expired')}</h2>
-        <p className="text-[#d5c2c3] text-[15px] max-w-md">
+        <p className="text-[var(--muted)] text-[15px] max-w-md">
           {t('You were signed out, so your orders have stopped updating. Please sign in again.')}
         </p>
         <Link href="/?auth=login" className="h-10 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold flex items-center hover:brightness-110 transition-colors">
@@ -506,10 +506,10 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-surface text-[#e5e2e1] flex flex-col items-center justify-center font-body">
-        <span className="material-symbols-outlined text-5xl text-[#f7b5be] mb-4">lock</span>
+      <div className="min-h-screen bg-surface text-[var(--text)] flex flex-col items-center justify-center font-body">
+        <span className="material-symbols-outlined text-5xl text-[var(--accent)] mb-4">lock</span>
         <h2 className="font-display text-[26px] font-bold">{t('Sign In Required')}</h2>
-        <p className="text-[#d5c2c3] mt-2 mb-6 text-[15px]">{t('Please sign in to view your orders and manage your profile.')}</p>
+        <p className="text-[var(--muted)] mt-2 mb-6 text-[15px]">{t('Please sign in to view your orders and manage your profile.')}</p>
         <Link href="/?welcome=1" className="h-10 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold flex items-center hover:bg-[#ffd9dd] transition-colors">
           {t('Return to Home')}
         </Link>
@@ -521,27 +521,27 @@ export default function AccountPage() {
   const pastOrders = orders.filter(o => PAST_STATUSES.includes(o.status));
 
   return (
-    <div className="bg-surface text-[#e5e2e1] font-body min-h-screen pb-24">
+    <div className="bg-surface text-[var(--text)] font-body min-h-screen pb-24">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-[#1b1212] border-b border-[#514345]/60">
+      <header className="sticky top-0 z-50 bg-[var(--bg-deep)] border-b border-[var(--border)]/60">
         <div className="flex items-center justify-between px-6 h-14">
           <div className="flex items-center gap-4">
-            <Link href="/?welcome=1" className="flex items-center gap-2 group text-[#d5c2c3] hover:text-[#f7b5be] transition-colors" aria-label="Back to Home">
+            <Link href="/?welcome=1" className="flex items-center gap-2 group text-[var(--muted)] hover:text-[var(--accent)] transition-colors" aria-label="Back to Home">
               <i className="ph ph-arrow-left text-[20px]"></i>
             </Link>
             <Link href="/?welcome=1" className="flex items-center gap-2.5 group">
-              <span className="w-8 h-8 rounded-full bg-[#3b141c] border border-[#683941] flex items-center justify-center text-[#f7b5be] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
+              <span className="w-8 h-8 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
               <span className="font-display text-[21px] tracking-wide">Buna Hub</span>
             </Link>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-[#d5c2c3] text-[15px] hidden sm:block">{t('Hello,')} {user.first_name || user.username}</span>
+            <span className="text-[var(--muted)] text-[15px] hidden sm:block">{t('Hello,')} {user.first_name || user.username}</span>
             <ThemeToggle className="h-8 w-8" />
-            <Link href="/?welcome=1" className="h-8 px-4 rounded-full border border-[#514345] text-[#d5c2c3] text-[14px] flex items-center gap-2 hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors" aria-label="Back to Home">
+            <Link href="/?welcome=1" className="h-8 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] flex items-center gap-2 hover:border-[#f7b5be] hover:text-[var(--accent)] transition-colors" aria-label="Back to Home">
               <i className="ph ph-house"></i>
               <span>{t('Home')}</span>
             </Link>
-            <button onClick={logout} className="h-8 px-4 rounded-full border border-[#514345] text-[#d5c2c3] text-[14px] flex items-center hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">{t('Sign Out')}</button>
+            <button onClick={logout} className="h-8 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] flex items-center hover:border-[#f7b5be] hover:text-[var(--accent)] transition-colors">{t('Sign Out')}</button>
           </div>
         </div>
       </header>
@@ -549,9 +549,9 @@ export default function AccountPage() {
       {/* BANNER */}
       {banner && (
         <div className={`mx-4 mt-6 p-4 rounded-[14px] flex items-start gap-3 border ${
-          banner.type === 'success' ? 'bg-[#3b141c] border-[#683941] text-[#f7b5be]' :
+          banner.type === 'success' ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)]' :
           banner.type === 'error' ? 'bg-red-950 border-red-900 text-red-200' :
-          'bg-[#1c1b1b] border-[#514345] text-[#e5e2e1]'
+          'bg-surface-2 border-[var(--border)] text-[var(--text)]'
         }`}>
           <i className={`ph ${banner.type === 'success' ? 'ph-check-circle' : banner.type === 'error' ? 'ph-warning-circle' : 'ph-info'} text-xl mt-0.5`}></i>
           <span className="text-[15px]">{banner.message}</span>
@@ -572,23 +572,23 @@ export default function AccountPage() {
         </div>
         
         {/* TABS */}
-        <div className="flex flex-wrap gap-2 mb-8 border-b border-[#514345] pb-4">
-          <button onClick={() => handleTabChange('orders')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'orders' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('My Orders')}</button>
-          <button onClick={() => handleTabChange('reservations')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'reservations' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('Table Reservations')}</button>
-          <button onClick={() => handleTabChange('addresses')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'addresses' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('Delivery Addresses')}</button>
-          <button onClick={() => handleTabChange('profile')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'profile' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' : 'bg-[#1c1b1b] text-[#d5c2c3] border border-[#514345] hover:border-[#9e8d8e]'}`}>{t('Profile Settings')}</button>
+        <div className="flex flex-wrap gap-2 mb-8 border-b border-[var(--border)] pb-4">
+          <button onClick={() => handleTabChange('orders')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'orders' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[#9e8d8e]'}`}>{t('My Orders')}</button>
+          <button onClick={() => handleTabChange('reservations')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'reservations' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[#9e8d8e]'}`}>{t('Table Reservations')}</button>
+          <button onClick={() => handleTabChange('addresses')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'addresses' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[#9e8d8e]'}`}>{t('Delivery Addresses')}</button>
+          <button onClick={() => handleTabChange('profile')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'profile' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[#9e8d8e]'}`}>{t('Profile Settings')}</button>
         </div>
 
         {/* TAB: ORDERS */}
         {activeTab === 'orders' && (
           <div className="space-y-10 animate-fade-in">
             {isLoadingOrders ? (
-              <div className="py-12 flex justify-center text-[#9e8d8e]">{t('Loading orders...')}</div>
+              <div className="py-12 flex justify-center text-[var(--muted)]">{t('Loading orders...')}</div>
             ) : orders.length === 0 ? (
-              <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-10 text-center">
+              <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-10 text-center">
                 <i className="ph ph-receipt text-4xl text-[#514345] mb-4"></i>
                 <h3 className="font-display text-[22px] mb-2">{t('No orders yet')}</h3>
-                <p className="text-[#d5c2c3] text-[15.5px] mb-6">{t("Looks like you haven't tasted our buna yet.")}</p>
+                <p className="text-[var(--muted)] text-[15.5px] mb-6">{t("Looks like you haven't tasted our buna yet.")}</p>
                 <Link href="/#menu" className="h-10 px-6 rounded-full inline-flex items-center bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">{t('Browse Menu')}</Link>
               </div>
             ) : (
@@ -596,10 +596,10 @@ export default function AccountPage() {
                 {/* Active Orders Section */}
                 {pendingOrders.length > 0 && (
                   <div>
-                    <h3 className="font-display text-[24px] mb-4 flex items-center gap-2"><i className="ph ph-hourglass text-[#f7b5be]"></i> {t('Active Orders')}</h3>
+                    <h3 className="font-display text-[24px] mb-4 flex items-center gap-2"><i className="ph ph-hourglass text-[var(--accent)]"></i> {t('Active Orders')}</h3>
                     <div className="space-y-4">
                       {pendingOrders.map(order => (
-                        <div key={order.id} className="bg-[#1c1b1b] border border-[#683941] rounded-[18px] p-5">
+                        <div key={order.id} className="bg-surface-2 border border-[var(--accent)] rounded-[18px] p-5">
                           {/* A payment being confirmed right now is not the same as a payment that was
                               never made. Telling someone "NOT PAID YET" while the
                               gateway is still answering them is what made a real
@@ -612,7 +612,7 @@ export default function AccountPage() {
                                   {t('Confirming your payment')}
                                 </span>
                               </p>
-                              <p className="text-[#d5c2c3]">
+                              <p className="text-[var(--muted)]">
                                 {t('We are checking with the payment provider. This page updates by itself — you do not need to pay again.')}
                               </p>
                             </div>
@@ -629,9 +629,9 @@ export default function AccountPage() {
                                   {t('Last attempt:')} {order.latest_payment.failure_reason}
                                 </p>
                               )}
-                              <p className="text-[#d5c2c3]">
+                              <p className="text-[var(--muted)]">
                                 {t('Amount due:')}{' '}
-                                <strong className="text-[#f7b5be]">
+                                <strong className="text-[var(--accent)]">
                                   {Number(order.total_amount_etb).toFixed(2)} {birr}
                                 </strong>
                               </p>
@@ -644,9 +644,9 @@ export default function AccountPage() {
                               placedAt={order.placed_at || order.created_at}
                             />
                           )}
-                          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-[#514345] pt-4">
+                          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-4">
                             <div>
-                              <p className="text-[13px] text-[#9e8d8e] uppercase tracking-wider">{order.order_number}</p>
+                              <p className="text-[13px] text-[var(--muted)] uppercase tracking-wider">{order.order_number}</p>
                               <p className="text-[16px] font-semibold mt-0.5">{Number(order.total_amount_etb).toFixed(2)} {birr} • {order.items.length} {order.items.length === 1 ? t('item', 'item') : t('items', 'items')}</p>
                             </div>
                             <div className="flex gap-2">
@@ -656,9 +656,9 @@ export default function AccountPage() {
                                 </button>
                               )}
                               {isOrderPaid(order) ? (
-                                <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[#514345] text-[#d5c2c3] text-[14px] hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">{t('View Receipt')}</button>
+                                <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] hover:border-[#f7b5be] hover:text-[var(--accent)] transition-colors">{t('View Receipt')}</button>
                               ) : (
-                                <span className="h-9 px-4 rounded-full border border-[#514345]/60 text-[#9e8d8e] text-[13px] flex items-center cursor-not-allowed" title={t('Receipts are issued after payment')}>
+                                <span className="h-9 px-4 rounded-full border border-[var(--border)]/60 text-[var(--muted)] text-[13px] flex items-center cursor-not-allowed" title={t('Receipts are issued after payment')}>
                                   {t('Receipt after payment')}
                                 </span>
                               )}
@@ -673,10 +673,10 @@ export default function AccountPage() {
                 {/* Past Orders Section */}
                 {pastOrders.length > 0 && (
                   <div>
-                    <h3 className="font-display text-[24px] mb-4 flex items-center gap-2"><i className="ph ph-clock-counter-clockwise text-[#9e8d8e]"></i> {t('Order History')}</h3>
+                    <h3 className="font-display text-[24px] mb-4 flex items-center gap-2"><i className="ph ph-clock-counter-clockwise text-[var(--muted)]"></i> {t('Order History')}</h3>
                     <div className="space-y-4">
                       {pastOrders.map(order => (
-                        <div key={order.id} className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-[#9e8d8e] transition-colors">
+                        <div key={order.id} className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-[#9e8d8e] transition-colors">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
                               <span className="font-semibold text-[16px]">{order.order_number}</span>
@@ -686,7 +686,7 @@ export default function AccountPage() {
                                 'bg-yellow-950 text-yellow-300 border border-yellow-900'
                               }`}>{t(STATUS_LABELS[order.status] || order.status)}</span>
                             </div>
-                            <p className="text-[14.5px] text-[#d5c2c3] mb-1">{new Date(order.created_at).toLocaleDateString(locale)} • {order.items.length} {t('items')}</p>
+                            <p className="text-[14.5px] text-[var(--muted)] mb-1">{new Date(order.created_at).toLocaleDateString(locale)} • {order.items.length} {t('items')}</p>
                             {order.status === 'EXPIRED' ? (
                               <p className="text-[13px] text-yellow-300/90 mb-1">
                                 {t('This order expired before we received payment. Place it again below and we will make it fresh.')}
@@ -694,7 +694,7 @@ export default function AccountPage() {
                             ) : (order.status === 'REJECTED' || order.status === 'CANCELLED') && order.rejection_reason ? (
                               <p className="text-[13px] text-red-300/80 mb-1">{order.rejection_reason}</p>
                             ) : null}
-                            <p className="text-[16px] font-bold text-[#e5e2e1]">{Number(order.total_amount_etb).toFixed(2)} {birr}</p>
+                            <p className="text-[16px] font-bold text-[var(--text)]">{Number(order.total_amount_etb).toFixed(2)} {birr}</p>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
                             <button
@@ -715,9 +715,9 @@ export default function AccountPage() {
                               )}
                             </button>
                             {isOrderPaid(order) ? (
-                              <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[#514345] text-[#d5c2c3] text-[14px] hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors w-full sm:w-auto">{t('View Receipt')}</button>
+                              <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] hover:border-[#f7b5be] hover:text-[var(--accent)] transition-colors w-full sm:w-auto">{t('View Receipt')}</button>
                             ) : (
-                              <span className="h-9 px-4 rounded-full border border-[#514345]/60 text-[#9e8d8e] text-[13px] flex items-center cursor-not-allowed w-full sm:w-auto justify-center" title={t('Receipts are issued after payment')}>
+                              <span className="h-9 px-4 rounded-full border border-[var(--border)]/60 text-[var(--muted)] text-[13px] flex items-center cursor-not-allowed w-full sm:w-auto justify-center" title={t('Receipts are issued after payment')}>
                                 {t('Receipt after payment')}
                               </span>
                             )}
@@ -736,27 +736,27 @@ export default function AccountPage() {
         {activeTab === 'reservations' && (
           <div className="space-y-10 animate-fade-in">
             {isLoadingReservations ? (
-              <div className="py-12 flex justify-center text-[#9e8d8e]">{t('Loading reservations...')}</div>
+              <div className="py-12 flex justify-center text-[var(--muted)]">{t('Loading reservations...')}</div>
             ) : reservations.length === 0 ? (
-              <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-10 text-center">
+              <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-10 text-center">
                 <i className="ph ph-calendar text-4xl text-[#514345] mb-4"></i>
                 <h3 className="font-display text-[22px] mb-2">{t('No reservations yet')}</h3>
-                <p className="text-[#d5c2c3] text-[15.5px] mb-6">{t("You haven't booked any tables with us.")}</p>
+                <p className="text-[var(--muted)] text-[15.5px] mb-6">{t("You haven't booked any tables with us.")}</p>
                 <Link href="/#book" className="h-10 px-6 rounded-full inline-flex items-center bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">{t('Book a Table')}</Link>
               </div>
             ) : (
               <div className="space-y-4">
                 {reservations.map(res => (
-                  <div key={res.id} className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-5 flex flex-wrap gap-4 items-center justify-between">
+                  <div key={res.id} className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-5 flex flex-wrap gap-4 items-center justify-between">
                     <div>
-                      <p className="text-[12px] font-mono text-[#9e8d8e] mb-1 tracking-wide">{res.order_code || `#${res.id}`}</p>
-                      <p className="text-[14px] text-[#d5c2c3] mb-1">{t('Reservation for')} {res.name}</p>
+                      <p className="text-[12px] font-mono text-[var(--muted)] mb-1 tracking-wide">{res.order_code || `#${res.id}`}</p>
+                      <p className="text-[14px] text-[var(--muted)] mb-1">{t('Reservation for')} {res.name}</p>
                       <p className="text-[16px] font-semibold">{new Date(res.date_time).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                      <p className="text-[14px] text-[#d5c2c3] mt-1">{res.party_size} {t('People')}{res.contact_phone ? ` • ${res.contact_phone}` : ''}</p>
+                      <p className="text-[14px] text-[var(--muted)] mt-1">{res.party_size} {t('People')}{res.contact_phone ? ` • ${res.contact_phone}` : ''}</p>
                     </div>
                     <div>
                       <span className={`px-3 py-1 rounded-full text-[12px] font-semibold tracking-wide uppercase ${
-                        res.status === 'CONFIRMED' ? 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]' :
+                        res.status === 'CONFIRMED' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' :
                         res.status === 'CANCELLED' ? 'bg-red-950 text-red-300 border border-red-900' :
                         res.status === 'PENDING' ? 'bg-blue-950 text-blue-300 border border-blue-900' :
                         'bg-yellow-950 text-yellow-300 border border-yellow-900'
@@ -774,27 +774,27 @@ export default function AccountPage() {
         {/* TAB: ADDRESSES */}
         {activeTab === 'addresses' && (
           <div className="space-y-8 animate-fade-in">
-            <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6">
+            <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-6">
               <h3 className="font-display text-[24px] mb-5">{t('Add New Address')}</h3>
-              {addrMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${addrMsg.includes('success') ? 'bg-[#3b141c] text-[#f7b5be]' : 'bg-red-950 text-red-200'}`}>{addrMsg}</div>}
+              {addrMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${addrMsg.includes('success') ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'bg-red-950 text-red-200'}`}>{addrMsg}</div>}
               <form onSubmit={handleAddAddress} className="space-y-4">
                 <div>
-                  <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('Street Address')}</label>
-                  <input type="text" required value={streetAddress} onChange={e => setStreetAddress(e.target.value)} className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole Road, House 123" />
+                  <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Street Address')}</label>
+                  <input type="text" required value={streetAddress} onChange={e => setStreetAddress(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole Road, House 123" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('City')}</label>
-                    <input type="text" value="Addis Ababa" disabled className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#9e8d8e] cursor-not-allowed opacity-70" />
+                    <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('City')}</label>
+                    <input type="text" value="Addis Ababa" disabled className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--muted)] cursor-not-allowed opacity-70" />
                   </div>
                   <div>
-                    <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('Subcity / Zone')}</label>
-                    <input type="text" value={subcityOrZone} onChange={e => setSubcityOrZone(e.target.value)} className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole, Arada, etc." />
+                    <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Subcity / Zone')}</label>
+                    <input type="text" value={subcityOrZone} onChange={e => setSubcityOrZone(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole, Arada, etc." />
                   </div>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer mt-2 w-max">
-                  <input type="checkbox" checked={isDefaultAddr} onChange={e => setIsDefaultAddr(e.target.checked)} className="rounded border-[#514345] bg-surface text-[#f7b5be] focus:ring-[#f7b5be]" />
-                  <span className="text-[14.5px] text-[#d5c2c3]">{t('Set as default delivery address')}</span>
+                  <input type="checkbox" checked={isDefaultAddr} onChange={e => setIsDefaultAddr(e.target.checked)} className="rounded border-[var(--border)] bg-surface text-[var(--accent)] focus:ring-[#f7b5be]" />
+                  <span className="text-[14.5px] text-[var(--muted)]">{t('Set as default delivery address')}</span>
                 </label>
                 <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">{t('Save Address')}</button>
               </form>
@@ -803,19 +803,19 @@ export default function AccountPage() {
             <div className="space-y-4">
               <h3 className="font-display text-[24px] mb-4">{t('Saved Addresses')}</h3>
               {addresses.length === 0 ? (
-                <p className="text-[#9e8d8e] text-[15px]">{t('No saved addresses yet.')}</p>
+                <p className="text-[var(--muted)] text-[15px]">{t('No saved addresses yet.')}</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {addresses.map(addr => (
-                    <div key={addr.id} className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-5 relative group">
+                    <div key={addr.id} className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-5 relative group">
                       {addr.is_default && (
-                        <span className="absolute top-4 right-4 text-[10px] uppercase font-bold tracking-wider bg-[#3b141c] text-[#f7b5be] px-2 py-0.5 rounded">{t('Default')}</span>
+                        <span className="absolute top-4 right-4 text-[10px] uppercase font-bold tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-0.5 rounded">{t('Default')}</span>
                       )}
                       <div className="flex items-start gap-3 mt-1">
-                        <i className="ph ph-map-pin text-[20px] text-[#9e8d8e] mt-0.5"></i>
+                        <i className="ph ph-map-pin text-[20px] text-[var(--muted)] mt-0.5"></i>
                         <div>
-                          <p className="text-[#e5e2e1] font-semibold text-[15.5px] mb-1">{addr.street_address}</p>
-                          <p className="text-[#d5c2c3] text-[14px]">{addr.subcity_or_zone ? `${addr.subcity_or_zone}, ` : ''}{addr.city}</p>
+                          <p className="text-[var(--text)] font-semibold text-[15.5px] mb-1">{addr.street_address}</p>
+                          <p className="text-[var(--muted)] text-[14px]">{addr.subcity_or_zone ? `${addr.subcity_or_zone}, ` : ''}{addr.city}</p>
                         </div>
                       </div>
                     </div>
@@ -829,13 +829,13 @@ export default function AccountPage() {
         {/* TAB: PROFILE */}
         {activeTab === 'profile' && (
           <div className="animate-fade-in max-w-2xl">
-            <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6">
+            <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-6">
               <h3 className="font-display text-[24px] mb-5">{t('Personal Details')}</h3>
-              {profileMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${profileMsg.includes('success') ? 'bg-[#3b141c] text-[#f7b5be]' : 'bg-red-950 text-red-200'}`}>{profileMsg}</div>}
+              {profileMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${profileMsg.includes('success') ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'bg-red-950 text-red-200'}`}>{profileMsg}</div>}
               
               <div className="mb-6">
-                <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('Username / Email')}</label>
-                <div className="h-11 bg-surface border border-[#514345] rounded-[12px] px-4 flex items-center text-[#9e8d8e] opacity-70">
+                <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Username / Email')}</label>
+                <div className="h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 flex items-center text-[var(--muted)] opacity-70">
                   {user.email || user.username}
                 </div>
                 <p className="text-[#514345] text-xs mt-1">{t('Username/email cannot be changed here.')}</p>
@@ -844,17 +844,17 @@ export default function AccountPage() {
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('First Name')}</label>
-                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" />
+                    <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('First Name')}</label>
+                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[#f7b5be]" />
                   </div>
                   <div>
-                    <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('Last Name')}</label>
-                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" />
+                    <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Last Name')}</label>
+                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[#f7b5be]" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[13px] text-[#9e8d8e] uppercase tracking-wider mb-2">{t('Phone Number')}</label>
-                  <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-11 bg-surface border border-[#514345] rounded-[12px] px-4 text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]" placeholder="+251 911 234567" />
+                  <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Phone Number')}</label>
+                  <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[#f7b5be]" placeholder="+251 911 234567" />
                 </div>
                 <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">{t('Update Profile')}</button>
               </form>
