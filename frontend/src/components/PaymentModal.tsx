@@ -120,26 +120,26 @@ export default function PaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-fade-in">
-      <div className="relative w-[95%] sm:w-full max-w-lg my-auto bg-surface-container border border-[#514345] rounded-2xl shadow-2xl p-5 sm:p-7 text-[#e5e2e1] max-h-[92vh] overflow-y-auto">
+      <div className="relative w-[95%] sm:w-full max-w-lg my-auto  bg-surface-2 border border-[var(--border)] rounded-2xl shadow-2xl p-5 sm:p-7 text-[var(--text)] max-h-[92vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3.5 border-b border-[#514345]">
+        <div className="flex items-center justify-between pb-3.5 border-b border-[var(--border)]">
           <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-[#f7b5be] text-2xl">account_balance_wallet</span>
+            <span className="material-symbols-outlined text-[var(--accent)] text-2xl">account_balance_wallet</span>
             <div>
-              <h3 className="font-display text-lg sm:text-xl font-bold text-[#f7b5be]">{t('Chapa Payment Gateway')}</h3>
-              <p className="text-[11px] text-[#9e8d8e]">Order #{orderNumber} • ETB {totalAmountEtb}</p>
+              <h3 className="font-display text-lg sm:text-xl font-bold text-[var(--accent)]">{t('Chapa Payment Gateway')}</h3>
+              <p className="text-[11px] text-[var(--muted)]">Order #{orderNumber} • ETB {totalAmountEtb}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-[#9e8d8e] hover:text-[#f7b5be] hover:bg-outline-variant/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--accent)] hover:bg-outline-variant/10 transition-colors"
           >
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
 
         {/* Chapa Banner */}
-        <div className="mt-3.5 p-3 rounded-xl bg-[#2b1b1e] border border-[#683941] text-[#f7b5be] text-xs flex items-center justify-between">
+        <div className="mt-3.5 p-3 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-base">verified_user</span>
             <span className="font-semibold">{t('Chapa ETB Payment Active')}</span>
@@ -164,7 +164,7 @@ export default function PaymentModal({
         <form onSubmit={handlePay} className="mt-4 space-y-4">
           {/* Payment Method Selector */}
           <div>
-            <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-2">
+            <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-2">
               {t('Select Payment Method')}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -175,8 +175,8 @@ export default function PaymentModal({
                   onClick={() => setPaymentMethod(m.id)}
                   className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all ${
                     paymentMethod === m.id
-                      ? 'bg-[#2b1b1e] border-tertiary text-[#f7b5be] shadow-sm'
-                      : 'bg-surface-container border-[#514345] text-[#9e8d8e] hover:bg-outline-variant/10'
+                      ? 'bg-[var(--accent-soft)] border-tertiary text-[var(--accent)] shadow-sm'
+                      : ' bg-surface-2 border-[var(--border)] text-[var(--muted)] hover:bg-outline-variant/10'
                   }`}
                 >
                   <span className="material-symbols-outlined text-xl">{m.icon}</span>
@@ -189,7 +189,7 @@ export default function PaymentModal({
           {/* Test Phone Presets for Mobile Money */}
           {paymentMethod !== 'cash' && paymentMethod !== 'card' && (
             <div>
-              <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">
                 {t('Chapa Mobile Test Phone Scenarios')}
               </label>
               <div className="grid grid-cols-2 gap-2 mb-2">
@@ -199,7 +199,7 @@ export default function PaymentModal({
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
                     phone === '251900000000'
                       ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300'
-                      : 'bg-transparent border-[#514345] text-[#9e8d8e] hover:bg-outline-variant/10'
+                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-outline-variant/10'
                   }`}
                 >
                   <p className="font-bold">🟢 251900000000</p>
@@ -212,7 +212,7 @@ export default function PaymentModal({
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
                     phone === '251911111111'
                       ? 'bg-red-950/60 border-red-500 text-red-300'
-                      : 'bg-transparent border-[#514345] text-[#9e8d8e] hover:bg-outline-variant/10'
+                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-outline-variant/10'
                   }`}
                 >
                   <p className="font-bold">🔴 251911111111</p>
@@ -225,7 +225,7 @@ export default function PaymentModal({
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
                     phone === '251922222222'
                       ? 'bg-amber-950/60 border-amber-500 text-amber-300'
-                      : 'bg-transparent border-[#514345] text-[#9e8d8e] hover:bg-outline-variant/10'
+                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-outline-variant/10'
                   }`}
                 >
                   <p className="font-bold">🟡 251922222222</p>
@@ -238,7 +238,7 @@ export default function PaymentModal({
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
                     phone === '251933333333'
                       ? 'bg-blue-950/60 border-blue-500 text-blue-300'
-                      : 'bg-transparent border-[#514345] text-[#9e8d8e] hover:bg-outline-variant/10'
+                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-outline-variant/10'
                   }`}
                 >
                   <p className="font-bold">⏱️ 251933333333</p>
@@ -247,8 +247,8 @@ export default function PaymentModal({
               </div>
 
               {/* Phone Input */}
-              <div className="flex items-center rounded-lg bg-surface-container border border-[#514345] focus-within:border-tertiary overflow-hidden">
-                <span className="px-3 py-2 bg-transparent border-r border-[#514345] text-[#f7b5be] font-bold text-xs shrink-0">
+              <div className="flex items-center rounded-lg  bg-surface-2 border border-[var(--border)] focus-within:border-tertiary overflow-hidden">
+                <span className="px-3 py-2 bg-transparent border-r border-[var(--border)] text-[var(--accent)] font-bold text-xs shrink-0">
                   🇪🇹
                 </span>
                 <input
@@ -257,19 +257,19 @@ export default function PaymentModal({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="251900000000"
-                  className="w-full px-3 py-2 bg-transparent text-[#e5e2e1] text-sm focus:outline-none"
+                  className="w-full px-3 py-2 bg-transparent text-[var(--text)] text-sm focus:outline-none"
                 />
               </div>
             </div>
           )}
 
           {paymentMethod === 'card' && (
-            <div className="p-3.5 rounded-xl bg-surface-container-high/70 border border-tertiary/20 text-xs space-y-1.5">
-              <p className="font-bold text-[#f7b5be] flex items-center gap-1.5">
+            <div className="p-3.5 rounded-xl  bg-surface-2-high/70 border border-tertiary/20 text-xs space-y-1.5">
+              <p className="font-bold text-[var(--accent)] flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-base">open_in_new</span>
                 {t('Redirect to Chapa Hosted Checkout')}
               </p>
-              <p className="text-[#9e8d8e] text-[11px] leading-relaxed">
+              <p className="text-[var(--muted)] text-[11px] leading-relaxed">
                 {t("Clicking the button below will open Chapa's official hosted checkout page where you can pay using Telebirr, CBE Birr, Debit/Credit Card, or Bank Transfer.")}
               </p>
             </div>

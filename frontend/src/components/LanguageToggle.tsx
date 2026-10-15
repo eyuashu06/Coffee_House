@@ -36,8 +36,8 @@ export default function LanguageToggle({
       data-testid="language-toggle"
       suppressHydrationWarning
       className={className || (
-        'h-9 px-3 rounded-[28px] border border-[#514345] text-[#d5c2c3] text-[14px] flex items-center '
-        + 'gap-1.5 hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors'
+        'h-9 px-3 rounded-[28px] border border-[var(--border)] text-[var(--muted)] text-[14px] flex items-center '
+        + 'gap-1.5 hover:border-[#f7b5be] hover:text-[var(--accent)] transition-colors'
       )}
     >
       {/* The material-symbols font renders as text ligatures; explicit font size and
