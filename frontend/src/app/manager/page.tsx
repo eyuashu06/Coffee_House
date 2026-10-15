@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
+import ThemeToggle from '../../components/ThemeToggle';
 import ReceiptModal from '../../components/ReceiptModal';
 import NotificationsDropdown from '../../components/NotificationsDropdown';
 import { apiFetch } from '../../lib/api';
@@ -89,7 +90,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_BADGE: Record<string, string> = {
   PENDING_PAYMENT: 'bg-yellow-900/50 text-yellow-300 border border-yellow-800',
-  PLACED: 'bg-[#3b141c] text-[#f7b5be] border border-[#683941]',
+  PLACED: 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]',
   ACCEPTED: 'bg-cyan-900/50 text-cyan-300 border border-cyan-800',
   PREPARING: 'bg-blue-900/50 text-blue-300 border border-blue-800',
   READY: 'bg-green-900/50 text-green-300 border border-green-800',
@@ -119,6 +120,7 @@ const DEFAULT_PREP_MINUTES: Record<string, number> = {
 
 interface TableReservation {
   id: number;
+  order_code: string;
   name: string;
   date_time: string;
   party_size: number;
@@ -522,10 +524,10 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
 
   if (!user && sessionExpired) {
     return (
-      <div className="min-h-screen bg-surface text-[#e5e2e1] font-body flex flex-col items-center justify-center gap-4 px-6 text-center">
+      <div className="min-h-screen bg-surface text-[var(--text)] font-body flex flex-col items-center justify-center gap-4 px-6 text-center">
         <span className="material-symbols-outlined text-5xl text-amber-400">lock_clock</span>
         <h2 className="font-display text-[26px] font-bold">{t('Session expired')}</h2>
-        <p className="text-[#d5c2c3] text-[15px] max-w-md">
+        <p className="text-[var(--muted)] text-[15px] max-w-md">
           {t('You were signed out, so live orders and revenue have stopped updating. Please sign in again.')}
         </p>
         <button
@@ -540,10 +542,10 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
 
   if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) {
     return (
-      <div className="min-h-screen bg-surface text-[#e5e2e1] flex flex-col items-center justify-center font-body">
+      <div className="min-h-screen bg-surface text-[var(--text)] flex flex-col items-center justify-center font-body">
         <span className="material-symbols-outlined text-5xl text-red-500 mb-4">gavel</span>
         <h2 className="font-display text-[26px] font-bold">{t('Access Denied')}</h2>
-        <p className="text-[#d5c2c3] mt-2 mb-6 text-[15px]">{t('You do not have permission to view this page.')}</p>
+        <p className="text-[var(--muted)] mt-2 mb-6 text-[15px]">{t('You do not have permission to view this page.')}</p>
         <Link href="/?welcome=1" className="h-10 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold flex items-center hover:bg-[#ffd9dd] transition-colors">
           {t('Return to Home')}
         </Link>
@@ -555,53 +557,53 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
   const liveOrderCount = orders.filter(o => !CLOSED_STATUSES.includes(o.status)).length;
 
   return (
-    <div className="bg-surface text-[#e5e2e1] font-body min-h-screen flex flex-col md:flex-row">
+    <div className="bg-surface text-[var(--text)] font-body min-h-screen flex flex-col md:flex-row">
       {/* SIDEBAR */}
-      <aside className="w-full md:w-64 bg-[#1c1b1b] border-r border-[#514345] md:min-h-screen flex flex-col flex-shrink-0 relative z-20">
-        <div className="p-6 border-b border-[#514345]">
+      <aside className="w-full md:w-64 bg-surface-2 border-r border-[var(--border)] md:min-h-screen flex flex-col flex-shrink-0 relative z-20">
+        <div className="p-6 border-b border-[var(--border)]">
           <Link href="/?welcome=1" className="flex items-center gap-2.5 group">
-            <span className="w-8 h-8 rounded-full bg-[#3b141c] border border-[#683941] flex items-center justify-center text-[#f7b5be] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
+            <span className="w-8 h-8 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
             <span className="font-display text-[21px] tracking-wide text-white">{t('Manager')}</span>
           </Link>
         </div>
         <nav className="flex-1 p-4 space-y-2 flex flex-row md:flex-col overflow-x-auto hide-scrollbar">
-          <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-[#3b141c] text-[#f7b5be] font-bold' : 'text-[#d5c2c3] hover:bg-[#514345]/30'}`}>
+          <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-bold' : 'text-[var(--muted)] hover:bg-[#514345]/30'}`}>
             <i className="ph ph-chart-line-up text-xl"></i> {t('Dashboard')}
           </button>
-          <button onClick={() => setActiveTab('orders')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'orders' ? 'bg-[#3b141c] text-[#f7b5be] font-bold' : 'text-[#d5c2c3] hover:bg-[#514345]/30'}`}>
+          <button onClick={() => setActiveTab('orders')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'orders' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-bold' : 'text-[var(--muted)] hover:bg-[#514345]/30'}`}>
             <i className="ph ph-receipt text-xl"></i> {t('Live Orders')}
             {liveOrderCount > 0 && (
               <span className="ml-auto bg-[#f7b5be] text-[#3b141c] text-[11px] font-bold px-2 py-0.5 rounded-full">{liveOrderCount}</span>
             )}
           </button>
-          <button onClick={() => setActiveTab('menu')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'menu' ? 'bg-[#3b141c] text-[#f7b5be] font-bold' : 'text-[#d5c2c3] hover:bg-[#514345]/30'}`}>
+          <button onClick={() => setActiveTab('menu')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'menu' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-bold' : 'text-[var(--muted)] hover:bg-[#514345]/30'}`}>
             <i className="ph ph-list-dashes text-xl"></i> {t('Menu Management')}
           </button>
-          <button onClick={() => setActiveTab('reservations')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'reservations' ? 'bg-[#3b141c] text-[#f7b5be] font-bold' : 'text-[#d5c2c3] hover:bg-[#514345]/30'}`}>
+          <button onClick={() => setActiveTab('reservations')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'reservations' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-bold' : 'text-[var(--muted)] hover:bg-[#514345]/30'}`}>
             <i className="ph ph-calendar-blank text-xl"></i> {t('Table Reservations')}
             {reservations.filter(r => r.status === 'PENDING').length > 0 && (
               <span className="ml-auto bg-blue-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">{reservations.filter(r => r.status === 'PENDING').length}</span>
             )}
           </button>
-          <button onClick={() => setActiveTab('reports')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'reports' ? 'bg-[#3b141c] text-[#f7b5be] font-bold' : 'text-[#d5c2c3] hover:bg-[#514345]/30'}`}>
+          <button onClick={() => setActiveTab('reports')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'reports' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-bold' : 'text-[var(--muted)] hover:bg-[#514345]/30'}`}>
             <i className="ph ph-chart-line-up text-xl"></i> {t('Reports & Analytics')}
           </button>
         </nav>
-        <div className="p-4 border-t border-[#514345] hidden md:block">
+        <div className="p-4 border-t border-[var(--border)] hidden md:block">
           <Link
             href="/?welcome=1"
-            className="flex items-center gap-3 px-3 py-2.5 mb-3 rounded-[12px] text-[14.5px] text-[#d5c2c3] hover:bg-[#3b141c] hover:text-[#f7b5be] transition-colors"
+            className="flex items-center gap-3 px-3 py-2.5 mb-3 rounded-[12px] text-[14.5px] text-[var(--muted)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] transition-colors"
           >
             <i className="ph ph-storefront text-xl"></i> {t('View Customer Site')}
           </Link>
           <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-10 h-10 rounded-full bg-[#3b141c] border border-[#683941] text-[#f7b5be] flex items-center justify-center text-[16px] font-bold">{user.first_name?.[0] || 'M'}</div>
+            <div className="w-10 h-10 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] flex items-center justify-center text-[16px] font-bold">{user.first_name?.[0] || 'M'}</div>
             <div>
-              <p className="text-[14.5px] font-bold text-[#e5e2e1]">{user.first_name || t('Manager')}</p>
-              <p className="text-[12px] text-[#9e8d8e]">{t(user.role, user.role)}</p>
+              <p className="text-[14.5px] font-bold text-[var(--text)]">{user.first_name || t('Manager')}</p>
+              <p className="text-[12px] text-[var(--muted)]">{t(user.role, user.role)}</p>
             </div>
           </div>
-          <button onClick={logout} className="w-full h-10 rounded-[12px] border border-[#514345] text-[#d5c2c3] text-[14px] flex items-center justify-center gap-2 hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors">
+          <button onClick={logout} className="w-full h-10 rounded-[12px] border border-[var(--border)] text-[var(--muted)] text-[14px] flex items-center justify-center gap-2 hover:border-[#f7b5be] hover:text-[var(--accent)] transition-colors">
             <i className="ph ph-sign-out text-lg"></i> {t('Sign Out')}
           </button>
         </div>
@@ -611,15 +613,16 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
       <main className="flex-1 p-6 md:p-10 md:h-screen overflow-y-auto">
         
         {/* Status Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-8 bg-[#1c1b1b] border border-[#514345] p-5 rounded-[18px]">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8 bg-surface-2 border border-[var(--border)] p-5 rounded-[18px]">
           <div>
             <h1 className="font-display text-[26px] md:text-[32px] leading-none mb-1 text-white">{t('Store Overview')}</h1>
-            <p className="text-[#9e8d8e] text-[14.5px]">{t('Manage incoming orders and store status.')}</p>
+            <p className="text-[var(--muted)] text-[14.5px]">{t('Manage incoming orders and store status.')}</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="relative flex items-center">
               <NotificationsDropdown />
             </div>
+            <ThemeToggle className="h-10 w-10" />
             <div className="flex items-center gap-2">
               <span className={`w-3 h-3 rounded-full ${isOpen ? 'bg-green-500' : 'bg-red-500'}`}></span>
               <span className="text-[15.5px] font-semibold">{isOpen ? t('STORE OPEN') : t('STORE CLOSED')}</span>
@@ -634,7 +637,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
         </div>
 
         {actionMsg && (
-          <div className="mb-6 p-4 rounded-[14px] bg-[#3b141c] border border-[#683941] text-[#f7b5be] flex items-center gap-3 animate-fade-in">
+          <div className="mb-6 p-4 rounded-[14px] bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] flex items-center gap-3 animate-fade-in">
             <i className="ph ph-info text-xl"></i>
             <span className="text-[15px]">{actionMsg}</span>
           </div>
@@ -645,31 +648,31 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
           <div className="animate-fade-in space-y-6">
             <div className="flex items-center justify-between gap-4">
               <h2 className="font-display text-[24px] text-white">{t('Analytics Overview')}</h2>
-              <span className="flex items-center gap-2 text-[12.5px] text-[#9e8d8e]">
+              <span className="flex items-center gap-2 text-[12.5px] text-[var(--muted)]">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 {t('Live')}{lastSync ? ` · ${lastSync.toLocaleTimeString(locale)}` : ''}
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-[#1c1b1b] border border-[#514345] p-6 rounded-[18px] relative overflow-hidden">
+              <div className="bg-surface-2 border border-[var(--border)] p-6 rounded-[18px] relative overflow-hidden">
                 <div className="absolute -right-4 -bottom-4 text-[120px] text-[#3b141c] opacity-30"><i className="ph ph-trend-up"></i></div>
-                <h3 className="text-[#9e8d8e] font-bold text-[13px] uppercase tracking-wider mb-2">{t("Today's Revenue")}</h3>
-                <div className="text-[42px] text-[#f7b5be]">
+                <h3 className="text-[var(--muted)] font-bold text-[13px] uppercase tracking-wider mb-2">{t("Today's Revenue")}</h3>
+                <div className="text-[42px] text-[var(--accent)]">
                   <MoneyCell value={analytics.daily_revenue} />
                 </div>
-                <p className="text-[#d5c2c3] text-[14.5px] mt-2">
+                <p className="text-[var(--muted)] text-[14.5px] mt-2">
                   {t('from')} {analytics.daily_orders_count} {t('paid orders')} {t('today')}
                 </p>
               </div>
 
-              <div className="bg-[#1c1b1b] border border-[#514345] p-6 rounded-[18px] relative overflow-hidden">
+              <div className="bg-surface-2 border border-[var(--border)] p-6 rounded-[18px] relative overflow-hidden">
                 <div className="absolute -right-4 -bottom-4 text-[120px] text-[#3b141c] opacity-30"><i className="ph ph-calendar-check"></i></div>
-                <h3 className="text-[#9e8d8e] font-bold text-[13px] uppercase tracking-wider mb-2">{t('Monthly Revenue')}</h3>
-                <div className="text-[42px] text-[#f7b5be]">
+                <h3 className="text-[var(--muted)] font-bold text-[13px] uppercase tracking-wider mb-2">{t('Monthly Revenue')}</h3>
+                <div className="text-[42px] text-[var(--accent)]">
                   <MoneyCell value={analytics.monthly_revenue} />
                 </div>
-                <p className="text-[#d5c2c3] text-[14.5px] mt-2">
+                <p className="text-[var(--muted)] text-[14.5px] mt-2">
                   {t('from')} {analytics.monthly_orders_count} {t('paid orders')} {t('this month')}
                 </p>
               </div>
@@ -677,13 +680,13 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: 'Live Orders', value: analytics.live_orders_count ?? 0, icon: 'ph-bell-ringing', tone: 'text-[#f7b5be]' },
+                { label: 'Live Orders', value: analytics.live_orders_count ?? 0, icon: 'ph-bell-ringing', tone: 'text-[var(--accent)]' },
                 { label: 'In Kitchen', value: analytics.in_kitchen_count ?? 0, icon: 'ph-coffee-maker', tone: 'text-blue-300' },
                 { label: 'Awaiting Payment', value: analytics.awaiting_payment_count ?? 0, icon: 'ph-hourglass', tone: 'text-yellow-300' },
                 { label: 'Avg. Order Value', value: analytics.average_order_value ?? 0, money: true, icon: 'ph-chart-line', tone: 'text-emerald-300' },
               ].map(card => (
-                <div key={card.label} className="bg-[#1c1b1b] border border-[#514345] p-5 rounded-[18px]">
-                  <div className="flex items-center gap-2 text-[#9e8d8e] text-[12px] font-bold uppercase tracking-wider mb-2">
+                <div key={card.label} className="bg-surface-2 border border-[var(--border)] p-5 rounded-[18px]">
+                  <div className="flex items-center gap-2 text-[var(--muted)] text-[12px] font-bold uppercase tracking-wider mb-2">
                     <i className={`${card.icon} text-[16px] ${card.tone}`}></i>{t(card.label)}
                   </div>
                   {card.money
@@ -695,23 +698,23 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* 7-DAY REVENUE */}
-              <div className="lg:col-span-2 bg-[#1c1b1b] border border-[#514345] p-6 rounded-[18px]">
-                <h3 className="text-[#9e8d8e] font-bold text-[13px] uppercase tracking-wider mb-4">{t('Last 7 Days Revenue')}</h3>
+              <div className="lg:col-span-2 bg-surface-2 border border-[var(--border)] p-6 rounded-[18px]">
+                <h3 className="text-[var(--muted)] font-bold text-[13px] uppercase tracking-wider mb-4">{t('Last 7 Days Revenue')}</h3>
                 {(analytics.weekly || []).length === 0 ? (
-                  <p className="text-[#9e8d8e] text-[14px]">{t('No revenue recorded yet.')}</p>
+                  <p className="text-[var(--muted)] text-[14px]">{t('No revenue recorded yet.')}</p>
                 ) : (() => {
                   const max = Math.max(...(analytics.weekly || []).map(d => d.revenue), 1);
                   return (
                     <div className="flex items-end gap-3 h-[180px]">
                       {(analytics.weekly || []).map(day => (
                         <div key={day.day} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-                          <span className="text-[11px] text-[#d5c2c3]">{day.revenue > 0 ? day.revenue.toFixed(0) : ''}</span>
+                          <span className="text-[11px] text-[var(--muted)]">{day.revenue > 0 ? day.revenue.toFixed(0) : ''}</span>
                           <div
                             title={`${day.day}: ${birr} ${day.revenue.toFixed(2)} · ${day.orders} ${t('orders')}`}
                             className="w-full rounded-t-[8px] bg-gradient-to-t from-[#683941] to-[#f7b5be] transition-all duration-700"
                             style={{ height: `${Math.max((day.revenue / max) * 100, day.revenue > 0 ? 6 : 2)}%` }}
                           />
-                          <span className="text-[10.5px] text-[#9e8d8e]">
+                          <span className="text-[10.5px] text-[var(--muted)]">
                             {new Date(day.day).toLocaleDateString(locale, { weekday: 'short' })}
                           </span>
                         </div>
@@ -722,10 +725,10 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
               </div>
 
               {/* REVENUE BY PAYMENT METHOD */}
-              <div className="bg-[#1c1b1b] border border-[#514345] p-6 rounded-[18px]">
-                <h3 className="text-[#9e8d8e] font-bold text-[13px] uppercase tracking-wider mb-4">{t('Collected by Method')}</h3>
+              <div className="bg-surface-2 border border-[var(--border)] p-6 rounded-[18px]">
+                <h3 className="text-[var(--muted)] font-bold text-[13px] uppercase tracking-wider mb-4">{t('Collected by Method')}</h3>
                 {(analytics.by_payment_method || []).length === 0 ? (
-                  <p className="text-[#9e8d8e] text-[14px]">{t('No settled payments yet.')}</p>
+                  <p className="text-[var(--muted)] text-[14px]">{t('No settled payments yet.')}</p>
                 ) : (
                   <div className="space-y-3">
                     {(analytics.by_payment_method || []).map(row => {
@@ -733,8 +736,8 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                       return (
                         <div key={row.method}>
                           <div className="flex justify-between text-[13.5px] mb-1">
-                            <span className="text-[#d5c2c3]">{t(PAYMENT_METHOD_LABELS[row.method] || row.method)}</span>
-                            <span className="text-[#f7b5be] font-bold">{row.revenue.toFixed(2)} {birr}</span>
+                            <span className="text-[var(--muted)]">{t(PAYMENT_METHOD_LABELS[row.method] || row.method)}</span>
+                            <span className="text-[var(--accent)] font-bold">{row.revenue.toFixed(2)} {birr}</span>
                           </div>
                           <div className="h-2 rounded-full bg-surface overflow-hidden">
                             <div
@@ -742,7 +745,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                               style={{ width: `${Math.max((row.revenue / total) * 100, 3)}%` }}
                             />
                           </div>
-                          <p className="text-[11px] text-[#9e8d8e] mt-1">{row.payments} {t('payments')}</p>
+                          <p className="text-[11px] text-[var(--muted)] mt-1">{row.payments} {t('payments')}</p>
                         </div>
                       );
                     })}
@@ -762,7 +765,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                 <button 
                   key={status} 
                   onClick={() => setFilterStatus(status)}
-                  className={`px-4 py-1.5 rounded text-[13px] font-bold tracking-wider transition-colors border ${filterStatus === status ? 'bg-[#e5e2e1] text-[#131313] border-[#e5e2e1]' : 'bg-transparent text-[#9e8d8e] border-[#514345] hover:text-[#d5c2c3]'}`}
+                  className={`px-4 py-1.5 rounded text-[13px] font-bold tracking-wider transition-colors border ${filterStatus === status ? 'bg-[#e5e2e1] text-[#131313] border-[#e5e2e1]' : 'bg-transparent text-[var(--muted)] border-[var(--border)] hover:text-[var(--muted)]'}`}
                 >
                   {t(status === 'ALL' ? 'ALL' : (STATUS_LABELS[status] || status))}
                 </button>
@@ -771,27 +774,27 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
 
             <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
               {filteredOrders.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-[#9e8d8e] bg-[#1c1b1b] border border-[#514345] rounded-[18px]">
+                <div className="col-span-full py-12 text-center text-[var(--muted)] bg-surface-2 border border-[var(--border)] rounded-[18px]">
                   {t('No orders found for this status.')}
                 </div>
               ) : (
                 filteredOrders.map(order => (
-                  <div key={order.id} className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-5 flex flex-col justify-between">
+                  <div key={order.id} className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-5 flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <span className="text-[20px] font-display font-bold text-white">#{order.order_number}</span>
-                          <span className="block text-[12px] text-[#9e8d8e] mt-1">{new Date(order.created_at).toLocaleTimeString(locale)}</span>
+                          <span className="block text-[12px] text-[var(--muted)] mt-1">{new Date(order.created_at).toLocaleTimeString(locale)}</span>
                         </div>
-                        <span className={`px-2 py-1 rounded text-[11px] font-bold uppercase ${STATUS_BADGE[order.status] || 'bg-[#514345] text-[#d5c2c3] border border-[#514345]'}`}>
+                        <span className={`px-2 py-1 rounded text-[11px] font-bold uppercase ${STATUS_BADGE[order.status] || 'bg-[#514345] text-[var(--muted)] border border-[var(--border)]'}`}>
                           {t(STATUS_LABELS[order.status] || order.status)}
                         </span>
                       </div>
                       
-                      <div className="text-[14px] text-[#d5c2c3] mb-4 space-y-1">
-                        <p><strong className="text-[#e5e2e1]">{t('Type:')}</strong> {t(order.order_type, order.order_type)} {order.table_number && `(${t('Table')} ${order.table_number})`}</p>
-                        <p><strong className="text-[#e5e2e1]">{t('Customer:')}</strong> {order.contact_name}</p>
-                        <p><strong className="text-[#e5e2e1]">{t('Phone:')}</strong> {order.contact_phone}</p>
+                      <div className="text-[14px] text-[var(--muted)] mb-4 space-y-1">
+                        <p><strong className="text-[var(--text)]">{t('Type:')}</strong> {t(order.order_type, order.order_type)} {order.table_number && `(${t('Table')} ${order.table_number})`}</p>
+                        <p><strong className="text-[var(--text)]">{t('Customer:')}</strong> {order.contact_name}</p>
+                        <p><strong className="text-[var(--text)]">{t('Phone:')}</strong> {order.contact_phone}</p>
                         <p className="pt-1">
                           <span
                             className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
@@ -799,7 +802,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                 ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-800'
                                 : order.status === 'PENDING_PAYMENT'
                                   ? 'bg-red-950 text-red-300 border border-red-800'
-                                  : 'bg-[#514345] text-[#d5c2c3] border border-[#514345]'
+                                  : 'bg-[#514345] text-[var(--muted)] border border-[var(--border)]'
                             }`}
                           >
                             <i className={`ph ${isOrderPaid(order) ? 'ph-check-circle' : 'ph-warning'}`}></i>
@@ -817,20 +820,20 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                         )}                      </div>
 
                       <div className="space-y-2 mb-4">
-                        <p className="text-[12px] uppercase text-[#9e8d8e] font-bold tracking-wider">{t('Items')}</p>
+                        <p className="text-[12px] uppercase text-[var(--muted)] font-bold tracking-wider">{t('Items')}</p>
                         {order.items.map((item, idx) => (
-                          <div key={idx} className="flex justify-between gap-3 text-[14.5px] border-b border-[#514345]/50 pb-2">
+                          <div key={idx} className="flex justify-between gap-3 text-[14.5px] border-b border-[var(--border)]/50 pb-2">
                             <span>
                               {item.quantity}x {tItem(item.item_name)}
                               {item.variant_name && (
                                 <span className="text-[12px] text-[#fbbb50]"> ({item.variant_name})</span>
                               )}
                               {item.add_ons && item.add_ons.length > 0 && (
-                                <span className="block text-[11px] text-[#d5c2c3]">
+                                <span className="block text-[11px] text-[var(--muted)]">
                                   + {item.add_ons.map(a => a.add_on_name).join(', ')}
                                 </span>
                               )}
-                              <span className="text-[12px] text-[#9e8d8e]">
+                              <span className="text-[12px] text-[var(--muted)]">
                                 {item.temperature && item.temperature !== 'Hot' ? item.temperature : ''}
                                 {item.milk_choice && item.milk_choice !== 'None' ? ` ${item.milk_choice}` : ''}
                               </span>
@@ -840,7 +843,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                         ))}
                       </div>
 
-                      <div className="flex justify-between text-[16px] font-bold text-[#f7b5be] mb-6">
+                      <div className="flex justify-between text-[16px] font-bold text-[var(--accent)] mb-6">
                         <span>{t('Total:')}</span>
                         <span>{order.total_amount_etb} {birr}</span>
                       </div>
@@ -857,14 +860,14 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                       )}
                       {order.status === 'PLACED' && (
                         <div className="flex gap-2">
-                          <button onClick={() => handleUpdateStatus(order.id, 'ACCEPTED')} className="flex-1 h-10 rounded-[12px] bg-[#3b141c] text-[#f7b5be] font-bold text-[13px] hover:brightness-110">{t('Accept Order')}</button>
+                          <button onClick={() => handleUpdateStatus(order.id, 'ACCEPTED')} className="flex-1 h-10 rounded-[12px] bg-[var(--accent-soft)] text-[var(--accent)] font-bold text-[13px] hover:brightness-110">{t('Accept Order')}</button>
                           <button onClick={() => handleUpdateStatus(order.id, 'REJECTED', 'Rejected by manager.')} className="flex-1 h-10 rounded-[12px] border border-red-900 text-red-400 font-bold text-[13px] hover:bg-red-950">{t('Reject')}</button>
                         </div>
                       )}
                       {order.status === 'ACCEPTED' && (
                         <>
                           <div className="flex items-center gap-2">
-                            <label className="text-[12px] text-[#9e8d8e] shrink-0" htmlFor={`prep-${order.id}`}>
+                            <label className="text-[12px] text-[var(--muted)] shrink-0" htmlFor={`prep-${order.id}`}>
                               {t('Ready in')}
                             </label>
                             <input
@@ -874,9 +877,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                               max={240}
                               defaultValue={order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20}
                               onBlur={(e) => handleSetPrepTime(order.id, Number(e.target.value))}
-                              className="flex-1 h-9 px-3 rounded-[12px] bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-[13px] focus:border-[#f7b5be] focus:outline-none"
+                              className="flex-1 h-9 px-3 rounded-[12px] bg-surface-2 border border-[var(--border)] text-[var(--text)] text-[13px] focus:border-[#f7b5be] focus:outline-none"
                             />
-                            <span className="text-[12px] text-[#9e8d8e]">{t('min')}</span>
+                            <span className="text-[12px] text-[var(--muted)]">{t('min')}</span>
                           </div>
                           <button onClick={() => handleUpdateStatus(order.id, 'PREPARING')} className="w-full h-10 rounded-[12px] bg-blue-900/40 border border-blue-800 text-blue-300 font-bold text-[13px] hover:bg-blue-900/60">{t('Start Preparing')}</button>
                         </>
@@ -894,9 +897,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                         <button onClick={() => handleUpdateStatus(order.id, 'COMPLETED')} className="w-full h-10 rounded-[12px] bg-green-900/40 border border-green-800 text-green-300 font-bold text-[13px] hover:bg-green-900/60">{t('Mark Delivered')}</button>
                       )}
                       {isOrderPaid(order) ? (
-                        <button onClick={() => setSelectedReceiptOrder(order)} className="w-full h-9 rounded-[12px] border border-[#514345] text-[#9e8d8e] font-semibold text-[13px] hover:border-[#f7b5be] hover:text-[#f7b5be]">{t('View Receipt')}</button>
+                        <button onClick={() => setSelectedReceiptOrder(order)} className="w-full h-9 rounded-[12px] border border-[var(--border)] text-[var(--muted)] font-semibold text-[13px] hover:border-[#f7b5be] hover:text-[var(--accent)]">{t('View Receipt')}</button>
                       ) : (
-                        <span className="w-full h-9 rounded-[12px] border border-[#514345]/60 text-[#9e8d8e] font-semibold text-[13px] flex items-center justify-center cursor-not-allowed" title={t('Receipts are issued only after payment')}>
+                        <span className="w-full h-9 rounded-[12px] border border-[var(--border)]/60 text-[var(--muted)] font-semibold text-[13px] flex items-center justify-center cursor-not-allowed" title={t('Receipts are issued only after payment')}>
                           {t('Receipt after payment')}
                         </span>
                       )}
@@ -914,15 +917,15 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             <h2 className="font-display text-[24px] text-white mb-6">{t('Menu Management')}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {menuItems.map(item => (
-                <div key={item.id} className={`bg-[#1c1b1b] border rounded-[18px] p-4 flex flex-col justify-between transition-colors ${item.is_available ? 'border-[#514345]' : 'border-red-900/50 opacity-70'}`}>
+                <div key={item.id} className={`bg-surface-2 border rounded-[18px] p-4 flex flex-col justify-between transition-colors ${item.is_available ? 'border-[var(--border)]' : 'border-red-900/50 opacity-70'}`}>
                   <div>
-                    <h4 className="font-display text-[20px] text-[#e5e2e1] mb-1 leading-tight">{tItem(item.name)}</h4>
-                    <span className="text-[12px] uppercase text-[#9e8d8e] tracking-wider font-bold">{tCategory(item.category_name)}</span>
-                    <div className="text-[16px] text-[#f7b5be] font-semibold mt-2">{Number(item.price || 0).toFixed(2)} {birr}</div>
+                    <h4 className="font-display text-[20px] text-[var(--text)] mb-1 leading-tight">{tItem(item.name)}</h4>
+                    <span className="text-[12px] uppercase text-[var(--muted)] tracking-wider font-bold">{tCategory(item.category_name)}</span>
+                    <div className="text-[16px] text-[var(--accent)] font-semibold mt-2">{Number(item.price || 0).toFixed(2)} {birr}</div>
                   </div>
                   <button 
                     onClick={() => toggleMenuItemAvailability(item)}
-                    className={`mt-4 w-full h-9 rounded-[12px] font-bold text-[13px] transition-colors border ${item.is_available ? 'border-[#683941] text-[#f7b5be] hover:bg-[#3b141c]' : 'bg-red-950/40 border-red-900/80 text-red-400 hover:bg-red-950/60'}`}
+                    className={`mt-4 w-full h-9 rounded-[12px] font-bold text-[13px] transition-colors border ${item.is_available ? 'border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-soft)]' : 'bg-red-950/40 border-red-900/80 text-red-400 hover:bg-red-950/60'}`}
                   >
                     {item.is_available ? t('Available (Click to Disable)') : t('Sold Out (Click to Enable)')}
                   </button>
@@ -938,39 +941,40 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             <h2 className="font-display text-[24px] text-white mb-6">{t('Table Reservations')}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {reservations.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-[#9e8d8e] bg-[#1c1b1b] border border-[#514345] rounded-[18px]">
+                <div className="col-span-full py-12 text-center text-[var(--muted)] bg-surface-2 border border-[var(--border)] rounded-[18px]">
                   {t('No table reservations found.')}
                 </div>
               ) : (
                 reservations.map(reservation => (
-                  <div key={reservation.id} className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-5 flex flex-col justify-between">
+                  <div key={reservation.id} className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-5 flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <span className="text-[20px] font-display font-bold text-white">{reservation.name}</span>
-                          <span className="block text-[12px] text-[#9e8d8e] mt-1">{t('Booked on')} {new Date(reservation.created_at).toLocaleDateString(locale)}</span>
+                          <span className="block text-[11px] font-mono text-[var(--muted)] mt-0.5 tracking-wide">{reservation.order_code || `#${reservation.id}`}</span>
+                          <span className="block text-[12px] text-[var(--muted)] mt-1">{t('Booked on')} {new Date(reservation.created_at).toLocaleDateString(locale)}</span>
                         </div>
                         <span className={`px-2 py-1 rounded text-[11px] font-bold uppercase ${
                           reservation.status === 'PENDING' ? 'bg-yellow-900/50 text-yellow-500' :
                           reservation.status === 'CONFIRMED' ? 'bg-blue-900/50 text-blue-400' :
                           reservation.status === 'COMPLETED' ? 'bg-green-900/50 text-green-400' :
-                          'bg-[#514345] text-[#d5c2c3]'
+                          'bg-[#514345] text-[var(--muted)]'
                         }`}>
                           {t(reservation.status)}
                         </span>
                       </div>
                       
-                      <div className="text-[14px] text-[#d5c2c3] mb-4 space-y-1">
-                        <p><strong className="text-[#e5e2e1]">{t('Date & Time:')}</strong> {new Date(reservation.date_time).toLocaleString(locale)}</p>
-                        <p><strong className="text-[#e5e2e1]">{t('Party Size:')}</strong> {reservation.party_size} {t('people')}</p>
-                        <p><strong className="text-[#e5e2e1]">{t('Phone:')}</strong> {reservation.contact_phone || t('N/A')}</p>
+                      <div className="text-[14px] text-[var(--muted)] mb-4 space-y-1">
+                        <p><strong className="text-[var(--text)]">{t('Date & Time:')}</strong> {new Date(reservation.date_time).toLocaleString(locale)}</p>
+                        <p><strong className="text-[var(--text)]">{t('Party Size:')}</strong> {reservation.party_size} {t('people')}</p>
+                        <p><strong className="text-[var(--text)]">{t('Phone:')}</strong> {reservation.contact_phone || t('N/A')}</p>
                       </div>
                     </div>
 
                     <div className="flex flex-col gap-2 mt-auto">
                       {reservation.status === 'PENDING' && (
                         <div className="flex gap-2">
-                          <button onClick={() => handleUpdateReservationStatus(reservation.id, 'CONFIRMED')} className="flex-1 h-10 rounded-[12px] bg-[#3b141c] text-[#f7b5be] font-bold text-[13px] hover:brightness-110">{t('Confirm')}</button>
+                          <button onClick={() => handleUpdateReservationStatus(reservation.id, 'CONFIRMED')} className="flex-1 h-10 rounded-[12px] bg-[var(--accent-soft)] text-[var(--accent)] font-bold text-[13px] hover:brightness-110">{t('Confirm')}</button>
                           <button onClick={() => handleUpdateReservationStatus(reservation.id, 'CANCELLED')} className="flex-1 h-10 rounded-[12px] border border-red-900 text-red-400 font-bold text-[13px] hover:bg-red-950">{t('Cancel')}</button>
                         </div>
                       )}
@@ -991,7 +995,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="font-display text-[26px] text-white leading-tight">{t('Reports & Analytics')}</h2>
-                <p className="text-[#9e8d8e] text-[14px]">
+                <p className="text-[var(--muted)] text-[14px]">
                   {t('Comprehensive sales summaries, top sellers, peak hours, and order breakdowns.')}
                 </p>
               </div>
@@ -999,13 +1003,13 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
               {/* Action Buttons: Filter & CSV */}
               <div className="flex flex-wrap items-center gap-3">
                 {/* Range Selector */}
-                <div className="flex items-center bg-[#1c1b1b] border border-[#514345] rounded-[12px] p-1 text-[13px]">
+                <div className="flex items-center bg-surface-2 border border-[var(--border)] rounded-[12px] p-1 text-[13px]">
                   {(['7d', '30d', '90d'] as const).map(rng => (
                     <button
                       key={rng}
                       onClick={() => setReportRange(rng)}
                       className={`px-3 py-1.5 rounded-[8px] font-semibold transition-colors ${
-                        reportRange === rng ? 'bg-[#3b141c] text-[#f7b5be]' : 'text-[#d5c2c3] hover:text-white'
+                        reportRange === rng ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--muted)] hover:text-white'
                       }`}
                     >
                       {rng === '7d' ? t('Last 7 Days') : rng === '30d' ? t('Last 30 Days') : t('Last 90 Days')}
@@ -1017,7 +1021,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                 <select
                   value={reportOrderType}
                   onChange={(e) => setReportOrderType(e.target.value)}
-                  className="bg-[#1c1b1b] border border-[#514345] rounded-[12px] px-3 py-2 text-[13.5px] text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]"
+                  className="bg-surface-2 border border-[var(--border)] rounded-[12px] px-3 py-2 text-[13.5px] text-[var(--text)] focus:outline-none focus:border-[#f7b5be]"
                 >
                   <option value="ALL">{t('All Types')}</option>
                   <option value="DELIVERY">{t('Delivery')}</option>
@@ -1028,7 +1032,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                 {/* CSV Export Button */}
                 <button
                   onClick={handleExportCsv}
-                  className="h-10 px-4 rounded-[12px] bg-[#3b141c] border border-[#683941] text-[#f7b5be] font-bold text-[13.5px] hover:brightness-110 flex items-center gap-2 transition-all shadow-sm"
+                  className="h-10 px-4 rounded-[12px] bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] font-bold text-[13.5px] hover:brightness-110 flex items-center gap-2 transition-all shadow-sm"
                 >
                   <i className="ph ph-download-simple text-lg"></i>
                   {t('Export CSV')}
@@ -1037,30 +1041,30 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             </div>
 
             {isLoadingReport ? (
-              <div className="py-20 flex flex-col items-center justify-center text-[#9e8d8e]">
+              <div className="py-20 flex flex-col items-center justify-center text-[var(--muted)]">
                 <div className="w-8 h-8 border-2 border-[#f7b5be] border-t-transparent rounded-full animate-spin mb-3" />
                 <span>{t('Compiling report data…')}</span>
               </div>
             ) : !reportData ? (
-              <div className="py-12 text-center text-[#9e8d8e] bg-[#1c1b1b] border border-[#514345] rounded-[18px]">
+              <div className="py-12 text-center text-[var(--muted)] bg-surface-2 border border-[var(--border)] rounded-[18px]">
                 {t('No report data available.')}
               </div>
             ) : (
               <div className="space-y-6">
                 {/* Summary KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[16px] p-5">
-                    <span className="text-[13px] text-[#9e8d8e] uppercase tracking-wider">{t('Total Revenue')}</span>
-                    <div className="mt-2 text-[26px] font-display font-bold text-[#f7b5be]">
+                  <div className="bg-surface-2 border border-[var(--border)] rounded-[16px] p-5">
+                    <span className="text-[13px] text-[var(--muted)] uppercase tracking-wider">{t('Total Revenue')}</span>
+                    <div className="mt-2 text-[26px] font-display font-bold text-[var(--accent)]">
                       {reportData.summary.revenue.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {birr}
                     </div>
-                    <span className="text-[12px] text-[#9e8d8e] mt-1 block">
+                    <span className="text-[12px] text-[var(--muted)] mt-1 block">
                       {reportData.summary.completed_orders} {t('completed')} / {reportData.summary.orders} {t('orders')}
                     </span>
                   </div>
 
-                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[16px] p-5">
-                    <span className="text-[13px] text-[#9e8d8e] uppercase tracking-wider">{t('Total Orders')}</span>
+                  <div className="bg-surface-2 border border-[var(--border)] rounded-[16px] p-5">
+                    <span className="text-[13px] text-[var(--muted)] uppercase tracking-wider">{t('Total Orders')}</span>
                     <div className="mt-2 text-[26px] font-display font-bold text-white">
                       {reportData.summary.orders}
                     </div>
@@ -1069,38 +1073,38 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                     </span>
                   </div>
 
-                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[16px] p-5">
-                    <span className="text-[13px] text-[#9e8d8e] uppercase tracking-wider">{t('Average Order Value')}</span>
-                    <div className="mt-2 text-[26px] font-display font-bold text-[#e5e2e1]">
+                  <div className="bg-surface-2 border border-[var(--border)] rounded-[16px] p-5">
+                    <span className="text-[13px] text-[var(--muted)] uppercase tracking-wider">{t('Average Order Value')}</span>
+                    <div className="mt-2 text-[26px] font-display font-bold text-[var(--text)]">
                       {reportData.summary.average_order_value.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {birr}
                     </div>
-                    <span className="text-[12px] text-[#9e8d8e] mt-1 block">
+                    <span className="text-[12px] text-[var(--muted)] mt-1 block">
                       {t('Per paid checkout')}
                     </span>
                   </div>
 
-                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[16px] p-5">
-                    <span className="text-[13px] text-[#9e8d8e] uppercase tracking-wider">{t('Delivery Fees')}</span>
-                    <div className="mt-2 text-[26px] font-display font-bold text-[#e5e2e1]">
+                  <div className="bg-surface-2 border border-[var(--border)] rounded-[16px] p-5">
+                    <span className="text-[13px] text-[var(--muted)] uppercase tracking-wider">{t('Delivery Fees')}</span>
+                    <div className="mt-2 text-[26px] font-display font-bold text-[var(--text)]">
                       {reportData.summary.delivery_fees.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {birr}
                     </div>
-                    <span className="text-[12px] text-[#9e8d8e] mt-1 block">
+                    <span className="text-[12px] text-[var(--muted)] mt-1 block">
                       {t('Collected from zone deliveries')}
                     </span>
                   </div>
                 </div>
 
                 {/* Unpaid & Expired Metrics Bar */}
-                <div className="bg-[#241a1c] border border-[#514345] rounded-[16px] p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div className="bg-[#241a1c] border border-[var(--border)] rounded-[16px] p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
                   <div className="flex items-center gap-2">
                     <i className="ph ph-warning-circle text-amber-400 text-lg"></i>
-                    <span className="text-[#d5c2c3]">
+                    <span className="text-[var(--muted)]">
                       <strong className="text-white">{t('Awaiting Payment:')}</strong> {reportData.unpaid.awaiting_payment} {t('orders')} ({reportData.unpaid.awaiting_payment_value.toFixed(2)} {birr})
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <i className="ph ph-clock-countdown text-red-400 text-lg"></i>
-                    <span className="text-[#d5c2c3]">
+                    <span className="text-[var(--muted)]">
                       <strong className="text-white">{t('Expired Orders (30d):')}</strong> {reportData.unpaid.expired_last_30_days} {t('unpaid orders expired')}
                     </span>
                   </div>
@@ -1109,30 +1113,30 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                 {/* Two Column Layout: Top Items & Order Type Split */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Top Items */}
-                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6">
+                  <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-display text-[20px] text-white flex items-center gap-2">
-                        <i className="ph ph-trophy text-[#f7b5be]"></i>
+                        <i className="ph ph-trophy text-[var(--accent)]"></i>
                         {t('Top Selling Items')}
                       </h3>
-                      <span className="text-xs text-[#9e8d8e]">{t('Ranked by revenue')}</span>
+                      <span className="text-xs text-[var(--muted)]">{t('Ranked by revenue')}</span>
                     </div>
                     {reportData.top_items.length === 0 ? (
-                      <p className="text-sm text-[#9e8d8e] py-8 text-center">{t('No item sales in this period.')}</p>
+                      <p className="text-sm text-[var(--muted)] py-8 text-center">{t('No item sales in this period.')}</p>
                     ) : (
                       <div className="divide-y divide-[#514345]/50">
                         {reportData.top_items.map((item, idx) => (
                           <div key={idx} className="py-3 flex items-center justify-between gap-3 text-sm">
                             <div className="flex items-center gap-3">
-                              <span className="w-6 text-center font-bold text-[#f7b5be] text-xs">#{idx + 1}</span>
+                              <span className="w-6 text-center font-bold text-[var(--accent)] text-xs">#{idx + 1}</span>
                               <div>
                                 <p className="font-semibold text-white">{tItem(item.item_name)}</p>
-                                <p className="text-xs text-[#9e8d8e]">
+                                <p className="text-xs text-[var(--muted)]">
                                   {item.quantity} {t('sold')} • {item.orders} {t('orders')}
                                 </p>
                               </div>
                             </div>
-                            <span className="font-bold text-[#f7b5be]">
+                            <span className="font-bold text-[var(--accent)]">
                               {item.revenue.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {birr}
                             </span>
                           </div>
@@ -1142,21 +1146,21 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                   </div>
 
                   {/* Order Type Distribution */}
-                  <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6 flex flex-col justify-between">
+                  <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-6 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-display text-[20px] text-white flex items-center gap-2">
-                          <i className="ph ph-chart-pie text-[#f7b5be]"></i>
+                          <i className="ph ph-chart-pie text-[var(--accent)]"></i>
                           {t('Order Type Split')}
                         </h3>
-                        <span className="text-xs text-[#9e8d8e]">{t('Volume & share')}</span>
+                        <span className="text-xs text-[var(--muted)]">{t('Volume & share')}</span>
                       </div>
                       <div className="space-y-4">
                         {reportData.order_types.map((ot) => (
                           <div key={ot.order_type} className="space-y-1">
                             <div className="flex justify-between text-sm">
                               <span className="font-semibold text-white">{t(ot.label || ot.order_type)}</span>
-                              <span className="text-[#d5c2c3]">
+                              <span className="text-[var(--muted)]">
                                 {ot.orders} {t('orders')} ({(ot.share * 100).toFixed(1)}%) • {ot.revenue.toFixed(2)} {birr}
                               </span>
                             </div>
@@ -1172,8 +1176,8 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                     </div>
 
                     {/* Busiest Peak Hour Highlight */}
-                    <div className="mt-6 pt-4 border-t border-[#514345] flex items-center justify-between">
-                      <span className="text-sm text-[#9e8d8e] flex items-center gap-2">
+                    <div className="mt-6 pt-4 border-t border-[var(--border)] flex items-center justify-between">
+                      <span className="text-sm text-[var(--muted)] flex items-center gap-2">
                         <i className="ph ph-clock text-amber-400 text-base"></i>
                         {t('Busiest Hour:')}
                       </span>
@@ -1189,13 +1193,13 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                 </div>
 
                 {/* Peak Hours Hourly Chart */}
-                <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6">
+                <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-display text-[20px] text-white flex items-center gap-2">
-                      <i className="ph ph-sun-horizon text-[#f7b5be]"></i>
+                      <i className="ph ph-sun-horizon text-[var(--accent)]"></i>
                       {t('Peak Hours')} (24h)
                     </h3>
-                    <span className="text-xs text-[#9e8d8e]">{t('Order frequency across hours')}</span>
+                    <span className="text-xs text-[var(--muted)]">{t('Order frequency across hours')}</span>
                   </div>
                   <div className="grid grid-cols-12 md:grid-cols-24 gap-1 items-end h-32 pt-4">
                     {reportData.peak_hours.hours.map((h) => {
@@ -1218,7 +1222,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                             style={{ height: `${heightPercent}%` }}
                             title={`${h.hour}:00 - ${h.orders} orders (${h.revenue.toFixed(2)} ${birr})`}
                           />
-                          <span className="text-[10px] text-[#9e8d8e] mt-1 hidden md:block">
+                          <span className="text-[10px] text-[var(--muted)] mt-1 hidden md:block">
                             {h.hour % 3 === 0 ? h.hour : ''}
                           </span>
                         </div>
@@ -1228,21 +1232,21 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                 </div>
 
                 {/* Daily Breakdown */}
-                <div className="bg-[#1c1b1b] border border-[#514345] rounded-[18px] p-6">
+                <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-6">
                   <h3 className="font-display text-[20px] text-white mb-4 flex items-center gap-2">
-                    <i className="ph ph-calendar text-[#f7b5be]"></i>
+                    <i className="ph ph-calendar text-[var(--accent)]"></i>
                     {t('Daily Sales Breakdown')}
                   </h3>
                   <div className="max-h-72 overflow-y-auto space-y-2 pr-2">
                     {reportData.summary.daily.slice().reverse().map((d) => (
                       <div
                         key={d.day}
-                        className="flex items-center justify-between p-3 rounded-[12px] bg-[#241a1c]/60 border border-[#514345]/50 text-sm"
+                        className="flex items-center justify-between p-3 rounded-[12px] bg-[#241a1c]/60 border border-[var(--border)]/50 text-sm"
                       >
                         <span className="font-semibold text-white">{d.day}</span>
                         <div className="flex items-center gap-4">
-                          <span className="text-xs text-[#9e8d8e]">{d.orders} {t('orders')}</span>
-                          <span className="font-bold text-[#f7b5be]">
+                          <span className="text-xs text-[var(--muted)]">{d.orders} {t('orders')}</span>
+                          <span className="font-bold text-[var(--accent)]">
                             {d.revenue.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {birr}
                           </span>
                         </div>

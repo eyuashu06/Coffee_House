@@ -47,7 +47,7 @@ def get_chapa_client():
     """Return a shared Chapa SDK client built from Django settings."""
     global _chapa_client
     if _chapa_client is None:
-        secret = getattr(settings, 'CHAPA_SECRET_KEY', '') or 'CHASECK_TEST-UMHsYkPPXIFHkoPbm38QkV9OpBh0y4vD'
+        secret = getattr(settings, 'CHAPA_SECRET_KEY', '')
         api_url = (getattr(settings, 'CHAPA_API_URL', 'https://api.chapa.co/v1') or '').rstrip('/')
         base_url, _, version = api_url.rpartition('/v1')
         _chapa_client = Chapa(
@@ -241,7 +241,20 @@ class InitializePaymentView(APIView):
             }, status=status.HTTP_200_OK)
 
         # ── Chapa SDK call (official hosted checkout) ─────────────────────────
-        chapa_secret_key = getattr(settings, 'CHAPA_SECRET_KEY', 'CHASECK_TEST-UMHsYkPPXIFHkoPbm38QkV9OpBh0y4vD')
+        chapa_secret_key = getattr(settings, 'CHAPA_SECRET_KEY', '')
+        if not chapa_secret_key:
+            # Fail loudly instead of sending an empty Bearer token to Chapa.
+            payment.failure_reason = 'CHAPA_SECRET_KEY is not configured'
+            payment.raw_response = 'CHAPA_SECRET_KEY missing from .env'
+            payment.status = 'FAILED'
+            payment.save()
+            return Response(
+                {
+                    'error': 'Payment gateway is not configured. Set CHAPA_SECRET_KEY in .env and restart the server.',
+                    'payment': PaymentSerializer(payment).data,
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
         backend_url = getattr(settings, 'BACKEND_PUBLIC_URL', 'http://localhost:8000')
 

@@ -357,7 +357,11 @@ def execute_tool(name, args, ctx):
             args.get('name'), args.get('variant'), args.get('add_ons'))
         if item is None:
             return {'added': False, 'error': problem,
-                    'note': {'not_on_menu': 'That product is not on our menu. Say so.',
+                    'note': {'not_on_menu': 'That product is not on our menu. Say so, then '
+                                            'search_menu for the closest real items and offer '
+                                            'them together with the fulfilment choices: '
+                                            'delivery, store pickup, dine-in, or a table '
+                                            'reservation.',
                              'unavailable': 'That item is sold out right now. Say so.',
                              'missing_item_name': 'No item name was given.'}.get(problem, '')}
         summary, status = ctx.staged.add_item(

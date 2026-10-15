@@ -45,10 +45,10 @@ PUBLIC_INTENTS = {
 #: "I can ... as soon as you are signed in". Kept as a phrase rather than a full
 #: sentence so both languages read naturally.
 SIGNOUT_TITLE = {
-    'reservation_create': ('book you a table', 'ቦታ ለመያየት'),
-    'reservation_cancel': ('cancel that reservation', 'ያ ማስያዣ ለመሰረዝ'),
+    'reservation_create': ('book you a table', 'የጠረጴዛ ቦታ ለማስያዝ'),
+    'reservation_cancel': ('cancel that reservation', 'ያንን የቦታ ማስያዣ ለመሰረዝ'),
     'reservation_status': ('show your reservations', 'የቦታ ማስያዣዎችዎን ለማሳየት'),
-    'order_create': ('place that order', 'ያንን ትዕዛዝ ለመስጠት'),
+    'order_create': ('place that order', 'ያንን ትዕዛዝ ለማስገባት'),
     'order_cancel': ('cancel that order', 'ያንን ትዕዛዝ ለመሰረዝ'),
     'order_status': ('show your orders', 'ትዕዛዞችዎን ለማሳየት'),
 }
@@ -56,11 +56,11 @@ SIGNOUT_TITLE = {
 #: Same, for the short reason shown on the sign-in button. This one is a noun
 #: phrase: "Sign in to continue with ...".
 SIGNOUT_REASON = {
-    'reservation_create': ('a table reservation', 'የቦታ ማስያዝ'),
-    'reservation_cancel': ('cancelling a reservation', 'የማስያዣ ማሰረዝ'),
-    'reservation_status': ('your reservation details', 'የቦታ ማስያዣ መረጃዎ'),
-    'order_create': ('placing an order', 'ትዕዛዝ ማስያዝ'),
-    'order_cancel': ('cancelling an order', 'የትዕዛዝ ማሰረዝ'),
+    'reservation_create': ('a table reservation', 'የጠረጴዛ ቦታ ማስያዝ'),
+    'reservation_cancel': ('cancelling a reservation', 'ቦታ ማስያዝ ማሰረዝ'),
+    'reservation_status': ('your reservation details', 'የቦታ ማስያዝ መረጃዎ'),
+    'order_create': ('placing an order', 'ትዕዛዝ ማዘዝ'),
+    'order_cancel': ('cancelling an order', 'ትዕዛዝ ማሰረዝ'),
     'order_status': ('your order details', 'የትዕዛዝ መረጃዎ'),
 }
 
@@ -81,27 +81,27 @@ def sign_in_answer(intent, user=None, resume_hint=None):
     in the middle of, so the message reads like a continuation instead of a wall
     and does not make them repeat themselves.
     """
-    what_en, what_am = SIGNOUT_TITLE.get(intent, ('help you further', 'ተጨማሪ ለመርዳት'))
+    what_en, what_am = SIGNOUT_TITLE.get(intent, ('help you further', 'ተጨማሪ እርዳታ ለመስጠት'))
 
     if resume_hint:
         hint_en, hint_am = resume_hint
         en = (f"I can {what_en} as soon as you are signed in.\n\n"
               f"Sign in below, or sign up if you do not have an account yet - it takes about a "
               f"minute. I already have {hint_en}, so we carry on from there.")
-        am = (f"እንደተግባሩ ሲከለሉ {what_am} እችላለሁ።\n\n"
-              f"ከዚህ በታች ይግቡ፣ መለያ ከሌለዎትም ተመዝገቡ - ከአንድ ደቂቃ በላይ አይፈልግም። "
-              f"{hint_am} አስቀድሞ አለኝ፣ በዚያ ከዚያም ይቀጥላለን።")
+        am = (f"በመለያዎ እንደገቡ {what_am} እችላለሁ።\n\n"
+              f"ከዚህ በታች ይግቡ፣ መለያ ከሌለዎትም ይመዝገቡ - ከአንድ ደቂቃ በላይ አይወስድም። "
+              f"{hint_am} አስቀድሞ ስላለኝ ከዚያው እንቀጥላለን።")
     else:
         en = (f"I can {what_en} once you are signed in.\n\n"
               "Sign in below, or sign up if you do not have an account yet - it takes about a "
               "minute.")
-        am = (f"እንደተግባሩ ሲከለሉ {what_am} እችላለሁ።\n\n"
-              "ከዚህ በታች ይግቡ፣ መለያ ከሌለዎትም ተመዝገቡ - ከአንድ ደቂቃ በላይ አይፈልግም።")
+        am = (f"በመለያዎ እንደገቡ {what_am} እችላለሁ።\n\n"
+              "ከዚህ በታች ይግቡ፣ መለያ ከሌለዎትም ይመዝገቡ - ከአንድ ደቂቃ በላይ አይወስድም።")
 
     en += ("\n\nIn the meantime I can still help with the menu, prices, what is available today, "
            "and our opening hours.")
-    am += ("\n\nበዚህ ሰዓት በሜኑ፣ በዋጋ፣ በዛሬ የሚገኙት ምርቶችና በመክፈቻ ሰዓታት እንዲሁም "
-           "ልረዳዎን ማድረስ እችላለሁ።")
+    am += ("\n\nእስከዚያው ድረስ ግን ስለ ሜኑ፣ ዋጋዎች፣ ዛሬ ስለሚገኙት ምርቶችና የመክፈቻ ሰዓታችን "
+           "ልረዳዎት እችላለሁ።")
 
     return bilingual(en, am)
 

@@ -17,9 +17,14 @@ v1_patterns = [
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # Versioned API routes
+    # Versioned API routes. The namespace is what makes the two mounts below
+    # unambiguous: `api/` was previously included un-namespaced, so its route names
+    # landed in the global reverse dict and - being registered last - won every
+    # reverse(), pointing generated URLs at the un-versioned alias. Namespacing each
+    # mount means `reverse('v1:...')` and `reverse('unversioned:...')` are explicit
+    # and no longer depend on include order.
     path('api/v1/', include((v1_patterns, 'v1'))),
-    path('api/', include(v1_patterns)),  # Alias without version prefix
+    path('api/', include((v1_patterns, 'unversioned'))),  # Alias without version prefix
     # OpenAPI Schema & Docs
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

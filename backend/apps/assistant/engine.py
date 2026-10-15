@@ -198,7 +198,7 @@ QUICK_ACTIONS = [
     {'id': 'reservation', 'label_en': 'Make Reservation', 'label_am': 'ቦታ ማስያዝ', 'icon': '📅', 'query_en': 'I want to reserve a table', 'query_am': 'ቦታ ማስያዝ እፈልጋለሁ'},
     {'id': 'order', 'label_en': 'Start an Order', 'label_am': 'ትዕዛዝ ጀምር', 'icon': '🧾', 'query_en': 'I would like to place an order', 'query_am': 'ትዕዛዝ ለመስጠት እፈልጋለሁ'},
     {'id': 'prices', 'label_en': 'Check Prices', 'label_am': 'ዋጋ ይመልከቱ', 'icon': '💰', 'query_en': 'How much is Masala Chai Latte?', 'query_am': 'Masala Chai Latte ዋጋው ስንት ነው?'},
-    {'id': 'about', 'label_en': 'About Coffee House', 'label_am': 'ስለ Coffee House', 'icon': 'ℹ️', 'query_en': 'What is this system?', 'query_am': 'ይህ ስርዓት ምንነው?'},
+    {'id': 'about', 'label_en': 'About Buna Hub', 'label_am': 'ስለ ቡና ሁብ', 'icon': 'ℹ️', 'query_en': 'What is Buna Hub?', 'query_am': 'ቡና ሁብ ምንድነው?'},
 ]
 
 
@@ -393,9 +393,62 @@ def answer_query(query, session_id=None, user=None, use_agent=None):
             session.staged_order.clear()
             session.pending_auth_intent = None
         session.remember(query, intent)
-        result = _finalize(query, answer, intent, [], [], meta, language, session)
+        # Menu cards for suggested items ride along in the meta, so the chat can
+        # show what we actually sell next to the text.
+        items = list((meta or {}).pop('items', []) or [])
+        result = _finalize(query, answer, intent, items, [], meta, language, session)
         result['orders'] = orders
         return result
+
+    # ── Food-vs-drink query routing ──────────────────────────────────────
+    # When a customer asks specifically about "food" (not a drink category),
+    # list only food items. Similarly "drinks" should only show beverages.
+    low_query = query.lower()
+    FOOD_ONLY_SLUGS = [
+        'artisanal-burgers', 'wood-fired-pizza', 'shawarma-wraps', 'fast-food', 'bakery-pastry',
+    ]
+    DRINK_ONLY_SLUGS = [
+        'micro-lot-coffee', 'espresso-infusions', 'premium-tea',
+    ]
+
+    # Detect a food-specific request that didn't resolve to a category
+    _food_words = {'food', 'foods', 'eat', 'meal', 'meals', 'snack', 'snacks', 'bite', 'dish', 'dishes'}
+    _food_am = {'ምግብ', 'ምግቦች', 'ምግቤ', 'ምግብ አላችሁ', 'ምን ምግብ', 'ምን አይነት ምግብ', 'ምግብ ሜኑ'}
+    _drink_words = {'drink', 'drinks', 'beverage', 'beverages', 'sip', 'thirst'}
+    _drink_am = {'መጠጥ', 'መጠጦች', 'ምን አይነት መጠጥ', 'ምን አይነት መጠጦች', 'መጠጥ አላችሁ', 'መጠጥ አለ', 'የመጠጥ ሜኑ'}
+
+    _is_food_only = (
+        not category
+        and intent in ('menu_list', 'availability', 'unknown', 'unknown_item')
+        and (
+            any(w in low_query.split() for w in _food_words)
+            or any(w in query for w in _food_am)
+        )
+    )
+    _is_drink_only = (
+        not category
+        and intent in ('menu_list', 'availability', 'unknown', 'unknown_item')
+        and (
+            any(w in low_query.split() for w in _drink_words)
+            or any(w in query for w in _drink_am)
+        )
+    )
+
+    if _is_food_only:
+        intent = 'menu_list'
+        answer, payload, meta = responder.build_food_only_answer(query)
+        if items:
+            session.last_items = [i.id for i in items]
+        session.remember(query, intent, items)
+        return _finalize(query, answer, intent, payload, [], meta, language, session)
+
+    if _is_drink_only:
+        intent = 'menu_list'
+        answer, payload, meta = responder.build_drink_only_answer(query)
+        if items:
+            session.last_items = [i.id for i in items]
+        session.remember(query, intent, items)
+        return _finalize(query, answer, intent, payload, [], meta, language, session)
 
     # Menu / venue answers
     answer, payload, meta = responder.build_venue_answer(intent, query, category, items)

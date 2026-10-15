@@ -13,7 +13,7 @@ export default function ResetPasswordPage() {
 
 function Shell({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#131313] text-[#e5e2e1] flex items-center justify-center px-5 py-12">
+    <div className="min-h-screen bg-surface text-[var(--text)] flex items-center justify-center px-5 py-12">
       <div className="w-full max-w-md space-y-5">
         <h1 className="font-display text-3xl">Reset your password</h1>
         {children}

@@ -25,9 +25,9 @@ interface AuthModalProps {
 const SHOW_DEMO_ACCOUNTS = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === 'true';
 
 const DEMO_ACCOUNTS = [
-  { label: 'Administrator', role: 'Admin', email: 'admin@gmail.com', password: 'AdminPassword123!' },
-  { label: 'Manager / Staff', role: 'Manager', email: 'manager@gmail.com', password: 'ManagerPassword123!' },
-  { label: 'Customer', role: 'Customer', email: 'customer@gmail.com', password: 'CustomerPassword123!' },
+  { label: 'Administrator', role: 'Admin', email: 'admin@gmail.com', password: 'password' },
+  { label: 'Manager / Staff', role: 'Manager', email: 'manager@gmail.com', password: 'password' },
+  { label: 'Customer', role: 'Customer', email: 'customer@gmail.com', password: 'password' },
 ];
 
 export default function AuthModal({
@@ -168,25 +168,25 @@ export default function AuthModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-fade-in overflow-y-auto">
       {/* Dynamic responsive card size for all devices */}
-      <div className="relative w-[95%] sm:w-full max-w-md my-auto bg-surface border border-[#514345] rounded-2xl shadow-2xl p-5 sm:p-7 text-[#e5e2e1] max-h-[90vh] overflow-y-auto">
+      <div className="relative w-[95%] sm:w-full max-w-md my-auto bg-surface border border-[var(--border)] rounded-2xl shadow-2xl p-5 sm:p-7 text-[var(--text)] max-h-[90vh] overflow-y-auto">
         {/* Ambient background glow */}
-        <div className="absolute -top-20 -right-20 w-36 h-36 bg-[#2b1b1e] rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-36 h-36 bg-[var(--accent-soft)]/50 rounded-full pointer-events-none" />
 
         {/* Header */}
-        <div className="flex items-center justify-between pb-3.5 border-b border-[#514345]">
+        <div className="flex items-center justify-between pb-3.5 border-b border-[var(--border)]">
           <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-[#f7b5be] text-2xl">
+            <span className="material-symbols-outlined text-[var(--accent)] text-2xl">
               {mode === 'LOGIN' ? 'login' : mode === 'REGISTER' ? 'person_add' : 'lock_reset'}
             </span>
-            <h3 className="font-display text-lg sm:text-xl font-bold text-[#f7b5be]">
+            <h3 className="font-display text-lg sm:text-xl font-bold text-[var(--accent)]">
               {mode === 'LOGIN' ? t('Welcome Back') : mode === 'REGISTER' ? t('Join Artisanal Reserve') : t('Reset Password')}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-[#9e8d8e] hover:text-[#f7b5be] bg-[#20201f] hover:bg-[#2c2b2a] transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--accent)] bg-[#20201f] hover:bg-[#2c2b2a] transition-colors"
           >
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
@@ -194,7 +194,7 @@ export default function AuthModal({
 
         {/* Prompt Message Banner (e.g. for Order Checkout requirement) */}
         {promptMessage && (
-          <div className="mt-3.5 p-3 rounded-lg bg-[#2b1b1e] border border-[#683941] text-[#f7b5be] text-xs flex items-center gap-2 font-medium">
+          <div className="mt-3.5 p-3 rounded-lg bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] text-xs flex items-center gap-2 font-medium">
             <span className="material-symbols-outlined text-base shrink-0">info</span>
             <span>{promptMessage}</span>
           </div>
@@ -220,7 +220,7 @@ export default function AuthModal({
           {mode === 'LOGIN' && (
             <>
               <div>
-                <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                   {t('Username or Email')}
                 </label>
                 <input
@@ -231,12 +231,12 @@ export default function AuthModal({
                   value={usernameOrEmail}
                   onChange={(e) => setUsernameOrEmail(e.target.value)}
                   placeholder={language === 'am' ? 'abebe@gmail.com ወይም አበበ' : 'abebe@gmail.com or Abebe'}
-                  className="w-full px-3.5 py-2.5 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be] transition-colors"
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be] transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                   {t('Password')}
                 </label>
                 <input
@@ -246,7 +246,7 @@ export default function AuthModal({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t('Enter your password')}
-                  className="w-full px-3.5 py-2.5 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be] transition-colors"
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be] transition-colors"
                 />
               </div>
 
@@ -254,7 +254,7 @@ export default function AuthModal({
                 <button
                   type="button"
                   onClick={() => { setError(null); setSuccess(null); setMode('FORGOT_PASSWORD'); }}
-                  className="text-xs text-[#f7b5be] hover:underline"
+                  className="text-xs text-[var(--accent)] hover:underline"
                 >
                   {t('Forgot password?')}
                 </button>
@@ -262,8 +262,8 @@ export default function AuthModal({
 
               {/* Demo accounts - tap to fill, then Sign in. Development builds only. */}
               {SHOW_DEMO_ACCOUNTS && (
-              <div className="rounded-xl border border-[#514345] bg-surface/70 p-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[#9e8d8e] mb-2">
+              <div className="rounded-xl border border-[var(--border)] bg-surface/70 p-3">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-2">
                   {t('Demo accounts — tap to fill')}
                 </p>
                 <div className="grid gap-1.5">
@@ -276,13 +276,13 @@ export default function AuthModal({
                         setPassword(acct.password);
                         setError(null);
                       }}
-                      className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-[#1c1b1b] border border-[#514345]/70 hover:border-[#f7b5be] transition-colors text-left"
+                      className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-surface-2 border border-[var(--border)]/70 hover:border-[#f7b5be] transition-colors text-left"
                     >
                       <span className="min-w-0">
-                        <span className="block text-[12.5px] text-[#e5e2e1] truncate">{t(acct.label)}</span>
-                        <span className="block text-[11px] text-[#9e8d8e] truncate">{acct.email} · {acct.password}</span>
+                        <span className="block text-[12.5px] text-[var(--text)] truncate">{t(acct.label)}</span>
+                        <span className="block text-[11px] text-[var(--muted)] truncate">{acct.email} · {acct.password}</span>
                       </span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#f7b5be] shrink-0">{t(acct.role)}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)] shrink-0">{t(acct.role)}</span>
                     </button>
                   ))}
                 </div>
@@ -295,7 +295,7 @@ export default function AuthModal({
             <>
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                     {t('First Name')}
                   </label>
                   <input
@@ -305,11 +305,11 @@ export default function AuthModal({
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder={language === 'am' ? 'ለምሳሌ አበበ' : 'e.g. Abebe'}
-                    className="w-full px-3 py-2 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+                    className="w-full px-3 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                     {t('Last Name')}
                   </label>
                   <input
@@ -319,13 +319,13 @@ export default function AuthModal({
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder={language === 'am' ? 'ለምሳሌ ብክል' : 'e.g. Bikila'}
-                    className="w-full px-3 py-2 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+                    className="w-full px-3 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                   {t('Username')}
                 </label>
 <input
@@ -336,12 +336,12 @@ export default function AuthModal({
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder={language === 'am' ? 'ልዩ የተጠቃሚ ስም ይምረጡ' : 'Choose a unique username'}
-                  className="w-full px-3.5 py-2 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+                  className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                   {t('Email Address')}
                 </label>
                 <input
@@ -352,19 +352,19 @@ export default function AuthModal({
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="abebe@gmail.com"
                   autoComplete="email"
-                  className="w-full px-3.5 py-2 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+                  className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
                 />
-                <p className="text-[10.5px] text-[#9e8d8e] mt-1 leading-relaxed">
+                <p className="text-[10.5px] text-[var(--muted)] mt-1 leading-relaxed">
                   {t('Use an email you can open — your receipt and payment confirmation are sent there.')}
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                   {t('Phone Number')}
                 </label>
-                <div className="flex items-center rounded-lg bg-[#1c1b1b] border border-[#514345] focus-within:border-tertiary overflow-hidden">
-                  <span className="px-3 py-2 bg-[#20201f] border-r border-[#514345] text-[#f7b5be] font-bold text-xs shrink-0 select-none flex items-center gap-1">
+                <div className="flex items-center rounded-lg bg-surface-2 border border-[var(--border)] focus-within:border-tertiary overflow-hidden">
+                  <span className="px-3 py-2 bg-[#20201f] border-r border-[var(--border)] text-[var(--accent)] font-bold text-xs shrink-0 select-none flex items-center gap-1">
                     🇪🇹 +251
                   </span>
                   <input
@@ -372,13 +372,13 @@ export default function AuthModal({
                     value={rawPhone.replace(/^\+251/, '')}
                     onChange={(e) => setRawPhone(e.target.value)}
                     placeholder="911223344 or 711223344"
-                    className="w-full px-3 py-2 bg-transparent text-[#e5e2e1] text-sm focus:outline-none"
+                    className="w-full px-3 py-2 bg-transparent text-[var(--text)] text-sm focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                   {t('Password')}
                 </label>
                 <input
@@ -389,7 +389,7 @@ export default function AuthModal({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t('Enter your password')}
-                  className="w-full px-3.5 py-2 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+                  className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
                 />
               </div>
             </>
@@ -397,7 +397,7 @@ export default function AuthModal({
 
           {mode === 'FORGOT_PASSWORD' && (
             <div>
-              <label className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                 {t('Registered Email Address')}
               </label>
               <input
@@ -408,7 +408,7 @@ export default function AuthModal({
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
                 placeholder={t('Enter your account email')}
-                className="w-full px-3.5 py-2.5 rounded-lg bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] text-sm focus:outline-none focus:border-[#f7b5be]"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
               />
             </div>
           )}
@@ -433,14 +433,14 @@ export default function AuthModal({
         </form>
 
         {/* Mode Footer Switch */}
-        <div className="mt-5 pt-3.5 border-t border-[#514345] text-center text-xs text-[#9e8d8e]">
+        <div className="mt-5 pt-3.5 border-t border-[var(--border)] text-center text-xs text-[var(--muted)]">
           {mode === 'LOGIN' ? (
             <p>
               {t("Don't have an account? Sign Up")}{' '}
               <button
                 type="button"
                 onClick={() => { setError(null); setSuccess(null); setMode('REGISTER'); }}
-                className="text-[#f7b5be] font-semibold hover:underline ml-1"
+                className="text-[var(--accent)] font-semibold hover:underline ml-1"
               >
                 {t('Sign Up')}
               </button>
@@ -451,7 +451,7 @@ export default function AuthModal({
               <button
                 type="button"
                 onClick={() => { setError(null); setSuccess(null); setMode('LOGIN'); }}
-                className="text-[#f7b5be] font-semibold hover:underline ml-1"
+                className="text-[var(--accent)] font-semibold hover:underline ml-1"
               >
                 {t('Sign In')}
               </button>

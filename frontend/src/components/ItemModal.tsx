@@ -109,8 +109,8 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-md bg-surface border border-[#514345] rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 animate-fade-in">
+      <div className="relative w-full max-w-md bg-surface border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
         {/* Header image */}
         <div className="h-44 w-full relative shrink-0">
           <img
@@ -127,21 +127,21 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
           </button>
           <div className="absolute bottom-3 left-5 right-5">
             <h3 className="font-display text-2xl font-bold text-white">{tItem(item.name)}</h3>
-            <p className="text-[#f7b5be] font-semibold text-sm mt-0.5">{etb(basePrice, birr)}</p>
+            <p className="text-[var(--accent)] font-semibold text-sm mt-0.5">{etb(basePrice, birr)}</p>
           </div>
         </div>
 
         {/* Step 1 - options */}
         <div className="px-5 py-4 space-y-5 overflow-y-auto flex-1">
-          <p className="text-[11px] uppercase tracking-wider text-[#9e8d8e] font-bold">
+          <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold">
             {t('Step 1 · Choose your options')}
           </p>
 
           {/* Variant / size */}
           {variants.length > 0 && (
             <div>
-              <label className="block text-xs font-semibold text-[#d5c2c3] uppercase tracking-wider mb-2">
-                {t('Size / Option')} <span className="text-[#f7b5be]">*</span>
+              <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-2">
+                {t('Size / Option')} <span className="text-[var(--accent)]">*</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {variants.map(v => {
@@ -154,8 +154,8 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
                       onClick={() => setVariant(selected ? null : v)}
                       className={`px-3 py-2.5 rounded-xl border text-left transition-all ${
                         selected
-                          ? 'bg-[#3b141c] border-[#f7b5be] text-[#f7b5be]'
-                          : 'bg-[#1c1b1b] border-[#514345] text-[#e5e2e1] hover:border-[#f7b5be]/60'
+                          ? 'bg-[var(--accent-soft)] border-[#f7b5be] text-[var(--accent)]'
+                          : 'bg-surface-2 border-[var(--border)] text-[var(--text)] hover:border-[#f7b5be]/60'
                       }`}
                     >
                       <span className="block text-sm font-semibold">{tItem(v.name)}</span>
@@ -172,7 +172,7 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
           {/* Add-ons */}
           {addOnOptions.length > 0 && (
             <div>
-              <label className="block text-xs font-semibold text-[#d5c2c3] uppercase tracking-wider mb-2">
+              <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-2">
                 {t('Add-ons')}
               </label>
               <div className="space-y-2">
@@ -185,21 +185,21 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
                       onClick={() => toggleAddOn(option)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${
                         selected
-                          ? 'bg-[#3b141c] border-[#f7b5be]'
-                          : 'bg-[#1c1b1b] border-[#514345] hover:border-[#f7b5be]/60'
+                          ? 'bg-[var(--accent-soft)] border-[#f7b5be]'
+                          : 'bg-surface-2 border-[var(--border)] hover:border-[#f7b5be]/60'
                       }`}
                     >
-                      <span className="flex items-center gap-2 text-sm text-[#e5e2e1]">
+                      <span className="flex items-center gap-2 text-sm text-[var(--text)]">
                         <span
                           className={`w-4 h-4 rounded border flex items-center justify-center ${
-                            selected ? 'bg-[#f7b5be] border-[#f7b5be]' : 'border-[#514345]'
+                            selected ? 'bg-[#f7b5be] border-[#f7b5be]' : 'border-[var(--border)]'
                           }`}
                         >
                           {selected && <i className="ph ph-check text-[10px] text-[#4e232b]"></i>}
                         </span>
                         {tItem(option.name)}
                       </span>
-                      <span className="text-[11px] text-[#f7b5be] font-semibold">
+                      <span className="text-[11px] text-[var(--accent)] font-semibold">
                         + {etb(Number(option.price_etb || 0), birr)}
                       </span>
                     </button>
@@ -213,7 +213,7 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
           {isBeverage && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#d5c2c3] uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-2">
                   {t('Temperature')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -225,7 +225,7 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
                       className={`py-2 rounded-lg text-sm font-semibold transition-colors border ${
                         temperature === temp
                           ? 'bg-[#f7b5be] text-[#1b1212] border-tertiary'
-                          : 'bg-[#1c1b1b] border-[#514345] text-[#e5e2e1]'
+                          : 'bg-surface-2 border-[var(--border)] text-[var(--text)]'
                       }`}
                     >
                       {t(temp)}
@@ -234,13 +234,13 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#d5c2c3] uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-2">
                   {t('Milk')}
                 </label>
                 <select
                   value={milk}
                   onChange={e => setMilk(e.target.value)}
-                  className="w-full bg-[#1c1b1b] border border-[#514345] rounded-lg px-3 py-2 text-sm text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]"
+                  className="w-full bg-surface-2 border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[#f7b5be]"
                 >
                   {['None', 'Whole', 'Oat', 'Soy', 'Almond'].map(m => (
                     <option key={m} value={m}>{t(m)}</option>
@@ -252,11 +252,11 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
 
           {/* Step 2 - quantity */}
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-[#9e8d8e] font-bold mb-2">
+            <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-2">
               {t('Step 2 · How many?')}
             </p>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-[#1c1b1b] border border-[#514345] rounded-xl px-2 py-1.5">
+              <div className="flex items-center gap-2 bg-surface-2 border border-[var(--border)] rounded-xl px-2 py-1.5">
                 <button
                   type="button"
                   onClick={() => applyQuantity(quantity - 1)}
@@ -286,34 +286,34 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
                   +
                 </button>
               </div>
-              <span className="text-[13px] text-[#d5c2c3]">
+              <span className="text-[13px] text-[var(--muted)]">
                 {etb(unitPrice, birr)} {t('each')}
-                {quantity > 1 && <span className="text-[#f7b5be] font-bold"> × {quantity} = {etb(lineTotal, birr)}</span>}
+                {quantity > 1 && <span className="text-[var(--accent)] font-bold"> × {quantity} = {etb(lineTotal, birr)}</span>}
               </span>
             </div>
           </div>
 
           {item.description && (
-            <p className="text-[13px] text-[#9e8d8e] leading-relaxed border-t border-[#514345] pt-3">
+            <p className="text-[13px] text-[var(--muted)] leading-relaxed border-t border-[var(--border)] pt-3">
               {item.description}
             </p>
           )}
         </div>
 
         {/* Step 3 - confirm */}
-        <div className="px-5 py-4 border-t border-[#514345] bg-[#1c1b1b] shrink-0">
-          <p className="text-[11px] uppercase tracking-wider text-[#9e8d8e] font-bold mb-2">
+        <div className="px-5 py-4 border-t border-[var(--border)] bg-surface-2 shrink-0">
+          <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-2">
             {t('Step 3 · Review & add')}
           </p>
           <div className="flex items-center justify-between text-sm mb-3">
-            <span className="text-[#d5c2c3]">
+            <span className="text-[var(--muted)]">
               {quantity} × {tItem(item.name)}
-              {variant && <span className="text-[#f7b5be]"> ({tItem(variant.name)})</span>}
+              {variant && <span className="text-[var(--accent)]"> ({tItem(variant.name)})</span>}
               {addOns.length > 0 && (
-                <span className="text-[#d5c2c3]"> + {addOns.map(a => tItem(a.name)).join(', ')}</span>
+                <span className="text-[var(--muted)]"> + {addOns.map(a => tItem(a.name)).join(', ')}</span>
               )}
             </span>
-            <span className="font-bold text-[#f7b5be]">{etb(lineTotal, birr)}</span>
+            <span className="font-bold text-[var(--accent)]">{etb(lineTotal, birr)}</span>
           </div>
           <button
             type="button"
@@ -324,7 +324,7 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
             <span>•</span>
             <span>{etb(lineTotal, birr)}</span>
           </button>
-          <p className="text-[10.5px] text-[#9e8d8e] text-center mt-2">
+          <p className="text-[10.5px] text-[var(--muted)] text-center mt-2">
             {t('Payment comes after this · you will choose Chapa or Cash on Delivery next')}
           </p>
         </div>

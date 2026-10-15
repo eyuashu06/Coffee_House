@@ -28,13 +28,13 @@ class AssistantTestBase(TestCase):
 
     # (item name, category slug, category name, price, description)
     FIXTURES = [
-        ('Yirgacheffe Grade 1', 'micro-lot-coffee', 'Micro-Lot Coffee', 350,
+        ('Yirgacheffe Grade 1', 'micro-lot-coffee', 'Micro-Lot Coffee', 85,
          'Jasmine, peach and black tea notes.'),
-        ('Smoked Cardamom Cappuccino', 'espresso-infusions', 'Espresso & Infusions', 280,
+        ('Smoked Cardamom Cappuccino', 'espresso-infusions', 'Espresso & Infusions', 70,
          'Espresso with steamed milk and cardamom.'),
-        ('Masala Chai Latte', 'premium-tea', 'Premium Tea', 200,
+        ('Masala Chai Latte', 'premium-tea', 'Premium Tea', 55,
          'Assam black tea simmered with whole spices and steamed milk.'),
-        ('Moroccan Mint Green Tea', 'premium-tea', 'Premium Tea', 160,
+        ('Moroccan Mint Green Tea', 'premium-tea', 'Premium Tea', 40,
          'Fresh mint leaves steeped in green tea.'),
         ('Margherita Classica', 'wood-fired-pizza', 'Wood-Fired Pizza', 580,
          'Tomato, mozzarella and basil.'),
@@ -92,7 +92,7 @@ class MenuRetrievalTests(AssistantTestBase):
     def test_price_is_from_database(self):
         item = MenuItem.objects.filter(name__icontains='Chai').first()
         r = self.ask(f'How much is {item.name}?')
-        self.assertIn('200', r['answer_en'].replace('.00', ''))
+        self.assertIn('55', r['answer_en'].replace('.00', ''))
         self.assertEqual(r['intent'], 'price')
 
     def test_ingredients_answer(self):
@@ -112,6 +112,13 @@ class MenuRetrievalTests(AssistantTestBase):
         self.assertTrue(r['answer_en'])
         self.assertNotIn("don't have that information", r['answer_en'].lower())
 
+    def test_drinks_category_amharic(self):
+        r = self.ask('ምን አይነት መጠጥ አላችሁ?')
+        self.assertTrue(r['items'], 'expected drinks items in response')
+        self.assertEqual(r['intent'], 'menu_list')
+        self.assertNotIn("don't have that information", r['answer_en'].lower())
+        self.assertNotIn("የለኝም", r['answer_am'])
+
 
 class AmharicAndMixedTests(AssistantTestBase):
     def test_amharic_price_question(self):
@@ -124,7 +131,7 @@ class AmharicAndMixedTests(AssistantTestBase):
         r = self.ask('Cappuccino ዋጋው ስንት ነው?')
         self.assertTrue(r['answer_en'])
         self.assertTrue(r['answer_am'])
-        self.assertIn('280', r['answer_en'])
+        self.assertIn('70', r['answer_en'])
 
     def test_mixed_language_reservation(self):
         r = self.ask('Tomorrow ለ4 ሰው reservation እፈልጋለሁ')
@@ -222,7 +229,7 @@ class SignInGateTests(AssistantTestBase):
         # No stranded preposition or duplicated article from template assembly.
         for broken in ('I can a table', 'I can your ', 'I can to '):
             self.assertNotIn(broken, en)
-        self.assertIn('ቦታ ለመያየት', r['answer_am'])
+        self.assertIn('የጠረጴዛ ቦታ ለማስያዝ', r['answer_am'])
 
     def test_the_button_reason_is_a_phrase_not_a_sentence(self):
         r = self.ask('cancel my order', session_id='g2c')
@@ -470,12 +477,12 @@ class AgentLoopTests(AssistantTestBase):
         result, client = self.run_with_script([
             _FakeResponse(function_calls=[
                 _FakeFunctionCall('search_menu', {'query': 'masala chai latte'})]),
-            _FakeResponse(text='{"en": "The Masala Chai Latte is 200 ETB.", '
-                               '"am": "የMasala Chai Latte ዋጋው 200 ብር ነው።"}'),
+            _FakeResponse(text='{"en": "The Masala Chai Latte is 55 ETB.", '
+                               '"am": "የMasala Chai Latte ዋጋው 55 ብር ነው።"}'),
         ], 'How much is the Masala Chai Latte?')
 
         self.assertIsNotNone(result)
-        self.assertIn('200', result['answer_en'])
+        self.assertIn('55', result['answer_en'])
         # The menu really was queried, and the private tools were not on the table.
         self.assertEqual(len(client.models.calls), 2)
         declarations = client.models.calls[0].config['tools'][0]['function_declarations']
@@ -668,7 +675,7 @@ class OrderingTests(AssistantTestBase):
 
         user = self.order_user()
         r = self.ask('I want to order Masala Chai Latte', session_id='o1', user=user)
-        self.assertIn('200', r['answer_en'].replace('.00', ''))
+        self.assertIn('55', r['answer_en'].replace('.00', ''))
         self.assertEqual(Order.objects.count(), 0)
 
     def test_quantity_is_read(self):
@@ -705,8 +712,8 @@ class OrderingTests(AssistantTestBase):
         self.assertIsNone(problem)
         staged = StagedOrder()
         summary, status = staged.add_item(item, quantity=1)
-        self.assertEqual(float(summary['lines'][0]['unit_price_etb']), 200.0)
-        self.assertEqual(float(summary['total_etb']), 200.0)
+        self.assertEqual(float(summary['lines'][0]['unit_price_etb']), 55.0)
+        self.assertEqual(float(summary['total_etb']), 55.0)
 
     def test_sold_out_item_cannot_be_added(self):
         item = MenuItem.objects.get(name='Croissant au Beurre')
@@ -727,6 +734,83 @@ class OrderingTests(AssistantTestBase):
                      user=self.order_user())
         self.assertTrue(r['answer_en'])
         self.assertTrue(r['answer_am'])
+
+
+class IndirectOrderTests(AssistantTestBase):
+    """
+    An order phrased indirectly ("i wanna cheese burger for me and my friend")
+    must be read as an order: match the real item, or explain what we do sell
+    and offer the cafe's choices instead of a dead end.
+    """
+
+    def test_wanna_cheeseburger_for_a_friend_is_an_order(self):
+        r = self.ask('i wanna cheese burger for me and my friend', session_id='i1')
+        self.assertEqual(r['intent'], 'order_create')
+        self.assertEqual(r['action']['action'], 'collect_order_details')
+        self.assertIn('Added to your order', r['answer_en'])
+        self.assertNotIn("don't have that information", r['answer_en'].lower())
+
+    def test_compound_word_picks_the_cheeseburger(self):
+        """'cheese burger' must pick the Cheeseburger, not every burger mentioning cheese."""
+        burger, _ = Category.objects.get_or_create(
+            slug='artisanal-burgers', defaults={'name': 'Artisanal Burgers', 'icon': 'lunch_dining'})
+        MenuItem.objects.get_or_create(
+            slug='classic-cheeseburger',
+            defaults={'name': 'Classic Cheeseburger', 'category': burger, 'base_price_etb': 450,
+                      'description': 'Beef patty with cheddar.', 'is_available': True})
+        r = self.ask('i wanna cheese burger for me and my friend', session_id='i2')
+        self.assertIn('Classic Cheeseburger', r['answer_en'])
+        self.assertNotIn('Wagyu', r['answer_en'])
+        self.assertEqual(r['answer_en'].count('•'), 1)
+
+    def test_burger_with_no_qualifier_lets_them_choose(self):
+        """A bare 'burger' matches several items; the customer picks one."""
+        burger, _ = Category.objects.get_or_create(
+            slug='artisanal-burgers', defaults={'name': 'Artisanal Burgers', 'icon': 'lunch_dining'})
+        MenuItem.objects.get_or_create(
+            slug='classic-burger',
+            defaults={'name': 'Classic Burger', 'category': burger, 'base_price_etb': 400,
+                      'description': 'Flame-grilled beef patty.', 'is_available': True})
+        r = self.ask('i wanna a burger for me and my friend', session_id='i3')
+        self.assertEqual(r['intent'], 'order_create')
+        self.assertIn('Which one would you like?', r['answer_en'])
+        self.assertGreaterEqual(len(r['items']), 2)
+        self.assertNotIn('Added to your order', r['answer_en'])
+
+    def test_absent_product_explains_and_offers_the_cafe_choices(self):
+        r = self.ask('i wanna sushi for me and my friend', session_id='i4')
+        self.assertEqual(r['intent'], 'order_create')
+        low = r['answer_en'].lower()
+        self.assertIn('sushi', low)
+        self.assertIn('do not have', low)
+        self.assertTrue(r['items'], 'closest real menu items must be suggested')
+        self.assertIn('delivery', low)
+        self.assertTrue('reservation' in low or 'book a table' in low)
+        self.assertEqual(r['action']['action'], 'collect_order_details')
+
+    def test_order_still_completes_after_the_indirect_opening(self):
+        """Choosing an item by name after the chooser must add it and place cleanly."""
+        user = self.customer('indirect')
+        self.ask('i wanna cheese burger for me and my friend', session_id='i5', user=user)
+        r = self.ask('yes, place it for pickup', session_id='i5', user=user)
+        self.assertEqual(r['action']['action'], 'order_placed')
+
+    def test_amharic_want_coffee_lists_the_coffee(self):
+        r = self.ask('ቡና እፈልጋለሁ', session_id='i6')
+        self.assertEqual(r['intent'], 'order_create')
+        self.assertIn('Micro-Lot Coffee', r['answer_en'])
+        self.assertIn('delivery', r['answer_en'].lower())
+
+    def test_delivery_address_with_a_house_number_continues_the_order(self):
+        """'delivery to Bole Road, house 12' is the next step, not a dead end."""
+        from apps.assistant.engine import get_session
+
+        user = self.customer('address-flow')
+        self.ask('i wanna cheese burger for me and my friend', session_id='i7', user=user)
+        r = self.ask('delivery to Bole Road, house 12', session_id='i7', user=user)
+        self.assertEqual(r['intent'], 'order_create')
+        self.assertNotIn("don't have that information", r['answer_en'].lower())
+        self.assertIn('Bole Road', get_session('i7').staged_order.address)
 
 
 class ReservationTests(AssistantTestBase):
@@ -855,10 +939,60 @@ class VenueInfoTests(AssistantTestBase):
         self.assertIn(venue.contact_phone, r['answer_en'])
 
     def test_about_explains_system_without_tech_jargon(self):
-        r = self.ask('What is this system?')
-        low = r['answer_en'].lower()
-        for jargon in ['rag', 'embedding', 'vector', 'llm', 'api']:
-            self.assertNotIn(jargon, low)
+        for query in ['What is Buna Hub?', 'What is Coffee House?', 'What is this system?', 'About Buna Hub']:
+            with self.subTest(query=query):
+                r = self.ask(query)
+                self.assertEqual(r['intent'], 'about')
+                low = r['answer_en'].lower()
+                for jargon in ['rag', 'embedding', 'vector', 'llm', 'api']:
+                    self.assertNotIn(jargon, low)
+                self.assertIn('Buna Hub (Coffee House)', r['answer_en'])
+                self.assertIn('ቡና ሁብ (Coffee House)', r['answer_am'])
+
+    def test_about_amharic_system_query(self):
+        """Verifies 'ቡና ሁብ ምንድነው?', 'ይህ ስርዓት ምንነው?' and variants resolve to about with identical answers."""
+        variants = [
+            'ቡና ሁብ ምንድነው?',
+            'ቡና ሁብ ምንነው?',
+            'ቡና ሁብ ምን ነው?',
+            'ስለ ቡና ሁብ',
+            'ይህ ስርዓት ምንነው?',
+            'ይህ ስርዓት ምን ነው?',
+            'ይህ ስርዓት ምንድን ነው?',
+            'ስርዓቱ ምንድነው?',
+            'ይህ ሲስተም ምን ነው?',
+            'ስለዚህ ስርዓት',
+            'ስለ Coffee House',
+        ]
+        for query in variants:
+            with self.subTest(query=query):
+                r = self.ask(query)
+                self.assertEqual(r['intent'], 'about', f"Query '{query}' resolved to {r['intent']} instead of about")
+                self.assertIn('Buna Hub (Coffee House)', r['answer_en'])
+                self.assertIn('ቡና ሁብ (Coffee House)', r['answer_am'])
+                # Must never return the fallback "I don't have that information"
+                self.assertNotIn('ይህ መረጃ በCoffee House ስርዓት ውስጥ የለኝም', r['answer_am'])
+
+    def test_about_identical_details_in_both_languages(self):
+        """Ensures English and Amharic answers convey the exact same capabilities."""
+        for query in ['What is Buna Hub?', 'ቡና ሁብ ምንድነው?', 'ይህ ስርዓት ምንነው?']:
+            with self.subTest(query=query):
+                r = self.ask(query)
+                # English details
+                self.assertIn('Buna Hub (Coffee House)', r['answer_en'])
+                self.assertIn('explore our menu', r['answer_en'])
+                self.assertIn('check prices and availability', r['answer_en'])
+                self.assertIn('table reservations', r['answer_en'])
+                self.assertIn('English or Amharic', r['answer_en'])
+                self.assertIn('single-origin', r['answer_en'])
+                self.assertIn('jebena', r['answer_en'])
+                # Matching Amharic details
+                self.assertIn('ቡና ሁብ (Coffee House)', r['answer_am'])
+                self.assertIn('ሜኑአችንን ለማሰስ', r['answer_am'])
+                self.assertIn('ዋጋዎችንና መገኘታቸውን', r['answer_am'])
+                self.assertIn('የጠረጴዛ ቦታዎችን', r['answer_am'])
+                self.assertIn('በእንግሊዝኛ ወይም በአማርኛ', r['answer_am'])
+                self.assertIn('የባህል ጀበና ቡናን', r['answer_am'])
 
 
 class MemoryTests(AssistantTestBase):
@@ -953,6 +1087,34 @@ class ApiSafetyTests(AssistantTestBase):
         blob = str(response.data)
         self.assertNotIn('@gmail.com', blob)
         self.assertNotIn('password', blob.lower())
+
+    def test_a_failure_inside_the_engine_is_answered_not_raised(self):
+        """
+        The endpoint promises a friendly bilingual reply for any failure.
+
+        It caught this with two identical `except Exception` blocks stacked on top of
+        each other, the second of which could never run - so the safety net was one
+        edit away from being one branch wide. This proves the remaining branch is the
+        one doing the work: anything the engine raises becomes the generic reply,
+        with the exception text nowhere in the body.
+        """
+        from unittest import mock
+
+        from django.db import DatabaseError
+
+        for boom in (RuntimeError('provider exploded'), DatabaseError('no such table')):
+            with mock.patch('apps.assistant.views.answer_query', side_effect=boom):
+                request = self.factory.post(
+                    '/api/v1/assistant/message/', {'query': 'what coffee do you have?'},
+                    content_type='application/json')
+                response = AssistantMessageView.as_view()(request)
+
+            self.assertEqual(response.status_code, 200, boom)
+            self.assertTrue(response.data['answer_en'], boom)
+            self.assertTrue(response.data['answer_am'], boom)
+            blob = str(response.data).lower()
+            for leak in ('traceback', 'provider exploded', 'no such table', 'exception'):
+                self.assertNotIn(leak, blob, boom)
 
 class RegressionTests(AssistantTestBase):
     """

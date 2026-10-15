@@ -7,7 +7,12 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from api.models import Order as LegacyOrder, TableReservation
+from api.models import (
+    Category as LegacyCategory,
+    CoffeeItem as LegacyCoffeeItem,
+    Order as LegacyOrder,
+    TableReservation,
+)
 from apps.assistant import reservations as reservation_rules
 
 User = get_user_model()
@@ -194,3 +199,93 @@ class LegacyOrderLeakTests(TestCase):
         res = self.client.get('/api/v1/legacy-orders/')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data['results']), 1)
+
+class LegacyEndpointWritePermissionsTests(TestCase):
+    """
+    The legacy tables are seeded, not edited by customers.
+
+    `CoffeeItemViewSet` and `OrderViewSet` are bare `ModelViewSet`s with no
+    `permission_classes`, so they fell through to the project default
+    `IsAuthenticatedOrReadOnly` - a rule written for the live endpoints, where every
+    view overrides it per action. Anything signed in could therefore create rows in
+    `api.CoffeeItem` and `api.Order`, and this app resolves no prices server-side, so
+    the amount was whatever the browser sent. `apps.orders` recomputes every price;
+    `apps.menu` already scopes its writes to managers. The legacy surface did not,
+    and nothing needs it to.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.customer = User.objects.create_user(
+            username='legacycustomer', email='legacycustomer@coffeereceipts.com',
+            phone='+251911000060', password='Password123!', role='CUSTOMER')
+        self.manager = User.objects.create_user(
+            username='legacymanager', email='legacymanager@coffeereceipts.com',
+            phone='+251911000061', password='Password123!', role='MANAGER')
+
+    def test_a_customer_cannot_create_a_legacy_coffee(self):
+        category = LegacyCategory.objects.create(name='Free', slug='free')
+        self.client.force_authenticate(self.customer)
+        res = self.client.post('/api/v1/coffees/', {
+            'name': 'Injected', 'category': category.id, 'price': '1.00',
+            'description': 'x', 'image_url': 'https://example.org/x.png',
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(LegacyCoffeeItem.objects.filter(name='Injected').exists())
+
+    def test_a_customer_cannot_create_a_legacy_order(self):
+        self.client.force_authenticate(self.customer)
+        res = self.client.post('/api/v1/legacy-orders/', {
+            'customer_name': 'Someone Else', 'customer_email': 'victim@example.org',
+            'total_amount': '9999.00',
+            'items': [{'quantity': 1, 'unit_price': '9999.00'}],
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(LegacyOrder.objects.filter(customer_name='Someone Else').exists())
+
+    def test_a_customer_cannot_delete_a_legacy_coffee(self):
+        coffee = LegacyCoffeeItem.objects.create(
+            name='Protected', category=LegacyCategory.objects.create(
+                name='Beans', slug='beans'),
+            price='10.00', description='x', image_url='https://example.org/x.png')
+
+        self.client.force_authenticate(self.customer)
+        res = self.client.delete(f'/api/v1/coffees/{coffee.id}/')
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(LegacyCoffeeItem.objects.filter(pk=coffee.pk).exists())
+
+    def test_a_manager_can_still_write(self):
+        category = LegacyCategory.objects.create(name='Beans', slug='beans')
+        self.client.force_authenticate(self.manager)
+        res = self.client.post('/api/v1/coffees/', {
+            'name': 'Staff Blend', 'category': category.id, 'price': '85.00',
+            'description': 'Added by staff', 'image_url': 'https://example.org/x.png',
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(LegacyCoffeeItem.objects.filter(name='Staff Blend').exists())
+
+    def test_reading_the_legacy_menu_is_still_public(self):
+        LegacyCoffeeItem.objects.create(
+            name='Public', category=LegacyCategory.objects.create(
+                name='Beans', slug='beans2'),
+            price='10.00', description='x', image_url='https://example.org/x.png')
+
+        res = self.client.get('/api/v1/coffees/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data['results'])
+
+    def test_reading_someone_elses_legacy_orders_is_still_refused(self):
+        other = User.objects.create_user(
+            username='legacyother', email='legacyother@coffeereceipts.com',
+            password='Password123!')
+        LegacyOrder.objects.create(user=other, customer_name='Other', total_amount=50)
+
+        self.client.force_authenticate(self.customer)
+        res = self.client.get('/api/v1/legacy-orders/')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['count'], 0)

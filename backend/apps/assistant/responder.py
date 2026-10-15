@@ -112,11 +112,17 @@ def _thanks():
 
 
 def _about():
-    en = ("This is the Coffee House assistant. It helps you explore our menu, look up food and "
-          "drink details, check prices and availability, and make or manage table reservations. "
-          "You can ask questions in English or Amharic.")
-    am = ("ይህ የCoffee House ረዳት ነው። ሜኑአችንን ለማየት፣ ስለ ምግብና መጠጦች መረጃ ለማግኘት፣ ዋጋና መገኘትን ለማረጋገጥ፣ "
-          "እንዲሁም ቦታ ለማስያዝና ለማስተዳደር ይረዳዎታል። በእንግሊዝኛ ወይም በአማርኛ መጠየቅ ይችላሉ።")
+    en = ("Buna Hub (Coffee House) is a specialty coffee house in Addis Ababa dedicated to "
+          "authentic Ethiopian coffee tradition and artisanal dining. We serve 100% single-origin "
+          "micro-lot coffees, traditional clay jebena brews, wood-fired pizzas, gourmet burgers, "
+          "fresh pastries, and premium teas. As your assistant, I can help you explore our menu, "
+          "check prices and availability, place orders, and make or manage table reservations. "
+          "You can ask me anytime in English or Amharic!")
+    am = ("ቡና ሁብ (Coffee House) በኢትዮጵያ ጥንታዊ የቡና ባህል እና በዘመናዊ የምግብና መጠጥ ጥበብ የተዋቀረ "
+          "በአዲስ አበባ የሚገኝ ልዩ የቡና መዳረሻ ነው። 100% የተመረጡ የሀገር ውስጥ የቆሎ ቡናዎችን፣ "
+          "የባህል ጀበና ቡናን፣ በከሰል ምጣድ የሚጋገሩ ፒዛዎችን፣ ልዩ በርገሮችን፣ ኬኮችን እና ፕሪሚየም ሻይዎችን እናቀርባለን። "
+          "እኔ ደግሞ ሜኑአችንን ለማሰስ፣ ዋጋዎችንና መገኘታቸውን ለማረጋገጥ፣ ለማዘዝ እንዲሁም የጠረጴዛ ቦታዎችን "
+          "ለማስያዝና ለማስተዳደር የምረዳዎት ረዳት ነኝ። በእንግሊዝኛ ወይም በአማርኛ በማንኛውም ሰዓት ሊጠይቁኝ ይችላሉ!")
     return bilingual(en, am), []
 
 
@@ -443,7 +449,7 @@ def handle_reservation_cancel(text, state, user=None):
 
 #: How the staged order reads in a reply, both languages.
 _ORDER_TYPE_EN = {'DELIVERY': 'delivery', 'PICKUP': 'store pickup', 'DINE_IN': 'dine-in'}
-_ORDER_TYPE_AM = {'DELIVERY': 'ማድረስ', 'PICKUP': 'በመደብር መረከብ', 'DINE_IN': 'በዛሪክ'}
+_ORDER_TYPE_AM = {'DELIVERY': 'ማድረስ', 'PICKUP': 'በመደብር መረከብ', 'DINE_IN': 'እዛው መመገብ'}
 
 
 def _order_lines_en(summary):
@@ -494,6 +500,132 @@ def _detect_order_type_and_address(text):
     return detect_order_type(text), extract_address(text)
 
 
+#: Words that talk about ordering rather than name a product. Quoted back in the
+#: reply, "i wanna cheese burger for me and my friend" must read "cheese burger",
+#: not the whole sentence.
+_ORDER_PHRASE_NOISE = {
+    'deliver', 'delivery', 'deliveries', 'pickup', 'takeaway', 'collect', 'collection',
+    'dine', 'dinein', 'table', 'restaurant', 'reservation', 'reserve', 'book', 'booking',
+    'one', 'two', 'three', 'some', 'extra', 'also', 'tonight', 'today', 'soon',
+    'እባክዎ', 'እባክልኝ', 'ለእኔ', 'አንድ', 'ሁለት', 'ሦስት',
+    'ማድረስ', 'መደብር', 'መረከብ', 'እዛው', 'መመገብ', 'ቦታ', 'ትዕዛዝ',
+}
+
+
+def _requested_product_phrase(text):
+    """The product words the customer used, for quoting back in the reply."""
+    from .retriever import STOPWORDS, tokenize
+
+    words = []
+    for token in tokenize(text):
+        if token in STOPWORDS or token in _ORDER_PHRASE_NOISE:
+            continue
+        if not token.isalpha():
+            continue
+        # English filler is short and already filtered above; Amharic product
+        # words can be two characters ("ቡና"), so only English gets a length floor.
+        if token.isascii() and len(token) < 3:
+            continue
+        words.append(token)
+    return ' '.join(words[:4])
+
+
+def _pick_named_items(text, items):
+    """
+    Narrow several matching menu items down to the ones the customer named.
+
+    "i wanna cheese burger" must add the cheeseburger, not every burger whose
+    description happens to mention cheese. A bare "a burger" names no product
+    beyond the category, so nothing is added and the customer chooses instead.
+
+    Returns (chosen, contested): `chosen` is the unique best match, `contested`
+    the equally good options to offer back.
+    """
+    from .retriever import CATEGORY_KEYWORD_WORDS, STOPWORDS, _plural_forms, tokenize
+
+    words = [t for t in tokenize(text)
+             if t.isalpha() and t not in STOPWORDS
+             and (not t.isascii() or len(t) >= 3)]
+    # A word that only names a category ("burger", "coffee") does not single an
+    # item out; anything else ("cheese", "masala") does.
+    meaningful = [w for w in words
+                  if not any(form in CATEGORY_KEYWORD_WORDS for form in _plural_forms(w))]
+
+    def hits(item):
+        name = item.name.lower()
+        return sum(1 for w in words if w in name)
+
+    if len(items) == 1 or not meaningful:
+        # One match is already the answer; only a category word was given, so
+        # every match is as good as the next and the customer picks.
+        return ([items[0]] if len(items) == 1 else []), ([] if len(items) == 1 else items[:4])
+
+    ranked = sorted(items, key=lambda i: (-hits(i), i.name))
+    best = hits(ranked[0])
+    if best <= 0:
+        return [], items[:4]
+    top = [i for i in ranked if hits(i) == best]
+    if len(top) == 1:
+        return top, []
+    return [], top
+
+
+def _order_opening_reply(text, contested=None):
+    """
+    The customer started an order; turn whatever they said into the next step.
+
+    An indirect request ("i wanna cheese burger for me and my friend") is read
+    as an order: say plainly when the product is not on the menu, show the
+    closest things we do sell, and give every way an order can be fulfilled -
+    or offer to book a table instead. The customer can then simply choose.
+    """
+    from .retriever import detect_intent, list_menu
+
+    phrase = _requested_product_phrase(text)
+    _, _, category = detect_intent(text)
+    suggestions = list_menu(category_slug=category, limit=4) if category else []
+
+    if contested:
+        quoted = f' "{phrase}"' if phrase else ''
+        en = [f"We have a few that match{quoted}. Which one would you like?"]
+        am = [f"በጥቂት ተመሳሳዮች አልቋል{quoted}. የትኛውን ይፈልጋሉ?"]
+        suggestions = contested
+    elif phrase and not category:
+        en = [f"I understand you would like to order {phrase}, but we do not have "
+              f"{phrase} on our menu."]
+        am = [f"{phrase} ለማዘዝ እንደሚፈልጉ ተረድቻለሁ፤ ግን {phrase} በሜኑአችን ውስጥ የለም።"]
+        if not suggestions:
+            suggestions = list_menu(limit=4)
+        if suggestions:
+            en.append("Here is what we do have that is closest:")
+            am.append("በጣም ተመሳሳይ የምንቀርባቸው፦")
+    elif category and suggestions:
+        category_name = suggestions[0].category.name
+        en = [f"Happy to take your order. These are our {category_name} items:"]
+        am = [f"ትዕዛዝዎን በደስታ እንቀበላለን። የ{category_name} ምርቶችአችን፦"]
+    else:
+        en = ["Happy to take your order. Which items from the menu would you like?"]
+        am = ["ትዕዛዝዎን በደስታ እንቀበላለን። ከሜኑ ምን አይነት ምርት ይፈልጋሉ?"]
+
+    payload = []
+    if suggestions:
+        cat_en, cat_am = _catalog(suggestions, limit=4)
+        en.append(cat_en)
+        am.append(cat_am)
+        payload = [_item_payload(i) for i in suggestions[:4]]
+        en.append("Would you like one of these? You can order for delivery, collect from "
+                  "the shop, or dine in - or if you would rather book a table, I can help "
+                  "with a reservation.")
+        am.append("አንዱን ይፈልጋሉ? ለማድረስ፣ ከመደብር መረከብ ወይም እዛው መመገብ በማዘዝ ይችላሉ - "
+                  "ወይም ጠረጴዛ ማስያዝ ከፈለጉ ልረዳዎት እችላለሁ።")
+    else:
+        en.append("Would that be delivery, store pickup, or dining in - or would you rather "
+                  "book a table?")
+        am.append("እንዲደርስዎ፣ ከመደብር መረከብ ወይስ እዛው መመገብ ይፈልጋሉ - ወይም ጠረጴዛ ማስያዝ ይፈልጋሉ?")
+
+    return bilingual('\n'.join(en), '\n'.join(am)), payload, {'action': 'collect_order_details'}
+
+
 def handle_order_intent(intent, text, staged, user=None):
     """
     Deterministic ordering: add items, read back the order, place it, or list
@@ -511,8 +643,8 @@ def handle_order_intent(intent, text, staged, user=None):
         if not orders:
             en = ("I could not find any orders on your account. "
                   "Once you order, it will show here with its status.")
-            am = ("በመለያዎ ላይ የተገኝ ትዕዛዝ አልካለም። "
-                  "ከዘዙ ትዕዛዝ አስያው በዚህ ከሁኔታው ጋር ይታያል።")
+            am = ("በመለያዎ ውስጥ የተገኘ ምንም ትዕዛዝ የለም። "
+                  "ትዕዛዝ ሲሰጡ የትዕዛዙ ሁኔታ እዚህ ጋር ይታያል።")
             return bilingual(en, am), [], {'action': 'none'}
 
         lines_en, lines_am = [], []
@@ -529,9 +661,9 @@ def handle_order_intent(intent, text, staged, user=None):
         en = ("I cannot cancel an order from here, and I would not want to guess. "
               "Please open My Orders in your account and cancel it there, or call the Coffee House "
               "and the team will do it for you.")
-        am = ("ከዚህ ትዕዛዝ መሰረዝ አይችልም፣ እንዲሁም ምንም እርማ መገምገም አልፈለግም። "
-              "እባክዎ 'የእኔ ትዕዛዞች' በመለያዎ ውስጥ ክፈተው ይሰረዙ፣ "
-              "ወይም ለCoffee House ይደውሉ እና ቡድኖቹ ያደርገዋል።")
+        am = ("ከዚህ ሆኜ ትዕዛዝ መሰረዝ አልችልም። "
+              "እባክዎን በመለያዎ ውስጥ 'የእኔ ትዕዛዞች' የሚለውን ገጽ ከፍተው ይሰርዙ፣ "
+              "ወይም ወደ Coffee House ደውለው ሰራተኞቻችን እንዲሰርዙልዎ ያድርጉ።")
         return bilingual(en, am), [], {'action': 'none'}
 
     # ── order_create ──────────────────────────────────────────────
@@ -545,15 +677,24 @@ def handle_order_intent(intent, text, staged, user=None):
     if not named:
         named = find_menu_items(_strip_fulfilment_words(text), limit=4)
 
-    # A bare "I want to order" with no product named yet: ask what they want
-    # rather than inventing a suggestion.
+    # Several items can match one message ("a burger" matches every burger). Only
+    # add them all when the customer clearly named more than one; otherwise keep
+    # the single item their own words pick out, or ask them to choose.
+    contested = []
+    if len(named) > 1:
+        named, contested = _pick_named_items(text, named)
+
+    if contested:
+        answer, payload, meta = _order_opening_reply(text, contested=contested)
+        return answer, [], {**meta, 'items': payload}
+
+    # A bare "I want to order", a product we do not stock, or a category too
+    # broad to pick from ("i want coffee"): move the order forward with the real
+    # options instead of dead-ending.
     if not named:
         if staged.is_empty():
-            en = ("Happy to take your order. Which items from the menu would you like, and would "
-                  "that be delivery, store pickup or dining in?")
-            am = ("ትዕዛዝዎን እንወስዳለን። ከሜኑ ምን ምርቶች ይፈልጋሉ፣ "
-                  "እና ማድረስ ነው፣ በመደብር መረከብ ነው ወይስ በዛሪክ?")
-            return bilingual(en, am), [], {'action': 'collect_order_details'}
+            answer, payload, meta = _order_opening_reply(text)
+            return answer, [], {**meta, 'items': payload}
 
         summary = staged.summary()
         if order_type:
@@ -565,12 +706,12 @@ def handle_order_intent(intent, text, staged, user=None):
         if not staged.order_type:
             en = ("Good. Would you like that delivered, collected from the shop, or served at a "
                   "table?")
-            am = ("ጥሩ። ማድረስ ይፈልጋሉ፣ ከመክፈቻ ቤት እንደመረከብ ወይስ በጠረጳይ አንቀሳቅስ?")
+            am = ("ጥሩ። እንዲደርስዎ፣ ከመደብር መረከብ ወይስ እዛው በጠረጴዛ ላይ መመገብ ይፈልጋሉ?")
             return bilingual(en, am), [], {'action': 'collect_order_details'}
 
         if staged.order_type == 'DELIVERY' and not staged.address:
             en = "Where should we deliver it? Please give me the address."
-            am = "የት እንደምላክ ይፈልጋሉ? እባክዎ አድራሻውን ይስጡኝ።"
+            am = "የት እንዲደርስዎ ይፈልጋሉ? እባክዎን አድራሻውን ይስጡኝ።"
             return bilingual(en, am), [], {'action': 'collect_order_details'}
 
         if not staged.is_empty() and _customer_confirmed(text):
@@ -589,15 +730,15 @@ def handle_order_intent(intent, text, staged, user=None):
             if order is None:
                 en, am = {
                     'missing_order_type': ("Which delivery option would you like?",
-                                           "የመስጠት ዘዴ ይምረጣሉ?"),
+                                           "የትኛውን የመረከቢያ ዘዴ ይመርጣሉ?"),
                     'missing_address': ("Where should we deliver it?",
-                                        "የት እንደምላክ ይፈልጋሉ?"),
+                                        "የት እንዲደርስዎ ይፈልጋሉ?"),
                     'restaurant_closed': ("We are closed right now, so I cannot take the order yet. "
                                           "Our opening hours are listed whenever you need them.",
-                                          "አሁን ዝግ ነን፣ በዚህ ሰዓት ትዕዛዝ መውረድ አይችልም። "
-                                          "የመክፈቻ ሰዓታችን ስንኳን ያገኘዎታለሁ።"),
+                                          "አሁን ዝግ ስለሆንን ትዕዛዝ መቀበል አንችልም። "
+                                          "የመክፈቻ ሰዓታችን ሲደርስ በደስታ እናስተናግዳለን።"),
                     'empty_order': ("There is nothing in the order yet.",
-                                    "በትዕዛዙ ውስጥ ምንም የለም።"),
+                                    "በትዕዛዙ ውስጥ ምንም ነገር የለም።"),
                 }.get(error, ("I could not place that order just now. Please try again, or call the "
                               "Coffee House.",
                               "ይህን ትዕዛዝ አሁን መስጠት አልተቻለም። "
@@ -611,12 +752,12 @@ def handle_order_intent(intent, text, staged, user=None):
                   f"Items: {data['item_count']}\n"
                   f"Total: {format_price(data['total_etb'])}\n\n"
                   "Complete payment on the next step and we will start preparing it.")
-            am = ("ትዕዛዝዎ ተልኳል።\n\n"
+            am = ("ትዕዛዝዎ ተጠናቋል!\n\n"
                   f"የትዕዛዝ ቁጥር፦ {data['order_number']}\n"
                   f"ዓይነት፦ {data['order_type_label']}\n"
                   f"ምርቶች፦ {data['item_count']}\n"
                   f"ጠቅላላ፦ {format_price(data['total_etb'])}\n\n"
-                  "በቀጣዩ ደረጃ ክፍያውን ያጠናቅቁ እና እንዲሁም ምግቡን እንቀርጥላለን።")
+                  "በቀጣዩ ደረጃ ክፍያውን ያጠናቅቁ፤ ወዲያውኑ ማዘጋጀት እንጀምራለን።")
             return bilingual(en, am), [data], {'action': 'order_placed', 'order': data,
                                                'order_number': data['order_number']}
 
@@ -648,11 +789,11 @@ def handle_order_intent(intent, text, staged, user=None):
             names = ', '.join(name for name, _ in problems)
             en = (f"I could not match {names} to anything on our menu right now. "
                   "Could you tell me the item name as it is written on the menu?")
-            am = (f"{names} አሁን በሜኑካችን ላይ መስራሉን አልቻልኩም። "
-                  "የምርቱን ስም በሜኑው ላይ በተጻፈበት እንወስደው ይንገሩኝስ።")
+            am = (f"{names} በአሁኑ ሜኑአችን ውስጥ አልተገኘም። "
+                  "እባክዎን የምርቱን ስም በሜኑው ላይ እንደተጻፈው ይንገሩን።")
             return bilingual(en, am), [], {'action': 'collect_order_details'}
         en = "I could not match that to anything on our menu. Could you tell me the item name?"
-        am = "ይህን በሜኑካችን ላይ ማዛመድ አልቻልኩም። የምርቱን ስም ይንገሩኝስ።"
+        am = "ይህን በሜኑአችን ላይ ማዛመድ አልቻልኩም። እባክዎን የምርቱን ስም ይንገሩን።"
         return bilingual(en, am), [], {'action': 'collect_order_details'}
 
     if order_type:
@@ -670,7 +811,7 @@ def handle_order_intent(intent, text, staged, user=None):
             "Added to your order:",
             "ወደ ትዕዛዝዎ ተጨምሯል፦",
             "Where should we deliver it? Please give me the address.",
-            "የት እንደምላክ ይፈልጋሉ? እባክዎ አድራሻውን ይስጡኝ።")
+            "የት እንዲደርስዎ ይፈልጋሉ? እባክዎን አድራሻውን ይስጡኝ።")
         return answer, [], {'action': 'collect_order_details'}
 
     return _order_summary_reply(
@@ -678,7 +819,7 @@ def handle_order_intent(intent, text, staged, user=None):
         "Added to your order:",
         "ወደ ትዕዛዝዎ ተጨምሯል፦",
         "Anything else, and delivery, pickup or dining in?",
-        "ሌላ የሚጨምር ነገር አለ? እና ማድረስ፣ መረከብ ወይስ በዛሪክ?"), [], {'action': 'collect_order_details'}
+        "ሌላ የሚጨምሩት ነገር አለ? እንዲሁም እንዲደርስዎ፣ መረከብ ወይስ እዛው መመገብ ይፈልጋሉ?"), [], {'action': 'collect_order_details'}
 
 
 #: How-the-order words that are not product words. Leaving them in makes every
@@ -687,7 +828,7 @@ _FULFILMENT_NOISE = {
     'delivery', 'deliver', 'delivered', 'home', 'pickup', 'takeaway', 'take',
     'collection', 'collect', 'dine', 'dinein', 'sit', 'table', 'restaurant',
     'order', 'orders', 'please', 'want', 'like', 'and', 'for', 'me', 'my', 'to',
-    'ማድረስ', 'መደብር', 'መረከብ', 'በዛሪክ', 'ቦታ', 'ትዕዛዝ', 'እባክዎ',
+    'ማድረስ', 'መደብር', 'መረከብ', 'እዛው', 'መመገብ', 'ቦታ', 'ትዕዛዝ', 'እባክዎ',
 }
 
 
@@ -805,3 +946,92 @@ def build_venue_answer(intent, text, category_slug, items):
         return _thanks()[0], [], {'action': 'none'}
 
     return None, None, None
+
+
+# ── Food / drink sub-menu helpers ────────────────────────────────────
+
+FOOD_ONLY_SLUGS = [
+    'artisanal-burgers', 'wood-fired-pizza', 'shawarma-wraps', 'fast-food', 'bakery-pastry',
+]
+DRINK_ONLY_SLUGS = [
+    'micro-lot-coffee', 'espresso-infusions', 'premium-tea',
+]
+
+
+def _build_categorized_listing(items, header_en, header_am):
+    """Group items by category and return a formatted bilingual answer + payload."""
+    from collections import defaultdict
+    by_cat = defaultdict(list)
+    for item in items:
+        by_cat[item.category.name].append(item)
+
+    en_parts = [header_en]
+    am_parts = [header_am]
+    payload = []
+
+    CATEGORY_AM_NAMES = {
+        'Micro-Lot Coffee': 'ልዩ ቡና (Micro-Lot Coffee)',
+        'Espresso & Infusions': 'ኢስፕሬሶ እና ቅመሞች (Espresso & Infusions)',
+        'Premium Tea': 'ፕሪሚየም ሻይ (Premium Tea)',
+        'Artisanal Burgers': 'አርቲሳናል በርገር (Artisanal Burgers)',
+        'Wood-Fired Pizza': 'ፒዛ (Wood-Fired Pizza)',
+        'Shawarma & Wraps': 'ሻዋርማ እና ወራፕ (Shawarma & Wraps)',
+        'Fast Food Favourites': 'ፈጣን ምግብ (Fast Food)',
+        'Bakery & Pastry': 'መጋገሪያ እና ኬክ (Bakery & Pastry)',
+    }
+
+    for cat_name, cat_items in by_cat.items():
+        am_cat_name = CATEGORY_AM_NAMES.get(cat_name, cat_name)
+        en_parts.append(f"\n**{cat_name}**")
+        am_parts.append(f"\n**{am_cat_name}**")
+        for item in cat_items:
+            en_parts.append(f"  • {_item_en(item, include_desc=False)}")
+            am_parts.append(f"  • {_item_am(item, include_desc=False)}")
+            payload.append(_item_payload(item))
+
+    en_parts.append("\nWould you like more details or prices on any specific item?")
+    am_parts.append("\nስለ ተወሰነ ምርት ተጨማሪ ዝርዝር ወይም ዋጋ ይፈልጋሉ?")
+
+    return bilingual('\n'.join(en_parts), '\n'.join(am_parts)), payload, {'action': 'none'}
+
+
+def build_food_only_answer(query):
+    """
+    Return a menu listing for food categories only (no coffee/drinks).
+    Called when the customer asks "What food do you have?" or similar.
+    """
+    all_food = []
+    for slug in FOOD_ONLY_SLUGS:
+        all_food.extend(list_menu(category_slug=slug))
+
+    if not all_food:
+        en = ("I'm sorry, I couldn't find any food items available at the moment. "
+              "Please ask our staff or check the full menu.")
+        am = ("ይቅርታ፣ አሁን ምግብ ምርቶች አልተገኙም። "
+              "እባክዎ ሰራተኞቻችንን ይጠይቁ ወይም ሙሉ ሜኑ ይመልከቱ።")
+        return bilingual(en, am), [], {'action': 'none'}
+
+    header_en = f"Here is our food menu ({len(all_food)} items, by category):"
+    header_am = f"የምግብ ሜኑአችን ({len(all_food)} ምርቶች፣ በምድብ)፦"
+    return _build_categorized_listing(all_food, header_en, header_am)
+
+
+def build_drink_only_answer(query):
+    """
+    Return a menu listing for drink categories only (coffee, teas, infusions).
+    Called when the customer asks "What drinks are available?" or similar.
+    """
+    all_drinks = []
+    for slug in DRINK_ONLY_SLUGS:
+        all_drinks.extend(list_menu(category_slug=slug))
+
+    if not all_drinks:
+        en = ("I'm sorry, I couldn't find any drinks available at the moment. "
+              "Please ask our staff or check the full menu.")
+        am = ("ይቅርታ፣ አሁን መጠጥ ምርቶች አልተገኙም። "
+              "እባክዎ ሰራተኞቻችንን ይጠይቁ ወይም ሙሉ ሜኑ ይመልከቱ።")
+        return bilingual(en, am), [], {'action': 'none'}
+
+    header_en = f"Here are our drinks ({len(all_drinks)} items, by category):"
+    header_am = f"መጠጦቻችን ({len(all_drinks)} ምርቶች፣ በምድብ)፦"
+    return _build_categorized_listing(all_drinks, header_en, header_am)

@@ -660,3 +660,65 @@ class ReorderApiTests(TestCase):
         venue.is_open = True
         venue.save()
 
+
+
+class RestaurantSettingsApiTests(TestCase):
+    """
+    The venue settings the whole ordering flow depends on.
+
+    Reading them is public (the checkout form needs the opening hours before anyone
+    signs in); changing them is staff-only.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.manager = User.objects.create_user(
+            username='settingsmanager', email='manager@coffeereceipts.com',
+            phone='+251911000050', password='Password123!', role='MANAGER',
+        )
+        self.customer = User.objects.create_user(
+            username='settingscustomer', email='customer@coffeereceipts.com',
+            phone='+251911000051', password='Password123!', role='CUSTOMER',
+        )
+
+    def test_reading_the_settings_is_public(self):
+        res = self.client.get('/api/v1/restaurant-settings/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('opening_hours', res.data)
+
+    def test_a_manager_can_change_them(self):
+        self.client.force_authenticate(self.manager)
+        res = self.client.patch('/api/v1/restaurant-settings/', {'is_open': False})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertFalse(RestaurantSettings.get_settings().is_open)
+
+    def test_a_customer_is_refused(self):
+        self.client.force_authenticate(self.customer)
+        res = self.client.patch('/api/v1/restaurant-settings/', {'is_open': False})
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(RestaurantSettings.get_settings().is_open)
+
+    def test_a_signed_out_caller_is_asked_to_sign_in(self):
+        """
+        This used to be a 500, not a 403.
+
+        The check was `not request.user or not request.user.is_manager_or_admin()`.
+        AnonymousUser is truthy, so `not request.user` was False and the call went
+        straight through to a method AnonymousUser does not have - AttributeError,
+        HTTP 500, for every signed-out visitor who touched the endpoint. The 401 is
+        also the status the frontend retries a token refresh on.
+        """
+        res = self.client.patch('/api/v1/restaurant-settings/', {'is_open': False})
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(RestaurantSettings.get_settings().is_open)
+
+    def test_nothing_a_signed_out_caller_sends_can_change_the_settings(self):
+        for payload in ({'is_open': False}, {'contact_phone': '+251911999999'},
+                        {'opening_hours': 'Always'}):
+            res = self.client.patch('/api/v1/restaurant-settings/', payload)
+            self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED, payload)
+
+        venue = RestaurantSettings.get_settings()
+        self.assertTrue(venue.is_open)
+        self.assertNotEqual(venue.contact_phone, '+251911999999')
+        self.assertNotEqual(venue.opening_hours, 'Always')

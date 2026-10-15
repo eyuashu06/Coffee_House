@@ -12,12 +12,23 @@ interface OrderTrackerProps {
 const STATUS_STAGES = [
   { key: 'PENDING_PAYMENT', label: 'Payment', icon: 'payments' },
   { key: 'PLACED', label: 'Placed', icon: 'receipt_long' },
-  { key: 'ACCEPTED', label: 'Accepted', icon: 'thumbs_up' },
   { key: 'PREPARING', label: 'Preparing', icon: 'coffee_maker' },
   { key: 'READY', label: 'Ready', icon: 'check_circle' },
   { key: 'OUT_FOR_DELIVERY', label: 'Delivery', icon: 'local_shipping' },
   { key: 'COMPLETED', label: 'Completed', icon: 'done_all' },
 ];
+
+/**
+ * Statuses the backend uses that are not shown as their own step.
+ *
+ * ACCEPTED is the kitchen acknowledging the order - it is a real status in the
+ * workflow, but not progress the customer can act on, so it is not a step. It still
+ * has to resolve to a stage that exists: without this the lookup below finds no
+ * match, returns -1, and an accepted order loses both its highlighted step and the
+ * progress fill. An accepted order therefore sits on "Placed", which is accurate -
+ * it is placed and the kitchen has not visibly started on it yet.
+ */
+const HIDDEN_STAGES: Record<string, string> = { ACCEPTED: 'PLACED' };
 
 /** Statuses where a countdown to "ready" is meaningful. */
 const IN_KITCHEN = ['PLACED', 'ACCEPTED', 'PREPARING'];
@@ -83,7 +94,9 @@ export default function OrderTracker({
     );
   }
 
-  const currentIndex = STATUS_STAGES.findIndex((s) => s.key === status);
+  const currentIndex = STATUS_STAGES.findIndex(
+    (s) => s.key === (HIDDEN_STAGES[status] ?? status),
+  );
 
   return (
     <div className="mt-4 pt-4 border-t border-white/5">
@@ -94,7 +107,7 @@ export default function OrderTracker({
         {/* Connecting Line active */}
         <div
           className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-tertiary rounded-full z-0 transition-all duration-500"
-          style={{ width: `${(currentIndex / (STATUS_STAGES.length - 1)) * 100}%` }}
+          style={{ width: `${(Math.max(currentIndex, 0) / (STATUS_STAGES.length - 1)) * 100}%` }}
         ></div>
 
         {STATUS_STAGES.map((stage, idx) => {

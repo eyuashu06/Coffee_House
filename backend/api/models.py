@@ -1,3 +1,4 @@
+import time
 from django.db import models
 from django.conf import settings
 
@@ -75,6 +76,7 @@ class TableReservation(models.Model):
     )
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='reservations')
+    order_code = models.CharField(max_length=30, unique=True, blank=True, db_index=True)
     name = models.CharField(max_length=150)
     date_time = models.DateTimeField()
     party_size = models.PositiveIntegerField()
@@ -82,8 +84,15 @@ class TableReservation(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        if not self.order_code:
+            timestamp_part = time.strftime('%Y%m%d')
+            random_suffix = str(int(time.time() * 1000))[-4:]
+            self.order_code = f"RES-{timestamp_part}-{random_suffix}"
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.name} - {self.date_time.strftime('%Y-%m-%d %H:%M')} (Party of {self.party_size})"
+        return f"{self.order_code} | {self.name} - {self.date_time.strftime('%Y-%m-%d %H:%M')} (Party of {self.party_size})"
 
     class Meta:
         ordering = ['-date_time']

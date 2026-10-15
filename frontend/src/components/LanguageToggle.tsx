@@ -34,12 +34,21 @@ export default function LanguageToggle({
       aria-label={title}
       lang={language}
       data-testid="language-toggle"
+      suppressHydrationWarning
       className={className || (
-        'h-9 px-3 rounded-[28px] border border-[#514345] text-[#d5c2c3] text-[14px] flex items-center '
-        + 'gap-1.5 hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors'
+        'h-9 px-3 rounded-[28px] border border-[var(--border)] text-[var(--muted)] text-[14px] flex items-center '
+        + 'gap-1.5 hover:border-[#f7b5be] hover:text-[var(--accent)] transition-colors'
       )}
     >
-      <span className="material-symbols-outlined text-[18px] leading-none">translate</span>
+      {/* The material-symbols font renders as text ligatures; explicit font size and
+          line-height ensure crisp icon rendering without layout shifts. */}
+      <span
+        className="material-symbols-outlined text-[18px] leading-none"
+        style={{ fontSize: 18, lineHeight: 1, display: 'inline-block', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}
+        suppressHydrationWarning
+      >
+        translate
+      </span>
       {compact ? (
         <span className="sr-only">{title}</span>
       ) : (

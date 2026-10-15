@@ -89,20 +89,20 @@ ${t('Thank you for visiting Artisanal Cafe!')}
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-surface-container border border-[#514345] rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-[#e5e2e1] relative">
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in">
+      <div className=" bg-surface-2 border border-[var(--border)] rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-[var(--text)] relative">
         {/* Header Bar */}
-        <div className="flex items-center justify-between border-b border-dashed border-[#514345] pb-3">
+        <div className="flex items-center justify-between border-b border-dashed border-[var(--border)] pb-3">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#f7b5be] text-2xl">receipt_long</span>
+            <span className="material-symbols-outlined text-[var(--accent)] text-2xl">receipt_long</span>
             <div>
-              <h3 className="font-bold text-[#f7b5be] text-sm tracking-wide">{t('RECEIPT CARD')}</h3>
+              <h3 className="font-bold text-[var(--accent)] text-sm tracking-wide">{t('RECEIPT CARD')}</h3>
               <p className="text-[10px] text-outline">{t('Ref:', 'ቁጥር፦')} {ref}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-full bg-transparent hover:bg-outline-variant/10 text-[#9e8d8e] transition-colors"
+            className="p-1 rounded-full bg-transparent hover:bg-outline-variant/10 text-[var(--muted)] transition-colors"
             title={t('Close')}
           >
             <span className="material-symbols-outlined text-lg">close</span>
@@ -120,35 +120,35 @@ ${t('Thank you for visiting Artisanal Cafe!')}
             </p>
           </div>
         ) : (
-        <div className="bg-surface-container-lowest border border-[#514345] rounded-xl p-4 font-mono text-xs text-[#9e8d8e] space-y-3 shadow-inner">
-          <div className="text-center border-b border-dashed border-[#514345] pb-2">
-            <p className="font-bold text-sm text-[#f7b5be]">{t('Artisanal Reserve Cafe')}</p>
+        <div className=" bg-surface-2 border border-[var(--border)] rounded-xl p-4 font-mono text-xs text-[var(--muted)] space-y-3 shadow-inner">
+          <div className="text-center border-b border-dashed border-[var(--border)] pb-2">
+            <p className="font-bold text-sm text-[var(--accent)]">{t('Artisanal Reserve Cafe')}</p>
             <p className="text-[10px] text-outline">{t('Bole Medhanialem, Addis Ababa')}</p>
             <p className="text-[10px] text-outline">{new Date(order.created_at).toLocaleString(locale)}</p>
           </div>
 
-          <div className="text-[11px] space-y-0.5 border-b border-dashed border-[#514345] pb-2">
+          <div className="text-[11px] space-y-0.5 border-b border-dashed border-[var(--border)] pb-2">
             <p>{t('Order Type:')} <span className="font-bold text-white">{t(order.order_type, order.order_type)}</span> {order.table_number && `(${t('Table')} ${order.table_number})`}</p>
             <p>{t('Customer:')} <span className="text-white">{order.contact_name}</span></p>
             <p>{t('Phone:')} <span className="text-white">{order.contact_phone}</span></p>
           </div>
 
-          <div className="space-y-1.5 py-1 border-b border-dashed border-[#514345] max-h-48 overflow-y-auto pr-1">
+          <div className="space-y-1.5 py-1 border-b border-dashed border-[var(--border)] max-h-48 overflow-y-auto pr-1">
             {order.items.map((item, idx) => (
               <div key={idx} className="flex justify-between items-center text-[11px]">
                 <span className="truncate max-w-[180px]">
                   {item.quantity}x {tItem(item.item_name)} {item.milk_choice && item.milk_choice !== 'None' ? `(${t(item.milk_choice)})` : ''}
                 </span>
-                <span className="font-bold text-[#f7b5be]">{lineTotal(item)} {birr}</span>
+                <span className="font-bold text-[var(--accent)]">{lineTotal(item)} {birr}</span>
               </div>
             ))}
           </div>
 
-          <div className="flex justify-between items-center pt-1 font-bold text-sm text-[#f7b5be]">
+          <div className="flex justify-between items-center pt-1 font-bold text-sm text-[var(--accent)]">
             <span>{t('TOTAL AMOUNT:')}</span>
             <span>{order.total_amount_etb} {birr}</span>
           </div>
-          <div className="pt-1 border-t border-dashed border-[#514345] text-[10px]">
+          <div className="pt-1 border-t border-dashed border-[var(--border)] text-[10px]">
             {t('Paid', 'ተከፍሏል')} · {order.latest_payment?.status === 'SUCCESS' ? t('confirmed') : ''}
           </div>
         </div>
@@ -165,7 +165,7 @@ ${t('Thank you for visiting Artisanal Cafe!')}
           </button>
           <button
             onClick={onClose}
-            className="py-3 px-6 bg-transparent border border-[#514345] hover:bg-outline-variant/10 text-[#9e8d8e] font-bold text-xs uppercase tracking-wider rounded-full transition-all"
+            className="py-3 px-6 bg-transparent border border-[var(--border)] hover:bg-outline-variant/10 text-[var(--muted)] font-bold text-xs uppercase tracking-wider rounded-full transition-all"
           >
             {t('Close')}
           </button>

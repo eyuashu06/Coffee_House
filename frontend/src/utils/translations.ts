@@ -19,6 +19,20 @@ export const translations: Record<string, string> = {
   'Sign In': 'ይግቡ',
   'Sign Up': 'ተመዝገቡ',
   'Sign Out': 'ውጡ',
+  'Our Story': 'የእኛ ታሪክ',
+  'Open menu': 'ምናሌውን ክፈት',
+  'Close menu': 'ምናሌውን ዝጋ',
+  'Swipe or tap to see more': 'ለማየት ይጠንቀቁ ወይም ያምሩ',
+  'Where it all began': 'ሁሉም ከየት ጀምሮ ነው',
+  'Coffee began in the highlands of Kaffa — beans washed by hand, roasted over charcoal, and brewed in a black clay jebena.':
+    'ቡናው በካፋ አርብቶ ካደገበኋላ ጀምሮ ነው፤ ፍሬዎቹ በእጅ ይታጠፋሉ፣ በኮበል ላይ ይዘጋጃሉ፣ በጥሬ ጀበና ይጠመቃሉ።',
+  'Every afternoon the pan comes out. Whoever is seated nearby gets the first cup.':
+    'በየቀኑ ከሰዓት በኋላ ቅርፀቱ ይወጣል፤ በአቅራቢያው ያሉ ሁሉ የመጀመሪያውን ቡና ይቀበላል።',
+  'Three rounds, one blessing': 'ሦስት ዙር፣ አንድ ባረካ',
+  'Three rounds — abol, tona, and baraka. Staying for the third is how strangers become regulars.':
+    'ሦስት ዙር — አቦል፣ ጦና እና ባረካ። በሶስተኛው ዙር መቆየት ነው የማያችሁን ወደ ተለማመዱ የሚቀይረው።',
+  'Our own roastery sits behind the counter — Yirgacheffe and Guji lots we buy through two family exporters.':
+    'የእኛ የማቁሰል ቤት ከካውንተሩ ጀርባ አለ — የይርጋጨፌ እና የጉጂ ምርቶችን በሁለት የቤት አስፋፋኞች ጋር እንገዛለን።',
   'Reorder': 'አስደግም',
   'Reordering…': 'በማስደገም ላይ…',
   'Order recreated successfully! Pay now to complete your order.': 'ትዕዛዝዎ በተሳካ ሁኔታ ተደግሟል! ትዕዛዝዎን ለማጠናቀቅ አሁን ይክፈሉ።',

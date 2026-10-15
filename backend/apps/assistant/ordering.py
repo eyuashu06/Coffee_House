@@ -48,12 +48,23 @@ def search_menu(query, limit=6, category_slug=None, available_only=True):
         return items
 
     # A broad "what do you have?" style query has no product words, so fall back
-    # to the category listing rather than returning nothing.
+    # to category or drink/food filtering rather than returning nothing.
     qs = MenuItem.objects.select_related('category').prefetch_related('variants', 'add_ons')
     if category_slug:
         qs = qs.filter(category__slug=category_slug)
     if available_only:
         qs = qs.filter(is_available=True)
+
+    low = (query or '').strip().lower()
+
+    drink_terms = {'drink', 'drinks', 'beverage', 'beverages', 'መጠጥ', 'መጠጦች', 'ምን አይነት መጠጥ', 'ምን አይነት መጠጦች'}
+    if low in drink_terms or all(w in drink_terms or len(w) < 3 for w in low.split()):
+        return list(qs.filter(category__slug__in=['micro-lot-coffee', 'espresso-infusions', 'premium-tea'])[:limit])
+
+    food_terms = {'food', 'foods', 'meal', 'meals', 'dish', 'dishes', 'snack', 'snacks', 'ምግብ', 'ምግቦች', 'ምን አይነት ምግብ', 'ምን አይነት ምግቦች'}
+    if low in food_terms or all(w in food_terms or len(w) < 3 for w in low.split()):
+        return list(qs.filter(category__slug__in=['artisanal-burgers', 'wood-fired-pizza', 'shawarma-wraps', 'fast-food', 'bakery-pastry'])[:limit])
+
     if query:
         qs = qs.filter(Q(name__icontains=query) | Q(description__icontains=query))
     return list(qs[:limit])
@@ -98,7 +109,8 @@ def resolve_order_item(name, variant_name=None, add_on_names=None):
 
     item = get_item_by_name(name)
     if item is None:
-        matches = search_menu(name, limit=1, available_only=False)
+        from .retriever import find_menu_items
+        matches = find_menu_items(name, limit=1, available_only=False)
         item = matches[0] if matches else None
     if item is None:
         return None, '', [], 'not_on_menu'
@@ -318,7 +330,7 @@ def detect_order_type(text):
 #: here: in "I want to order a croissant" they are part of the order phrase, and
 #: treating them as an address marker swallowed the item name as the address.
 _ADDRESS_MARKERS = (
-    r'address|my address is|send it to|deliver (?:it |the order )?to|'
+    r'address|my address is|send it to|deliver(?:y)? (?:it |the order )?to|'
     r'አድራሻ|ወደ\s*\S+\s*አድራሻ'
 )
 
