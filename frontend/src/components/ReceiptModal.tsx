@@ -97,12 +97,12 @@ ${t('Thank you for visiting Artisanal Cafe!')}
             <span className="material-symbols-outlined text-[var(--accent)] text-2xl">receipt_long</span>
             <div>
               <h3 className="font-bold text-[var(--accent)] text-sm tracking-wide">{t('RECEIPT CARD')}</h3>
-              <p className="text-[10px] text-outline">{t('Ref:', 'ቁጥር፦')} {ref}</p>
+              <p className="text-[10px] text-[var(--muted)]">{t('Ref:', 'ቁጥር፦')} {ref}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-full bg-transparent hover:bg-outline-variant/10 text-[var(--muted)] transition-colors"
+            className="p-1 rounded-full bg-transparent hover:bg-[var(--accent-soft)] text-[var(--muted)] transition-colors"
             title={t('Close')}
           >
             <span className="material-symbols-outlined text-lg">close</span>
@@ -123,14 +123,14 @@ ${t('Thank you for visiting Artisanal Cafe!')}
         <div className=" bg-surface-2 border border-[var(--border)] rounded-xl p-4 font-mono text-xs text-[var(--muted)] space-y-3 shadow-inner">
           <div className="text-center border-b border-dashed border-[var(--border)] pb-2">
             <p className="font-bold text-sm text-[var(--accent)]">{t('Artisanal Reserve Cafe')}</p>
-            <p className="text-[10px] text-outline">{t('Bole Medhanialem, Addis Ababa')}</p>
-            <p className="text-[10px] text-outline">{new Date(order.created_at).toLocaleString(locale)}</p>
+            <p className="text-[10px] text-[var(--muted)]">{t('Bole Medhanialem, Addis Ababa')}</p>
+            <p className="text-[10px] text-[var(--muted)]">{new Date(order.created_at).toLocaleString(locale)}</p>
           </div>
 
           <div className="text-[11px] space-y-0.5 border-b border-dashed border-[var(--border)] pb-2">
-            <p>{t('Order Type:')} <span className="font-bold text-white">{t(order.order_type, order.order_type)}</span> {order.table_number && `(${t('Table')} ${order.table_number})`}</p>
-            <p>{t('Customer:')} <span className="text-white">{order.contact_name}</span></p>
-            <p>{t('Phone:')} <span className="text-white">{order.contact_phone}</span></p>
+            <p>{t('Order Type:')} <span className="font-bold text-[var(--text)]">{t(order.order_type, order.order_type)}</span> {order.table_number && `(${t('Table')} ${order.table_number})`}</p>
+            <p>{t('Customer:')} <span className="text-[var(--text)]">{order.contact_name}</span></p>
+            <p>{t('Phone:')} <span className="text-[var(--text)]">{order.contact_phone}</span></p>
           </div>
 
           <div className="space-y-1.5 py-1 border-b border-dashed border-[var(--border)] max-h-48 overflow-y-auto pr-1">
@@ -158,14 +158,14 @@ ${t('Thank you for visiting Artisanal Cafe!')}
         <div className="flex gap-3 pt-2">
           <button
             onClick={handleDownload}
-            className="flex-1 py-3 px-6 bg-[#f7b5be] hover:brightness-110 text-[#4e232b] font-bold text-xs uppercase tracking-wider rounded-full flex items-center justify-center gap-2 shadow-md transition-all active:scale-95"
+            className="flex-1 py-3 px-6 bg-[var(--accent)] hover:brightness-110 text-[var(--accent-contrast)] font-bold text-xs uppercase tracking-wider rounded-full flex items-center justify-center gap-2 shadow-md transition-all active:scale-95"
           >
             <span className="material-symbols-outlined text-base">download</span>
             <span>{t('Download')}</span>
           </button>
           <button
             onClick={onClose}
-            className="py-3 px-6 bg-transparent border border-[var(--border)] hover:bg-outline-variant/10 text-[var(--muted)] font-bold text-xs uppercase tracking-wider rounded-full transition-all"
+            className="py-3 px-6 bg-transparent border border-[var(--border)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] text-[var(--muted)] font-bold text-xs uppercase tracking-wider rounded-full transition-all"
           >
             {t('Close')}
           </button>
