@@ -154,8 +154,8 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
                       onClick={() => setVariant(selected ? null : v)}
                       className={`px-3 py-2.5 rounded-xl border text-left transition-all ${
                         selected
-                          ? 'bg-[var(--accent-soft)] border-[#f7b5be] text-[var(--accent)]'
-                          : 'bg-surface-2 border-[var(--border)] text-[var(--text)] hover:border-[#f7b5be]/60'
+                          ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)]'
+                          : 'bg-surface-2 border-[var(--border)] text-[var(--text)] hover:border-[var(--accent)]/60'
                       }`}
                     >
                       <span className="block text-sm font-semibold">{tItem(v.name)}</span>
@@ -185,17 +185,17 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
                       onClick={() => toggleAddOn(option)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${
                         selected
-                          ? 'bg-[var(--accent-soft)] border-[#f7b5be]'
-                          : 'bg-surface-2 border-[var(--border)] hover:border-[#f7b5be]/60'
+                          ? 'bg-[var(--accent-soft)] border-[var(--accent)]'
+                          : 'bg-surface-2 border-[var(--border)] hover:border-[var(--accent)]/60'
                       }`}
                     >
                       <span className="flex items-center gap-2 text-sm text-[var(--text)]">
                         <span
                           className={`w-4 h-4 rounded border flex items-center justify-center ${
-                            selected ? 'bg-[#f7b5be] border-[#f7b5be]' : 'border-[var(--border)]'
+                            selected ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--border)]'
                           }`}
                         >
-                          {selected && <i className="ph ph-check text-[10px] text-[#4e232b]"></i>}
+                          {selected && <i className="ph ph-check text-[10px] text-[var(--accent-contrast)]"></i>}
                         </span>
                         {tItem(option.name)}
                       </span>
@@ -224,8 +224,8 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
                       onClick={() => setTemperature(temp)}
                       className={`py-2 rounded-lg text-sm font-semibold transition-colors border ${
                         temperature === temp
-                          ? 'bg-[#f7b5be] text-[#1b1212] border-tertiary'
-                          : 'bg-surface-2 border-[var(--border)] text-[var(--text)]'
+                          ? 'bg-[var(--accent)] text-[var(--accent-contrast)] border-[var(--accent)]'
+                          : 'bg-surface-2 border-[var(--border)] text-[var(--text)] hover:border-[var(--accent)]'
                       }`}
                     >
                       {t(temp)}
@@ -240,7 +240,7 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
                 <select
                   value={milk}
                   onChange={e => setMilk(e.target.value)}
-                  className="w-full bg-surface-2 border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[#f7b5be]"
+                  className="w-full bg-surface-2 border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
                 >
                   {['None', 'Whole', 'Oat', 'Soy', 'Almond'].map(m => (
                     <option key={m} value={m}>{t(m)}</option>
@@ -262,7 +262,7 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
                   onClick={() => applyQuantity(quantity - 1)}
                   disabled={quantity <= 1}
                   aria-label={t('Decrease quantity')}
-                  className="w-8 h-8 rounded bg-[#2c2b2a] flex items-center justify-center text-white disabled:opacity-40"
+                  className="w-8 h-8 rounded bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors disabled:opacity-40"
                 >
                   −
                 </button>
@@ -275,13 +275,13 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
                   onChange={e => handleQuantityInput(e.target.value)}
                   onBlur={() => applyQuantity(quantity)}
                   aria-label={t('Quantity')}
-                  className="w-12 text-center bg-transparent text-white font-bold text-base focus:outline-none"
+                  className="w-12 text-center bg-transparent text-[var(--text)] font-bold text-base focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => applyQuantity(quantity + 1)}
                   aria-label={t('Increase quantity')}
-                  className="w-8 h-8 rounded bg-[#2c2b2a] flex items-center justify-center text-white"
+                  className="w-8 h-8 rounded bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
                 >
                   +
                 </button>
@@ -318,7 +318,7 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
           <button
             type="button"
             onClick={handleAdd}
-            className="w-full py-3 rounded-full bg-[#f7b5be] text-[#1b1212] font-bold text-sm uppercase tracking-wider hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-sm uppercase tracking-wider hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
           >
             <span>{t('Add to Cart')} ({quantity})</span>
             <span>•</span>
