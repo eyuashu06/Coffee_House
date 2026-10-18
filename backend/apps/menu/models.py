@@ -53,3 +53,43 @@ class AddOn(models.Model):
 
     def __str__(self):
         return f"{self.name} (+{self.price_etb} ETB)"
+
+
+class CafeSettings(models.Model):
+    cafe_name = models.CharField(max_length=120, default='Buna Hub')
+    tagline = models.CharField(max_length=200, default='Artisanal Reserve')
+    description = models.TextField(
+        default='An Ethiopian coffee house in Piassa — ceremony buna, slow teas, and a kitchen that stays open late.'
+    )
+    primary_phone = models.CharField(max_length=50, default='+251 11 555 0148')
+    contact_email = models.EmailField(default='selam@bunahub.et')
+    opening_hours = models.CharField(max_length=100, default='1:00 – 3:00')
+    ceremony_time = models.CharField(max_length=100, default='9:00 (ከቀኑ 9:00)')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Cafe Settings'
+        verbose_name_plural = 'Cafe Settings'
+
+    def __str__(self):
+        return self.cafe_name
+
+
+class CafeLocation(models.Model):
+    name = models.CharField(max_length=150, help_text="e.g. Piassa Flagship, Bole Medhanialem Branch")
+    address = models.CharField(max_length=255, help_text="e.g. Gulele Road 14, Piassa")
+    city = models.CharField(max_length=100, default='Addis Ababa')
+    phone = models.CharField(max_length=50, blank=True, default='+251 11 555 0148')
+    email = models.EmailField(blank=True, default='selam@bunahub.et')
+    opening_hours = models.CharField(max_length=100, default='1:00 – 3:00')
+    is_primary = models.BooleanField(default=False, help_text="Primary / Main Branch")
+    is_active = models.BooleanField(default=True)
+    display_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['display_order', '-is_primary', 'id']
+
+    def __str__(self):
+        return f"{self.name} ({self.address}, {self.city})"
