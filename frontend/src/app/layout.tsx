@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import './globals.css';
 import { AuthProvider } from '../context/AuthContext';
 import { LanguageProvider } from '../context/LanguageContext';
+import { CafeProvider } from '../context/CafeContext';
 import SWRegister from '../components/SWRegister';
 
 const LANGUAGE_COOKIE = 'app_lang';
@@ -59,7 +60,9 @@ export default function RootLayout({
       <body className="font-body min-h-screen flex flex-col selection:bg-[var(--accent-soft)] selection:text-[var(--text)] transition-colors duration-300">
         <LanguageProvider initialLanguage={language}>
           <AuthProvider>
-            {children}
+            <CafeProvider>
+              {children}
+            </CafeProvider>
           </AuthProvider>
         </LanguageProvider>
         <SWRegister />
