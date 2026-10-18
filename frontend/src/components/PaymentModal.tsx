@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { apiFetch } from '../lib/api';
+import EthiopianPhoneInput from './EthiopianPhoneInput';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -46,7 +47,7 @@ export default function PaymentModal({
 }: PaymentModalProps) {
   const { t, language } = useLanguage();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('card');
-  const [phone, setPhone] = useState('251900000000');
+  const [phone, setPhone] = useState('+251900000000');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const birr = language === 'am' ? 'ብር' : 'ETB';
@@ -144,15 +145,15 @@ export default function PaymentModal({
             <span className="material-symbols-outlined text-base">verified_user</span>
             <span className="font-semibold">{t('Chapa ETB Payment Active')}</span>
           </div>
-          <span className="px-2 py-0.5 rounded bg-[#f7b5be] text-[#4e232b] text-[10px] font-bold uppercase">{t('Official')}</span>
+          <span className="px-2 py-0.5 rounded bg-[var(--accent)] text-[var(--accent-contrast)] text-[10px] font-bold uppercase">{t('Official')}</span>
         </div>
 
         {/* Error Alert */}
         {error && (
           <div className={`mt-3.5 p-3 rounded-lg text-xs flex items-start gap-2 border ${
             error.startsWith('⚠️')
-              ? 'bg-amber-950/70 border-amber-500/40 text-amber-200'
-              : 'bg-red-950/70 border-red-500/40 text-red-200'
+              ? 'dark:bg-amber-950/70 dark:border-amber-500/40 dark:text-amber-200 bg-amber-50 border-amber-300 text-amber-800'
+              : 'dark:bg-red-950/70 dark:border-red-500/40 dark:text-red-200 bg-red-50 border-red-300 text-red-800'
           }`}>
             <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">
               {error.startsWith('⚠️') ? 'warning' : 'error'}
@@ -175,7 +176,7 @@ export default function PaymentModal({
                   onClick={() => setPaymentMethod(m.id)}
                   className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all ${
                     paymentMethod === m.id
-                      ? 'bg-[var(--accent-soft)] border-tertiary text-[var(--accent)] shadow-sm'
+                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm'
                       : ' bg-surface-2 border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
                   }`}
                 >
@@ -192,74 +193,69 @@ export default function PaymentModal({
               <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">
                 {t('Chapa Mobile Test Phone Scenarios')}
               </label>
-              <div className="grid grid-cols-2 gap-2 mb-2">
+              <div className="grid grid-cols-2 gap-2 mb-3">
                 <button
                   type="button"
-                  onClick={() => handleTestPreset('251900000000')}
+                  onClick={() => handleTestPreset('+251900000000')}
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
-                    phone === '251900000000'
+                    phone.includes('900000000')
                       ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300'
                       : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
                   }`}
                 >
-                  <p className="font-bold">🟢 251900000000</p>
+                  <p className="font-bold">🟢 900 000 000</p>
                   <p className="text-[10px] text-emerald-400/80">{t('Success Scenario')}</p>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleTestPreset('251911111111')}
+                  onClick={() => handleTestPreset('+251911111111')}
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
-                    phone === '251911111111'
+                    phone.includes('911111111')
                       ? 'bg-red-950/60 border-red-500 text-red-300'
                       : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
                   }`}
                 >
-                  <p className="font-bold">🔴 251911111111</p>
+                  <p className="font-bold">🔴 911 111 111</p>
                   <p className="text-[10px] text-red-400/80">{t('Insufficient Funds')}</p>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleTestPreset('251922222222')}
+                  onClick={() => handleTestPreset('+251922222222')}
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
-                    phone === '251922222222'
+                    phone.includes('922222222')
                       ? 'bg-amber-950/60 border-amber-500 text-amber-300'
                       : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
                   }`}
                 >
-                  <p className="font-bold">🟡 251922222222</p>
+                  <p className="font-bold">🟡 922 222 222</p>
                   <p className="text-[10px] text-amber-400/80">{t('User Cancellation')}</p>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleTestPreset('251933333333')}
+                  onClick={() => handleTestPreset('+251933333333')}
                   className={`p-2 rounded-lg border text-xs text-left transition-all ${
-                    phone === '251933333333'
+                    phone.includes('933333333')
                       ? 'bg-blue-950/60 border-blue-500 text-blue-300'
                       : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
                   }`}
                 >
-                  <p className="font-bold">⏱️ 251933333333</p>
+                  <p className="font-bold">⏱️ 933 333 333</p>
                   <p className="text-[10px] text-blue-400/80">{t('Timeout / Pending')}</p>
                 </button>
               </div>
 
-              {/* Phone Input */}
-              <div className="flex items-center rounded-lg bg-surface-2 border border-[var(--border)] focus-within:border-tertiary overflow-hidden">
-                <span className="px-3 py-2 bg-transparent border-r border-[var(--border)] text-[var(--accent)] font-bold text-xs shrink-0">
-                  🇪🇹
-                </span>
-                <input
-                  type="text"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="251900000000"
-                  className="w-full px-3 py-2 bg-transparent text-[var(--text)] text-sm focus:outline-none"
-                />
-              </div>
+              {/* Ethiopian Phone Input */}
+              <label className="block text-xs font-semibold text-[var(--muted)] mb-1">
+                {t('Phone Number')}
+              </label>
+              <EthiopianPhoneInput
+                value={phone}
+                onChange={setPhone}
+                required
+              />
             </div>
           )}
 
@@ -279,10 +275,10 @@ export default function PaymentModal({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3 px-6 rounded-full bg-[#f7b5be] text-[#4A2B29] font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isSubmitting ? (
-              <span className="inline-block w-4 h-4 border-2 border-on-tertiary border-t-transparent rounded-full animate-spin" />
+              <span className="inline-block w-4 h-4 border-2 border-[var(--accent-contrast)] border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
                 <span>
