@@ -268,6 +268,12 @@ def answer_query(query, session_id=None, user=None, use_agent=None):
 
     intent, tokens, category = detect_intent(query)
 
+    import re
+    if re.search(r'RES-\d{8}-[A-Za-z0-9]{4}', query, re.I):
+        intent = 'reservation_status'
+    elif re.search(r'ORD-\d{8}-[A-Za-z0-9]{4}', query, re.I):
+        intent = 'order_status'
+
     # A message that already carries booking details is a booking, even when it
     # never says "reserve": "name abebe, date tomorrow at 9 morning, with 10
     # guests". Previously this scored zero reservation keywords, fell through to
