@@ -19,9 +19,6 @@ jobs:
     name: Backend (Django tests)
     runs-on: ubuntu-latest
     env:
-      # settings.py refuses to boot with DEBUG off and no SECRET_KEY, so a build that
-      # forgot to set one fails here exactly as it would in production. The value is
-      # throwaway: it signs nothing that outlives this job.
       SECRET_KEY: 'ci-only-not-a-secret-4f2c9a1b7e6d5c8a0f3b1e9d7c5a2b8e4f6d0c1a3b5e7f9d'
       ORDER_PAYMENT_WINDOW_MINUTES: '30'
     steps:
@@ -46,24 +43,19 @@ jobs:
         run: python manage.py check --deploy --fail-level ERROR
 
       - name: Verify migrations are committed
-        # A model change without its migration fails here instead of breaking `migrate`
-        # on the next deploy. docker-compose no longer runs makemigrations at boot.
         env:
           USE_SQLITE: 'true'
           REQUIRE_EMAIL_MX: 'false'
+          DEBUG: 'false'
           ALLOWED_HOSTS: 'localhost,testserver'
         run: python manage.py makemigrations --check --dry-run
 
       - name: Run tests
         env:
-          # SQLite keeps the suite self-contained. MX lookups are off: signup rejects
-          # undeliverable domains, and CI has no reliable DNS.
           USE_SQLITE: 'true'
           REQUIRE_EMAIL_MX: 'false'
           DEBUG: 'false'
           ALLOWED_HOSTS: 'localhost,127.0.0.1,testserver'
-          # The assistant tests stub the model client and opt in per-test. Pinned here
-          # so the suite can never reach the real Gemini API from CI.
           ASSISTANT_USE_LLM: 'false'
           GEMINI_API_KEY: ''
         run: python manage.py test apps api --verbosity 2
@@ -87,8 +79,6 @@ jobs:
         run: npm ci
 
       - name: Lint
-        # --max-warnings=0 is already in the script; this makes a regression in either
-        # the script or its invocation fail loudly rather than silently pass.
         run: npm run lint
 
       - name: Typecheck
@@ -96,8 +86,6 @@ jobs:
 
       - name: Production build
         env:
-          # Same value the compose file sets, so the proxy rewrite is compiled the way
-          # it runs in production rather than against localhost.
           INTERNAL_BACKEND_URL: 'http://backend:8000'
         run: npm run build
 
