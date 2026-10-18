@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import EthiopianPhoneInput from './EthiopianPhoneInput';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -186,7 +187,7 @@ export default function AuthModal({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--accent)] bg-[#20201f] hover:bg-[#2c2b2a] transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--accent)] bg-[var(--surface-2)] border border-[var(--border)] hover:bg-[var(--accent-soft)] transition-colors"
           >
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
@@ -202,14 +203,14 @@ export default function AuthModal({
 
         {/* Alerts */}
         {error && (
-          <div className="mt-3.5 p-3 rounded-lg bg-red-950/70 border border-red-500/40 text-red-200 text-xs flex items-start gap-2">
+          <div className="mt-3.5 p-3 rounded-lg dark:bg-red-950/70 dark:border-red-500/40 dark:text-red-200 bg-red-50 border border-red-300 text-red-800 text-xs flex items-start gap-2">
             <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">error</span>
             <span className="break-words leading-relaxed">{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="mt-3.5 p-3 rounded-lg bg-emerald-950/70 border border-emerald-500/40 text-emerald-200 text-xs flex items-start gap-2">
+          <div className="mt-3.5 p-3 rounded-lg dark:bg-emerald-950/70 dark:border-emerald-500/40 dark:text-emerald-200 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs flex items-start gap-2">
             <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">check_circle</span>
             <span>{success}</span>
           </div>
@@ -363,18 +364,11 @@ export default function AuthModal({
                 <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                   {t('Phone Number')}
                 </label>
-                <div className="flex items-center rounded-lg bg-surface-2 border border-[var(--border)] focus-within:border-tertiary overflow-hidden">
-                  <span className="px-3 py-2 bg-[#20201f] border-r border-[var(--border)] text-[var(--accent)] font-bold text-xs shrink-0 select-none flex items-center gap-1">
-                    🇪🇹 +251
-                  </span>
-                  <input
-                    type="tel"
-                    value={rawPhone.replace(/^\+251/, '')}
-                    onChange={(e) => setRawPhone(e.target.value)}
-                    placeholder="911223344 or 711223344"
-                    className="w-full px-3 py-2 bg-transparent text-[var(--text)] text-sm focus:outline-none"
-                  />
-                </div>
+                <EthiopianPhoneInput
+                  value={rawPhone}
+                  onChange={(val) => setRawPhone(val)}
+                  inputClassName="py-2"
+                />
               </div>
 
               <div>
@@ -389,7 +383,7 @@ export default function AuthModal({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t('Enter your password')}
-                  className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
+                  className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[var(--accent)]"
                 />
               </div>
             </>
@@ -408,7 +402,7 @@ export default function AuthModal({
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
                 placeholder={t('Enter your account email')}
-                className="w-full px-3.5 py-2.5 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[var(--accent)]"
               />
             </div>
           )}
@@ -417,10 +411,10 @@ export default function AuthModal({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full mt-3 py-2.5 rounded-[28px] bg-[#f7b5be] text-[#1b1212] font-bold text-sm hover:brightness-110 active:scale-[0.99] transition-all shadow-[0_4px_16px_rgba(247,181,190,0.25)] flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full mt-3 py-2.5 rounded-[28px] bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-sm hover:brightness-110 active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isSubmitting ? (
-              <span className="inline-block w-4 h-4 border-2 border-[#1b1212] border-t-transparent rounded-full animate-spin" />
+              <span className="inline-block w-4 h-4 border-2 border-[var(--accent-contrast)] border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
                 <span>
