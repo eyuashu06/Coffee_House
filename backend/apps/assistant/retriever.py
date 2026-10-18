@@ -664,6 +664,9 @@ def extract_reservation_fields(text, session_state=None):
     phone = _extract_phone(text)
     if phone:
         state['phone'] = phone
+    code_match = re.search(r'(RES-\d{8}-[A-Za-z0-9]{4})', text or '', re.IGNORECASE)
+    if code_match:
+        state['code'] = code_match.group(1).upper()
     return state
 
 #: Wording used in menu names/descriptions for meat-free dishes.
