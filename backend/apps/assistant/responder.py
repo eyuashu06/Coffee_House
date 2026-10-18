@@ -384,13 +384,14 @@ def handle_reservation_status(text, state, user=None):
     state = extract_reservation_fields(text, state)
     name = state.get('name')
     phone = state.get('phone')
-    if not name and not phone and not (user and user.is_authenticated):
-        en = ("Please tell me the name on the reservation, or the phone number you used, "
+    code = state.get('code')
+    if not name and not phone and not code and not (user and user.is_authenticated):
+        en = ("Please tell me the reservation code (e.g. RES-...), name on the reservation, or phone number you used, "
               "so I can look it up.")
-        am = "እባክዎን ለማስያዣው የተጠቀሙበትን ስም ወይም የስልክ ቁጥር ይንገሩኝ።"
+        am = "እባክዎን ለማስያዣው የተጠቀሙበትን ኮድ (ለምሳሌ RES-...)፣ ስም ወይም የስልክ ቁጥር ይንገሩኝ።"
         return bilingual(en, am), [], state, {'action': 'collect_reservation_lookup'}
 
-    found = reservation_service.find_reservations(name=name, phone=phone, user=user)
+    found = reservation_service.find_reservations(name=name, phone=phone, user=user, code=code)
     if not found:
         en = ("I could not find a matching reservation. Please check the details, "
               "or call the Coffee House and we will help.")
@@ -400,11 +401,12 @@ def handle_reservation_status(text, state, user=None):
     lines_en, lines_am, payload = [], [], []
     for r in found:
         stamp = _local_stamp(r.date_time)
-        lines_en.append(f"• {r.name} - {stamp} - {r.party_size} guests - {r.status}")
-        lines_am.append(f"• {r.name} - {stamp} - {r.party_size} ሰዎች - {r.status}")
+        code_str = f"[{r.order_code}] " if r.order_code else ""
+        lines_en.append(f"• {code_str}{r.name} - {stamp} - {r.party_size} guests - {r.status}")
+        lines_am.append(f"• {code_str}{r.name} - {stamp} - {r.party_size} ሰዎች - {r.status}")
         payload.append(reservation_service.serialize(r))
     en = "Here are your reservation(s):\n" + '\n'.join(lines_en)
-    am = "የእኔ ማስያዣዎች፦\n" + '\n'.join(lines_am)
+    am = "የቦታ ማስያዣ(ዎች) መረጃ፦\n" + '\n'.join(lines_am)
     return bilingual(en, am), payload, state, {'action': 'none'}
 
 
@@ -639,6 +641,21 @@ def handle_order_intent(intent, text, staged, user=None):
     from .ordering import detect_order_type, extract_address
 
     if intent == 'order_status':
+        if 'RES-' in text.upper():
+            return handle_reservation_status(text, {}, user=user)
+
+        import re
+        from apps.orders.models import Order
+        ord_match = re.search(r'(ORD-\d{8}-[A-Za-z0-9]{4}|BH-\d+)', text, re.I)
+        if ord_match:
+            code = ord_match.group(1).upper()
+            found_order = Order.objects.filter(order_number__iexact=code).prefetch_related('items').first()
+            if found_order and (not user or not user.is_authenticated or (hasattr(user, 'is_manager_or_admin') and user.is_manager_or_admin()) or found_order.customer == user):
+                data = ordering_service.serialize_order(found_order)
+                en = f"Here is the status for order {data['order_number']}:\n• Status: {data['status_label']}\n• Total: {format_price(data['total_etb'])}"
+                am = f"የትዕዛዝ #{data['order_number']} ሁኔታ፦\n• ሁኔታ፦ {data['status_label']}\n• ጠቅላላ፦ {format_price(data['total_etb'])}"
+                return bilingual(en, am), [data], {'action': 'none'}
+
         orders = ordering_service.my_orders(user)
         if not orders:
             en = ("I could not find any orders on your account. "
