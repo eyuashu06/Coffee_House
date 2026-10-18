@@ -149,10 +149,14 @@ def create_reservation(name, phone, date_str, time_str, guests, user=None):
         return None, 'create_failed'
 
 
-def find_reservations(name=None, phone=None, user=None):
+def find_reservations(name=None, phone=None, user=None, code=None):
+    if code:
+        code_clean = code.strip().upper()
+        return list(TableReservation.objects.filter(order_code__iexact=code_clean)[:1])
     qs = TableReservation.objects.all()
     if user is not None and getattr(user, 'is_authenticated', False):
-        qs = qs.filter(user=user)
+        if not (getattr(user, 'role', '') in ['MANAGER', 'ADMIN'] or getattr(user, 'is_superuser', False)):
+            qs = qs.filter(user=user)
     if name:
         qs = qs.filter(name__icontains=name.strip())
     if phone:
