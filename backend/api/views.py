@@ -211,14 +211,35 @@ class TableReservationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_authenticated:
-            if user.role in ['MANAGER', 'ADMIN'] or user.is_superuser:
-                return TableReservation.objects.all().order_by('-created_at')
-            return TableReservation.objects.filter(user=user).order_by('-created_at')
-        return TableReservation.objects.none()
+        search = self.request.query_params.get('search', '').strip()
+        code = self.request.query_params.get('order_code', '').strip() or search
+
+        if not user or not user.is_authenticated:
+            # Allow guest lookup of an exact reservation code without exposing entire list
+            if code and (code.upper().startswith('RES-') or len(code) >= 6):
+                return TableReservation.objects.filter(order_code__iexact=code)
+            return TableReservation.objects.none()
+
+        if user.role in ['MANAGER', 'ADMIN'] or user.is_superuser:
+            qs = TableReservation.objects.all()
+        else:
+            if code and code.upper().startswith('RES-'):
+                qs = TableReservation.objects.filter(models.Q(user=user) | models.Q(order_code__iexact=code))
+            else:
+                qs = TableReservation.objects.filter(user=user)
+
+        if search:
+            qs = qs.filter(
+                models.Q(order_code__icontains=search)
+                | models.Q(name__icontains=search)
+                | models.Q(contact_phone__icontains=search)
+            )
+        return qs.order_by('-created_at')
 
     def get_permissions(self):
         from rest_framework import permissions
+        if self.action in ['list', 'availability', 'create']:
+            return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 
     @action(detail=False, methods=['get'])
