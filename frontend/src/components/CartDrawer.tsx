@@ -258,11 +258,11 @@ export default function CartDrawer({
           <div className="p-5 bg-surface-2 border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2 text-[var(--accent)]">
               <span className="material-symbols-outlined text-xl">shopping_bag</span>
-              <h3 className="font-display text-lg font-bold text-white">{t('Your Cart')}</h3>
+              <h3 className="font-display text-lg font-bold text-[var(--text)]">{t('Your Cart')}</h3>
             </div>
             <button 
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-[#2c2b2a] hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-full bg-[var(--surface)] hover:bg-[var(--accent-soft)] text-[var(--text)] border border-[var(--border)] flex items-center justify-center transition-colors"
             >
               <span className="material-symbols-outlined text-base">close</span>
             </button>
@@ -287,18 +287,18 @@ export default function CartDrawer({
                   <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/40">
                     <span className="material-symbols-outlined text-3xl">check</span>
                   </div>
-                  <h4 className="font-display text-xl text-white font-bold">{t('Order Placed!')}</h4>
+                  <h4 className="font-display text-xl text-[var(--text)] font-bold">{t('Order Placed!')}</h4>
                   <p className="text-sm text-[var(--muted)] leading-relaxed">{orderSuccess}</p>
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={() => { setOrderSuccess(null); onClose(); }}
-                      className="py-2.5 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-bold text-xs uppercase tracking-wider shadow-md hover:brightness-110"
+                      className="py-2.5 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-xs uppercase tracking-wider shadow-md hover:brightness-110"
                     >
                       {t('Back to Menu')}
                     </button>
                     <a
                       href="/?welcome=1"
-                      className="py-2 px-6 rounded-full border border-[#683941] text-[var(--accent)] font-semibold text-xs text-center hover:bg-[#f7b5be]/10 transition-all"
+                      className="py-2 px-6 rounded-full border border-[var(--border)] text-[var(--accent)] font-semibold text-xs text-center hover:bg-[var(--accent-soft)] transition-all"
                     >
                       {t('Back to Home')}
                     </a>
@@ -343,9 +343,9 @@ export default function CartDrawer({
                     className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-display text-sm font-semibold text-white truncate">{tItem(item.coffee.name)}</h4>
+                    <h4 className="font-display text-sm font-semibold text-[var(--text)] truncate">{tItem(item.coffee.name)}</h4>
                     {item.variant && (
-                      <span className="text-[10.5px] text-[#fbbb50] block">
+                      <span className="text-[10.5px] text-[var(--gold)] block">
                         {tItem(item.variant.name)}
                         {Number(item.variant.price_modifier_etb || 0) > 0 &&
                           ` (+${birr} ${Number(item.variant.price_modifier_etb).toFixed(2)})`}
@@ -369,14 +369,14 @@ export default function CartDrawer({
                   <div className="flex items-center gap-2 bg-surface-2 px-2 py-1 rounded-lg border border-[var(--border)]/50">
                     <button 
                       onClick={() => onUpdateQty(idx, -1)}
-                      className="w-5 h-5 rounded bg-surface-bright flex items-center justify-center text-xs font-bold hover:text-[var(--accent)] text-[var(--text)]"
+                      className="w-5 h-5 rounded bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center text-xs font-bold hover:text-[var(--accent)] text-[var(--text)]"
                     >
                       -
                     </button>
-                    <span className="text-xs font-bold text-white min-w-[14px] text-center">{item.quantity}</span>
+                    <span className="text-xs font-bold text-[var(--text)] min-w-[14px] text-center">{item.quantity}</span>
                     <button 
                       onClick={() => onUpdateQty(idx, 1)}
-                      className="w-5 h-5 rounded bg-surface-bright flex items-center justify-center text-xs font-bold hover:text-[var(--accent)] text-[var(--text)]"
+                      className="w-5 h-5 rounded bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center text-xs font-bold hover:text-[var(--accent)] text-[var(--text)]"
                     >
                       +
                     </button>
@@ -415,8 +415,8 @@ export default function CartDrawer({
                       aria-pressed={orderType === option.value}
                       className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border text-[11px] font-semibold transition-all ${
                         orderType === option.value
-                          ? 'bg-[#f7b5be] text-[#4e232b] border-[#f7b5be]'
-                          : ' bg-surface-2 text-[var(--muted)] border-[var(--border)] hover:text-[var(--muted)]'
+                          ? 'bg-[var(--accent)] text-[var(--accent-contrast)] border-[var(--accent)]'
+                          : ' bg-surface-2 text-[var(--muted)] border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
                       }`}
                     >
                       <span className="material-symbols-outlined text-base">{option.icon}</span>
@@ -434,7 +434,7 @@ export default function CartDrawer({
                   <select
                     value={deliveryZoneId}
                     onChange={(e) => setDeliveryZoneId(e.target.value ? Number(e.target.value) : '')}
-                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:border-[#f7b5be] focus:outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:border-[var(--accent)] focus:outline-none"
                   >
                     <option value="">{t('Choose your zone...')}</option>
                     {zones.map((zone) => (
@@ -451,10 +451,10 @@ export default function CartDrawer({
                     onChange={(e) => setDeliveryAddress(e.target.value)}
                     rows={2}
                     placeholder={t('House, street, landmark...')}
-                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[#6f6162] focus:border-[#f7b5be] focus:outline-none resize-none"
+                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none resize-none"
                   />
                   {missingFulfillmentMessage && (
-                    <p className="text-[11px] text-[#fbbb50] leading-relaxed">{missingFulfillmentMessage}</p>
+                    <p className="text-[11px] text-[var(--gold)] leading-relaxed">{missingFulfillmentMessage}</p>
                   )}
                 </div>
               )}
@@ -470,7 +470,7 @@ export default function CartDrawer({
                     value={tableNumber}
                     onChange={(e) => setTableNumber(e.target.value)}
                     placeholder={t('Which table are you at?')}
-                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[#6f6162] focus:border-[#f7b5be] focus:outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
                   />
                 </div>
               )}
@@ -495,7 +495,7 @@ export default function CartDrawer({
               <button
                 onClick={handleCheckoutClick}
                 disabled={isSubmitting || isClosedStore || !fulfillmentReady}
-                className="w-full py-3.5 px-6 rounded-full bg-[#f7b5be] hover:brightness-110 text-[#4e232b] font-bold text-sm uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 px-6 rounded-full bg-[var(--accent)] hover:brightness-110 text-[var(--accent-contrast)] font-bold text-sm uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span>{isSubmitting ? t('Processing Order...') : t('Pay with Chapa')}</span>
                 <span className="material-symbols-outlined text-base">east</span>
