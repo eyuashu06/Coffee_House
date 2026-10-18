@@ -61,7 +61,7 @@ function ReadyEstimate({
   const time = readyAt.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
 
   return (
-    <p className="mt-3 text-[13px] text-on-surface-variant">
+    <p className="mt-3 text-[13px] text-[var(--muted)]">
       {minutesAway > 1
         ? `${t('Ready in about')} ${minutesAway} ${t('min')}`
         : `${t('Ready around')} ${time}`}
@@ -99,14 +99,14 @@ export default function OrderTracker({
   );
 
   return (
-    <div className="mt-4 pt-4 border-t border-white/5">
-      <h4 className="text-xs font-semibold text-on-surface-variant mb-4 uppercase tracking-wider">{t('Order Status Timeline')}</h4>
+    <div className="mt-4 pt-4 border-t border-[var(--border)]">
+      <h4 className="text-xs font-semibold text-[var(--muted)] mb-4 uppercase tracking-wider">{t('Order Status Timeline')}</h4>
       <div className="relative flex items-center justify-between">
         {/* Connecting Line background */}
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-surface-container rounded-full z-0"></div>
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-full z-0"></div>
         {/* Connecting Line active */}
         <div
-          className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-tertiary rounded-full z-0 transition-all duration-500"
+          className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-[var(--accent)] rounded-full z-0 transition-all duration-500"
           style={{ width: `${(Math.max(currentIndex, 0) / (STATUS_STAGES.length - 1)) * 100}%` }}
         ></div>
 
@@ -120,16 +120,16 @@ export default function OrderTracker({
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
                   isCompleted
-                    ? 'bg-tertiary text-on-tertiary border-2 border-tertiary'
+                    ? 'bg-[var(--accent)] text-[var(--accent-contrast)] border-2 border-[var(--accent)]'
                     : isCurrent
-                      ? 'bg-primary-container text-tertiary border-2 border-tertiary shadow-[0_0_10px_rgba(251,187,80,0.5)]'
-                      : 'bg-surface-container text-on-surface-variant border-2 border-surface-container-high'
+                      ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-2 border-[var(--accent)] shadow-md'
+                      : 'bg-[var(--surface)] text-[var(--muted)] border-2 border-[var(--border)]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">{stage.icon}</span>
               </div>
               <span className={`text-[9px] font-bold uppercase tracking-wider text-center ${
-                isCompleted || isCurrent ? 'text-tertiary' : 'text-on-surface-variant'
+                isCompleted || isCurrent ? 'text-[var(--accent)]' : 'text-[var(--muted)]'
               }`}>
                 {t(stage.label)}
               </span>
@@ -148,7 +148,7 @@ export default function OrderTracker({
         />
       )}
       {isReadyPhase(status, orderType) && orderType !== 'DELIVERY' && (
-        <p className="mt-3 text-[13px] font-semibold text-tertiary">
+        <p className="mt-3 text-[13px] font-semibold text-[var(--accent)]">
           {t('Ready now — ask at the counter with your order number.')}
         </p>
       )}
