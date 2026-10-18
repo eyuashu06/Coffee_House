@@ -261,7 +261,7 @@ export default function AssistantChat() {
           setUnread(0);
         }}
         aria-label={t('Buna Hub Assistant')}
-        className="fixed bottom-5 right-5 z-[70] flex items-center gap-2 px-4 py-3 rounded-full bg-[#f7b5be] text-[#4e232b] font-bold text-sm shadow-[0_10px_30px_rgba(0,0,0,0.45)] hover:brightness-110 active:scale-95 transition-all"
+        className="fixed bottom-5 right-5 z-[70] flex items-center gap-2 px-4 py-3 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-sm shadow-[0_10px_30px_rgba(0,0,0,0.3)] hover:brightness-110 active:scale-95 transition-all"
       >
         <i className={`ph ${isOpen ? 'ph-x' : 'ph-chat-circle-dots'} text-xl`}></i>
         <span className="hidden sm:inline">{isOpen ? t('Close') : t('Ask Buna')}</span>
@@ -273,16 +273,16 @@ export default function AssistantChat() {
       </button>
 
       {isOpen && (
-        <div className="fixed bottom-24 right-4 sm:right-5 z-[70] w-[calc(100vw-2rem)] sm:w-[420px] h-[70vh] max-h-[620px] bg-[#1c1b1b] border border-[#514345] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed bottom-24 right-4 sm:right-5 z-[70] w-[calc(100vw-2rem)] sm:w-[420px] h-[70vh] max-h-[620px] bg-surface border border-[var(--border)] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="px-4 py-3 bg-[#3b141c] border-b border-[#514345] flex items-center justify-between">
+          <div className="px-4 py-3 bg-surface-2 border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              <span className="w-9 h-9 rounded-full bg-[#1c1b1b] border border-[#683941] flex items-center justify-center text-[#f7b5be]">
+              <span className="w-9 h-9 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)]">
                 <i className="ph ph-coffee-bean text-lg"></i>
               </span>
               <div className="min-w-0">
-                <p className="font-display text-[15px] font-bold text-white truncate">Buna Hub Assistant</p>
-                <p className="text-[11px] text-[#d5c2c3] truncate">
+                <p className="font-display text-[15px] font-bold text-[var(--text)] truncate">Buna Hub Assistant</p>
+                <p className="text-[11px] text-[var(--muted)] truncate">
                   {language === 'am'
                     ? 'ስለ ሜኑ እና ቦታ ማስያዝ እርዳታ'
                     : 'Menu & reservations help'}
@@ -291,19 +291,19 @@ export default function AssistantChat() {
             </div>
             <div className="flex items-center gap-1">
               <LanguageToggle
-                className="h-7 px-2 rounded-full text-[#d5c2c3] hover:text-[#f7b5be] hover:bg-white/10 transition-colors flex items-center gap-1 text-[11px] font-semibold border border-[#514345] hover:border-[#f7b5be]"
+                className="h-7 px-2 rounded-full text-[var(--muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-soft)] transition-colors flex items-center gap-1 text-[11px] font-semibold border border-[var(--border)] hover:border-[var(--accent)]"
               />
               <button
                 onClick={startFresh}
                 title={language === 'am' ? 'አዲስ ውይይት ጀምር' : 'Start a new conversation'}
-                className="w-8 h-8 rounded-full text-[#d5c2c3] hover:text-[#f7b5be] hover:bg-white/10 transition-colors"
+                className="w-8 h-8 rounded-full text-[var(--muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-soft)] transition-colors"
               >
                 <i className="ph ph-arrow-counter-clockwise text-base"></i>
               </button>
               <button
                 onClick={() => setIsOpen(false)}
                 title={t('Close')}
-                className="w-8 h-8 rounded-full text-[#d5c2c3] hover:text-white hover:bg-white/10 transition-colors"
+                className="w-8 h-8 rounded-full text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--accent-soft)] transition-colors"
               >
                 <i className="ph ph-x text-base"></i>
               </button>
@@ -311,10 +311,10 @@ export default function AssistantChat() {
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-[#131313]">
-{messages.length === 0 && (
-              <div className="rounded-2xl rounded-tl-sm bg-[#1c1b1b] border border-[#514345] p-4 text-sm space-y-2">
-                <p className="text-[#e5e2e1] leading-relaxed">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-[var(--bg)]">
+            {messages.length === 0 && (
+              <div className="rounded-2xl rounded-tl-sm bg-surface border border-[var(--border)] p-4 text-sm space-y-2">
+                <p className="text-[var(--text)] leading-relaxed">
                   {language === 'am'
                     ? 'ሰላም! ስለ ሜኑአችን፣ ዋጋዎች፣ የምርቶች መገኘት፣ የመክፈቻ ሰዓታት እና ቦታ ማስያዝ ልረዳዎ እችላለሁ።'
                     : 'Hello! I can help with our menu, prices, availability, opening hours and table reservations. Every answer comes from our live menu database.'}
@@ -325,40 +325,40 @@ export default function AssistantChat() {
             {messages.map(msg => (
               <div key={msg.id} className={`flex flex-col ${msg.from === 'user' ? 'items-end' : 'items-start'}`}>
                 {msg.from === 'user' ? (
-                  <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-[#f7b5be] text-[#4e232b] px-4 py-2.5 text-sm font-medium">
+                  <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-[var(--accent)] text-[var(--accent-contrast)] px-4 py-2.5 text-sm font-medium">
                     {msg.en}
                   </div>
-) : (
+                ) : (
                   <div
                     className={`max-w-[92%] rounded-2xl rounded-tl-sm px-4 py-3 space-y-3 border ${
                       msg.error
-                        ? 'bg-red-950/60 border-red-800'
-                        : 'bg-[#1c1b1b] border-[#514345]'
+                        ? 'bg-red-50 text-red-900 border-red-300 dark:bg-red-950/60 dark:border-red-800 dark:text-red-200'
+                        : 'bg-surface border-[var(--border)] text-[var(--text)]'
                     }`}
                   >
                     {/* One language per bubble, matching question language or customer selection. */}
                     <div className="space-y-1">
-                      <p className="text-[#e5e2e1] text-sm leading-relaxed whitespace-pre-line">
+                      <p className="text-[var(--text)] text-sm leading-relaxed whitespace-pre-line">
                         {language === 'am' || msg.queryLang === 'am' ? (msg.am || msg.en) : msg.en}
                       </p>
                     </div>
                     {msg.items && msg.items.length > 0 && (
-                      <div className="grid grid-cols-2 gap-2 border-t border-[#514345] pt-3">
+                      <div className="grid grid-cols-2 gap-2 border-t border-[var(--border)] pt-3">
                         {msg.items.slice(0, 6).map(item => (
                           <a
                             key={item.id}
                             href="#menu"
                             onClick={() => setIsOpen(false)}
-                            className="flex items-center gap-2 p-2 rounded-lg bg-[#131313] border border-[#514345]/70 hover:border-[#f7b5be] transition-colors"
+                            className="flex items-center gap-2 p-2 rounded-lg bg-surface-2 border border-[var(--border)] hover:border-[var(--accent)] transition-colors"
                           >
                             {item.image_url && (
                               <img src={item.image_url} alt={tItem(item.name)} className="w-9 h-9 rounded object-cover shrink-0" />
                             )}
                             <span className="min-w-0">
-                              <span className="block text-[12px] font-bold text-[#e5e2e1] truncate">{tItem(item.name)}</span>
-                              <span className="block text-[11px] text-[#f7b5be]">
+                              <span className="block text-[12px] font-bold text-[var(--text)] truncate">{tItem(item.name)}</span>
+                              <span className="block text-[11px] text-[var(--accent)] font-semibold">
                                 {Number(item.price).toFixed(0)} {language === 'am' ? 'ብር' : 'ETB'}
-                                {!item.available && <span className="text-red-300"> · {t('Unavailable')}</span>}
+                                {!item.available && <span className="text-red-600 dark:text-red-400"> · {t('Unavailable')}</span>}
                               </span>
                             </span>
                           </a>
@@ -367,18 +367,18 @@ export default function AssistantChat() {
                     )}
 
                     {msg.reservations && msg.reservations.length > 0 && (
-                      <div className="border-t border-[#514345] pt-2 text-[11px] text-[#d5c2c3]">
-                        <i className="ph ph-calendar-check text-[#f7b5be]"></i>{' '}
+                      <div className="border-t border-[var(--border)] pt-2 text-[11px] text-[var(--muted)]">
+                        <i className="ph ph-calendar-check text-[var(--accent)]"></i>{' '}
                         {msg.reservations.length} {t('reservation records saved')}
                       </div>
                     )}
 
                     {msg.orders && msg.orders.length > 0 && (
-                      <div className="border-t border-[#514345] pt-2 text-[11px] text-[#d5c2c3] space-y-1">
+                      <div className="border-t border-[var(--border)] pt-2 text-[11px] text-[var(--muted)] space-y-1">
                         {msg.orders.map(order => (
                           <p key={order.order_number} className="flex items-center gap-1.5">
-                            <i className="ph ph-receipt text-[#f7b5be]"></i>
-                            <span className="font-semibold text-[#e5e2e1]">{order.order_number}</span>
+                            <i className="ph ph-receipt text-[var(--accent)]"></i>
+                            <span className="font-semibold text-[var(--text)]">{order.order_number}</span>
                             {order.status_label && <span>· {order.status_label}</span>}
                             <span>· {Number(order.total_etb).toFixed(0)} ETB</span>
                           </p>
@@ -391,17 +391,17 @@ export default function AssistantChat() {
                         we were about to do for them, so these buttons just get
                         them there. */}
                     {msg.action?.action === 'auth_required' && !user && (
-                      <div className="border-t border-[#514345] pt-3 flex flex-wrap gap-2">
+                      <div className="border-t border-[var(--border)] pt-3 flex flex-wrap gap-2">
                         <button
                           onClick={() => openAuth('LOGIN', msg.action?.reason_en)}
-                          className="px-3 py-1.5 rounded-full bg-[#f7b5be] text-[#4e232b] text-[12px] font-bold hover:brightness-110 transition-all"
+                          className="px-3 py-1.5 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[12px] font-bold hover:brightness-110 transition-all"
                         >
                           <i className="ph ph-sign-in mr-1"></i>
                           {t('Sign In')}
                         </button>
                         <button
                           onClick={() => openAuth('REGISTER', msg.action?.reason_am)}
-                          className="px-3 py-1.5 rounded-full bg-transparent border border-[#f7b5be] text-[#f7b5be] text-[12px] font-bold hover:bg-[#f7b5be]/10 transition-colors"
+                          className="px-3 py-1.5 rounded-full bg-transparent border border-[var(--accent)] text-[var(--accent)] text-[12px] font-bold hover:bg-[var(--accent-soft)] transition-colors"
                         >
                           <i className="ph ph-user-plus mr-1"></i>
                           {t('Sign Up')}
@@ -412,7 +412,7 @@ export default function AssistantChat() {
                     {msg.action?.action === 'order_placed' && (
                       <a
                         href="/account?tab=orders"
-                        className="border-t border-[#514345] pt-3 flex items-center gap-1.5 text-[12px] font-bold text-[#f7b5be] hover:underline"
+                        className="border-t border-[var(--border)] pt-3 flex items-center gap-1.5 text-[12px] font-bold text-[var(--accent)] hover:underline"
                       >
                         <i className="ph ph-receipt"></i>
                         {t('Track your order')}
@@ -422,7 +422,7 @@ export default function AssistantChat() {
                     {msg.error && lastFailed && (
                       <button
                         onClick={() => send(lastFailed)}
-                        className="flex items-center gap-1.5 text-[12px] font-bold text-[#f7b5be] hover:underline"
+                        className="flex items-center gap-1.5 text-[12px] font-bold text-[var(--accent)] hover:underline"
                       >
                         <i className="ph ph-arrow-clockwise"></i> {t('Retry')}
                       </button>
@@ -433,7 +433,7 @@ export default function AssistantChat() {
             ))}
 
             {isLoading && (
-              <div className="flex items-center gap-2 text-[#d5c2c3] text-xs bg-[#1c1b1b] border border-[#514345] rounded-xl px-3 py-2 w-max">
+              <div className="flex items-center gap-2 text-[var(--muted)] text-xs bg-surface border border-[var(--border)] rounded-xl px-3 py-2 w-max">
                 <i className="ph ph-circle-notch animate-spin"></i>
                 {language === 'am' ? 'መረጃ በመፈለግ ላይ…' : 'Checking the menu…'}
               </div>
@@ -441,14 +441,14 @@ export default function AssistantChat() {
           </div>
 
           {/* Quick actions */}
-          <div className="px-3 py-2 bg-[#131313] border-t border-[#514345] flex gap-2 overflow-x-auto">
+          <div className="px-3 py-2 bg-surface-2 border-t border-[var(--border)] flex gap-2 overflow-x-auto">
             {quickActions.map(action => (
               <button
                 key={action.id}
                 onClick={() => handleQuickAction(action)}
                 disabled={isLoading}
                 title={`${action.label_am} — ${action.label_en}`}
-                className="shrink-0 px-3 py-1.5 rounded-full bg-[#1c1b1b] border border-[#514345] text-[11px] font-semibold text-[#e5e2e1] hover:border-[#f7b5be] hover:text-[#f7b5be] transition-colors disabled:opacity-50"
+                className="shrink-0 px-3 py-1.5 rounded-full bg-surface border border-[var(--border)] text-[11px] font-semibold text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors disabled:opacity-50"
               >
                 <span className="mr-1">{action.icon}</span>
                 {language === 'am' ? action.label_am : action.label_en}
@@ -462,19 +462,19 @@ export default function AssistantChat() {
               e.preventDefault();
               send(input);
             }}
-            className="px-3 py-3 bg-[#1c1b1b] border-t border-[#514345] flex items-center gap-2"
+            className="px-3 py-3 bg-surface-2 border-t border-[var(--border)] flex items-center gap-2"
           >
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
               placeholder={language === 'am' ? 'ስለ ሜኑ ይጠይቁ…' : 'Ask about the menu…'}
-              className="flex-1 bg-[#131313] border border-[#514345] rounded-xl px-3 py-2.5 text-sm text-[#e5e2e1] focus:outline-none focus:border-[#f7b5be]"
+              className="flex-1 bg-surface border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent)]"
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
               aria-label={t('Send')}
-              className="w-11 h-11 rounded-xl bg-[#f7b5be] text-[#4e232b] flex items-center justify-center hover:brightness-110 transition-all disabled:opacity-40"
+              className="w-11 h-11 rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] flex items-center justify-center hover:brightness-110 transition-all disabled:opacity-40"
             >
               <i className="ph ph-paper-plane-tilt text-lg"></i>
             </button>
