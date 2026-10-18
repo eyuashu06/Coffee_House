@@ -7,8 +7,13 @@ import ReceiptModal from '../../components/ReceiptModal';
 import PaymentModal from '../../components/PaymentModal';
 import Link from 'next/link';
 import ThemeToggle from '../../components/ThemeToggle';
+import LanguageToggle from '../../components/LanguageToggle';
+import NotificationsDropdown from '../../components/NotificationsDropdown';
+import ProfileDropdown from '../../components/ProfileDropdown';
 import { useLanguage } from '../../context/LanguageContext';
 import { apiFetch } from '../../lib/api';
+import EthiopianPhoneInput from '../../components/EthiopianPhoneInput';
+import { formatEthiopianTime } from '../../utils/ethiopianTime';
 
 interface OrderItem {
   id: number;
@@ -142,6 +147,7 @@ export default function AccountPage() {
   const { t, tItem, locale, language } = useLanguage();
   const birr = language === 'am' ? 'ብር' : 'ETB';
   const [activeTab, setActiveTab] = useState<'orders' | 'reservations' | 'addresses' | 'profile'>('orders');
+  const [highlightCode, setHighlightCode] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -333,14 +339,41 @@ export default function AccountPage() {
     // in the language now on screen, not the one in force when the poll started.
   }, [fetchOrders, announcePaymentResult, reconcileUnsettled, t]);
 
-  // Support direct navigation to a tab, e.g. /account?tab=reservations
-  useEffect(() => {
+  // Support direct navigation to a tab and highlight specific order/reservation
+  const syncAccountFromUrl = useCallback(() => {
     if (typeof window === 'undefined') return;
-    const tab = new URLSearchParams(window.location.search).get('tab');
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    const highlight = params.get('highlight') || params.get('order') || params.get('reservation');
     if (tab === 'orders' || tab === 'reservations' || tab === 'addresses' || tab === 'profile') {
       setActiveTab(tab);
+    } else if (highlight) {
+      if (highlight.toUpperCase().startsWith('RES-')) {
+        setActiveTab('reservations');
+      } else {
+        setActiveTab('orders');
+      }
+    }
+    if (highlight) {
+      setHighlightCode(highlight);
+      setTimeout(() => {
+        const el = document.getElementById(`item-${highlight}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 400);
     }
   }, []);
+
+  useEffect(() => {
+    syncAccountFromUrl();
+    window.addEventListener('popstate', syncAccountFromUrl);
+    window.addEventListener('notification-navigate', syncAccountFromUrl);
+    return () => {
+      window.removeEventListener('popstate', syncAccountFromUrl);
+      window.removeEventListener('notification-navigate', syncAccountFromUrl);
+    };
+  }, [syncAccountFromUrl]);
 
   // Safety net: any order whose payment is still settling gets re-checked too, so a
   // customer who closed the Chapa tab still sees the confirmation when they come back.
@@ -506,11 +539,11 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-surface text-[var(--text)] flex flex-col items-center justify-center font-body">
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col items-center justify-center font-body">
         <span className="material-symbols-outlined text-5xl text-[var(--accent)] mb-4">lock</span>
         <h2 className="font-display text-[26px] font-bold">{t('Sign In Required')}</h2>
         <p className="text-[var(--muted)] mt-2 mb-6 text-[15px]">{t('Please sign in to view your orders and manage your profile.')}</p>
-        <Link href="/?welcome=1" className="h-10 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold flex items-center hover:bg-[#ffd9dd] transition-colors">
+        <Link href="/?welcome=1" className="h-10 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold flex items-center hover:brightness-110 transition-colors">
           {t('Return to Home')}
         </Link>
       </div>
@@ -521,7 +554,7 @@ export default function AccountPage() {
   const pastOrders = orders.filter(o => PAST_STATUSES.includes(o.status));
 
   return (
-    <div className="bg-surface text-[var(--text)] font-body min-h-screen pb-24">
+    <div className="bg-[var(--bg)] text-[var(--text)] font-body min-h-screen pb-24">
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-[var(--bg-deep)] border-b border-[var(--border)]/60">
         <div className="flex items-center justify-between px-6 h-14">
@@ -534,14 +567,15 @@ export default function AccountPage() {
               <span className="font-display text-[21px] tracking-wide">Buna Hub</span>
             </Link>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-[var(--muted)] text-[15px] hidden sm:block">{t('Hello,')} {user.first_name || user.username}</span>
-            <ThemeToggle className="h-8 w-8" />
-            <Link href="/?welcome=1" className="h-8 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] flex items-center gap-2 hover:border-[#f7b5be] hover:text-[var(--accent)] transition-colors" aria-label="Back to Home">
-              <i className="ph ph-house"></i>
-              <span>{t('Home')}</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <LanguageToggle className="h-9 px-2.5 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors" />
+            <ThemeToggle className="h-9 w-9" />
+            <Link href="/?welcome=1" className="h-9 px-3.5 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] hidden sm:flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors" aria-label="Back to Home">
+              <i className="ph ph-storefront text-[16px]"></i>
+              <span>{t('Store')}</span>
             </Link>
-            <button onClick={logout} className="h-8 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] flex items-center hover:border-[#f7b5be] hover:text-[var(--accent)] transition-colors">{t('Sign Out')}</button>
+            <NotificationsDropdown />
+            <ProfileDropdown />
           </div>
         </div>
       </header>
@@ -550,7 +584,7 @@ export default function AccountPage() {
       {banner && (
         <div className={`mx-4 mt-6 p-4 rounded-[14px] flex items-start gap-3 border ${
           banner.type === 'success' ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)]' :
-          banner.type === 'error' ? 'bg-red-950 border-red-900 text-red-200' :
+          banner.type === 'error' ? 'dark:bg-red-950 dark:border-red-900 dark:text-red-200 bg-red-100 border-red-300 text-red-800' :
           'bg-surface-2 border-[var(--border)] text-[var(--text)]'
         }`}>
           <i className={`ph ${banner.type === 'success' ? 'ph-check-circle' : banner.type === 'error' ? 'ph-warning-circle' : 'ph-info'} text-xl mt-0.5`}></i>
@@ -573,10 +607,10 @@ export default function AccountPage() {
         
         {/* TABS */}
         <div className="flex flex-wrap gap-2 mb-8 border-b border-[var(--border)] pb-4">
-          <button onClick={() => handleTabChange('orders')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'orders' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[#9e8d8e]'}`}>{t('My Orders')}</button>
-          <button onClick={() => handleTabChange('reservations')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'reservations' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[#9e8d8e]'}`}>{t('Table Reservations')}</button>
-          <button onClick={() => handleTabChange('addresses')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'addresses' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[#9e8d8e]'}`}>{t('Delivery Addresses')}</button>
-          <button onClick={() => handleTabChange('profile')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'profile' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[#9e8d8e]'}`}>{t('Profile Settings')}</button>
+          <button onClick={() => handleTabChange('orders')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'orders' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('My Orders')}</button>
+          <button onClick={() => handleTabChange('reservations')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'reservations' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Table Reservations')}</button>
+          <button onClick={() => handleTabChange('addresses')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'addresses' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Delivery Addresses')}</button>
+          <button onClick={() => handleTabChange('profile')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'profile' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Profile Settings')}</button>
         </div>
 
         {/* TAB: ORDERS */}
@@ -586,10 +620,10 @@ export default function AccountPage() {
               <div className="py-12 flex justify-center text-[var(--muted)]">{t('Loading orders...')}</div>
             ) : orders.length === 0 ? (
               <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-10 text-center">
-                <i className="ph ph-receipt text-4xl text-[#514345] mb-4"></i>
+                <i className="ph ph-receipt text-4xl text-[var(--muted)] mb-4"></i>
                 <h3 className="font-display text-[22px] mb-2">{t('No orders yet')}</h3>
                 <p className="text-[var(--muted)] text-[15.5px] mb-6">{t("Looks like you haven't tasted our buna yet.")}</p>
-                <Link href="/#menu" className="h-10 px-6 rounded-full inline-flex items-center bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">{t('Browse Menu')}</Link>
+                <Link href="/#menu" className="h-10 px-6 rounded-full inline-flex items-center bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold hover:brightness-110 transition-colors">{t('Browse Menu')}</Link>
               </div>
             ) : (
               <>
@@ -599,14 +633,22 @@ export default function AccountPage() {
                     <h3 className="font-display text-[24px] mb-4 flex items-center gap-2"><i className="ph ph-hourglass text-[var(--accent)]"></i> {t('Active Orders')}</h3>
                     <div className="space-y-4">
                       {pendingOrders.map(order => (
-                        <div key={order.id} className="bg-surface-2 border border-[var(--accent)] rounded-[18px] p-5">
+                        <div
+                          key={order.id}
+                          id={`item-${order.order_number}`}
+                          className={`bg-surface-2 rounded-[18px] p-5 transition-all duration-500 ${
+                            highlightCode === order.order_number
+                              ? 'border-2 border-[var(--accent)] ring-4 ring-[var(--accent)]/30 shadow-2xl'
+                              : 'border border-[var(--accent)]'
+                          }`}
+                        >
                           {/* A payment being confirmed right now is not the same as a payment that was
                               never made. Telling someone "NOT PAID YET" while the
                               gateway is still answering them is what made a real
                               paid order look unpaid. */}
                           {isPaymentSettling(order) ? (
-                            <div className="mt-4 rounded-xl border border-blue-500/40 bg-blue-950/40 p-3 text-xs space-y-2">
-                              <p className="flex items-start gap-2 text-blue-200 font-semibold">
+                            <div className="mt-4 rounded-xl border border-blue-500/40 bg-blue-50 text-blue-900 dark:bg-blue-950/40 dark:text-blue-200 p-3 text-xs space-y-2">
+                              <p className="flex items-start gap-2 text-blue-800 dark:text-blue-200 font-semibold">
                                 <i className="ph ph-spinner-gap animate-spin text-lg mt-0.5"></i>
                                 <span>
                                   {t('Confirming your payment')}
@@ -617,15 +659,15 @@ export default function AccountPage() {
                               </p>
                             </div>
                           ) : order.status === 'PENDING_PAYMENT' ? (
-                            <div className="mt-4 rounded-xl border border-red-500/40 bg-red-950/50 p-3 text-xs space-y-2">
-                              <p className="flex items-start gap-2 text-red-200 font-semibold">
+                            <div className="mt-4 rounded-xl border border-red-500/40 bg-red-50 text-red-900 dark:bg-red-950/50 dark:text-red-200 p-3 text-xs space-y-2">
+                              <p className="flex items-start gap-2 text-red-800 dark:text-red-200 font-semibold">
                                 <i className="ph ph-warning-octagon text-lg mt-0.5"></i>
                                 <span>
                                   {t('NOT PAID YET — you have not paid for this order, so the kitchen has not received it and no receipt can be issued.')}
                                 </span>
                               </p>
                               {isPaymentFailed(order) && order.latest_payment?.failure_reason && (
-                                <p className="text-red-300/90">
+                                <p className="text-red-700 dark:text-red-300/90">
                                   {t('Last attempt:')} {order.latest_payment.failure_reason}
                                 </p>
                               )}
@@ -651,12 +693,12 @@ export default function AccountPage() {
                             </div>
                             <div className="flex gap-2">
                               {order.status === 'PENDING_PAYMENT' && (
-                                <button onClick={() => setPayOrder(order)} className="h-9 px-4 rounded-full bg-[#f7b5be] text-[#4e232b] text-[14px] font-bold hover:brightness-110 transition-colors">
+                                <button onClick={() => setPayOrder(order)} className="h-9 px-4 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[14px] font-bold hover:brightness-110 transition-colors">
                                   {t('Pay')} {Number(order.total_amount_etb).toFixed(2)} {birr}
                                 </button>
                               )}
                               {isOrderPaid(order) ? (
-                                <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] hover:border-[#f7b5be] hover:text-[var(--accent)] transition-colors">{t('View Receipt')}</button>
+                                <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">{t('View Receipt')}</button>
                               ) : (
                                 <span className="h-9 px-4 rounded-full border border-[var(--border)]/60 text-[var(--muted)] text-[13px] flex items-center cursor-not-allowed" title={t('Receipts are issued after payment')}>
                                   {t('Receipt after payment')}
@@ -676,23 +718,31 @@ export default function AccountPage() {
                     <h3 className="font-display text-[24px] mb-4 flex items-center gap-2"><i className="ph ph-clock-counter-clockwise text-[var(--muted)]"></i> {t('Order History')}</h3>
                     <div className="space-y-4">
                       {pastOrders.map(order => (
-                        <div key={order.id} className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-[#9e8d8e] transition-colors">
+                        <div
+                          key={order.id}
+                          id={`item-${order.order_number}`}
+                          className={`bg-surface-2 rounded-[18px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-500 ${
+                            highlightCode === order.order_number
+                              ? 'border-2 border-[var(--accent)] ring-4 ring-[var(--accent)]/30 shadow-2xl'
+                              : 'border border-[var(--border)] hover:border-[#9e8d8e]'
+                          }`}
+                        >
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
                               <span className="font-semibold text-[16px]">{order.order_number}</span>
                               <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
-                                order.status === 'COMPLETED' ? 'bg-green-950 text-green-300 border border-green-900' :
-                                order.status === 'CANCELLED' || order.status === 'REJECTED' ? 'bg-red-950 text-red-300 border border-red-900' :
-                                'bg-yellow-950 text-yellow-300 border border-yellow-900'
+                                order.status === 'COMPLETED' ? 'bg-green-100 text-green-800 border border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-900' :
+                                order.status === 'CANCELLED' || order.status === 'REJECTED' ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-900' :
+                                'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-900'
                               }`}>{t(STATUS_LABELS[order.status] || order.status)}</span>
                             </div>
                             <p className="text-[14.5px] text-[var(--muted)] mb-1">{new Date(order.created_at).toLocaleDateString(locale)} • {order.items.length} {t('items')}</p>
                             {order.status === 'EXPIRED' ? (
-                              <p className="text-[13px] text-yellow-300/90 mb-1">
+                              <p className="text-[13px] text-amber-700 dark:text-yellow-300/90 mb-1">
                                 {t('This order expired before we received payment. Place it again below and we will make it fresh.')}
                               </p>
                             ) : (order.status === 'REJECTED' || order.status === 'CANCELLED') && order.rejection_reason ? (
-                              <p className="text-[13px] text-red-300/80 mb-1">{order.rejection_reason}</p>
+                              <p className="text-[13px] text-red-700 dark:text-red-300/80 mb-1">{order.rejection_reason}</p>
                             ) : null}
                             <p className="text-[16px] font-bold text-[var(--text)]">{Number(order.total_amount_etb).toFixed(2)} {birr}</p>
                           </div>
@@ -700,7 +750,7 @@ export default function AccountPage() {
                             <button
                               onClick={() => handleReorder(order.id)}
                               disabled={reorderingId === order.id}
-                              className="h-9 px-4 rounded-full bg-[#f7b5be] text-[#4e232b] text-[14px] font-bold hover:brightness-110 transition-colors flex items-center gap-1.5 disabled:opacity-50 w-full sm:w-auto justify-center"
+                              className="h-9 px-4 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[14px] font-bold hover:brightness-110 transition-colors flex items-center gap-1.5 disabled:opacity-50 w-full sm:w-auto justify-center"
                             >
                               {reorderingId === order.id ? (
                                 <>
@@ -715,7 +765,7 @@ export default function AccountPage() {
                               )}
                             </button>
                             {isOrderPaid(order) ? (
-                              <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] hover:border-[#f7b5be] hover:text-[var(--accent)] transition-colors w-full sm:w-auto">{t('View Receipt')}</button>
+                              <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors w-full sm:w-auto">{t('View Receipt')}</button>
                             ) : (
                               <span className="h-9 px-4 rounded-full border border-[var(--border)]/60 text-[var(--muted)] text-[13px] flex items-center cursor-not-allowed w-full sm:w-auto justify-center" title={t('Receipts are issued after payment')}>
                                 {t('Receipt after payment')}
@@ -739,27 +789,40 @@ export default function AccountPage() {
               <div className="py-12 flex justify-center text-[var(--muted)]">{t('Loading reservations...')}</div>
             ) : reservations.length === 0 ? (
               <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-10 text-center">
-                <i className="ph ph-calendar text-4xl text-[#514345] mb-4"></i>
+                <i className="ph ph-calendar text-4xl text-[var(--muted)] mb-4"></i>
                 <h3 className="font-display text-[22px] mb-2">{t('No reservations yet')}</h3>
                 <p className="text-[var(--muted)] text-[15.5px] mb-6">{t("You haven't booked any tables with us.")}</p>
-                <Link href="/#book" className="h-10 px-6 rounded-full inline-flex items-center bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">{t('Book a Table')}</Link>
+                <Link href="/#book" className="h-10 px-6 rounded-full inline-flex items-center bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold hover:brightness-110 transition-colors">{t('Book a Table')}</Link>
               </div>
             ) : (
               <div className="space-y-4">
                 {reservations.map(res => (
-                  <div key={res.id} className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-5 flex flex-wrap gap-4 items-center justify-between">
+                  <div
+                    key={res.id}
+                    id={`item-${res.order_code || res.id}`}
+                    className={`bg-surface-2 rounded-[18px] p-5 flex flex-wrap gap-4 items-center justify-between transition-all duration-500 ${
+                      highlightCode && (highlightCode === res.order_code || highlightCode === String(res.id))
+                        ? 'border-2 border-[var(--accent)] ring-4 ring-[var(--accent)]/30 shadow-2xl'
+                        : 'border border-[var(--border)]'
+                    }`}
+                  >
                     <div>
                       <p className="text-[12px] font-mono text-[var(--muted)] mb-1 tracking-wide">{res.order_code || `#${res.id}`}</p>
                       <p className="text-[14px] text-[var(--muted)] mb-1">{t('Reservation for')} {res.name}</p>
-                      <p className="text-[16px] font-semibold">{new Date(res.date_time).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <p className="text-[16px] font-semibold">{new Date(res.date_time).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                        <span className="text-[12px] px-2.5 py-0.5 rounded-full bg-[var(--gold)]/15 text-[var(--gold)] font-medium">
+                          🇪🇹 {formatEthiopianTime(res.date_time, language)}
+                        </span>
+                      </div>
                       <p className="text-[14px] text-[var(--muted)] mt-1">{res.party_size} {t('People')}{res.contact_phone ? ` • ${res.contact_phone}` : ''}</p>
                     </div>
                     <div>
                       <span className={`px-3 py-1 rounded-full text-[12px] font-semibold tracking-wide uppercase ${
                         res.status === 'CONFIRMED' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' :
-                        res.status === 'CANCELLED' ? 'bg-red-950 text-red-300 border border-red-900' :
-                        res.status === 'PENDING' ? 'bg-blue-950 text-blue-300 border border-blue-900' :
-                        'bg-yellow-950 text-yellow-300 border border-yellow-900'
+                        res.status === 'CANCELLED' ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-900' :
+                        res.status === 'PENDING' ? 'bg-blue-100 text-blue-800 border border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-900' :
+                        'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-900'
                       }`}>
                         {t(res.status)}
                       </span>
@@ -776,11 +839,11 @@ export default function AccountPage() {
           <div className="space-y-8 animate-fade-in">
             <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-6">
               <h3 className="font-display text-[24px] mb-5">{t('Add New Address')}</h3>
-              {addrMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${addrMsg.includes('success') ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'bg-red-950 text-red-200'}`}>{addrMsg}</div>}
+              {addrMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${addrMsg.includes('success') ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'}`}>{addrMsg}</div>}
               <form onSubmit={handleAddAddress} className="space-y-4">
                 <div>
                   <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Street Address')}</label>
-                  <input type="text" required value={streetAddress} onChange={e => setStreetAddress(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole Road, House 123" />
+                  <input type="text" required value={streetAddress} onChange={e => setStreetAddress(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" placeholder="Bole Road, House 123" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -789,14 +852,14 @@ export default function AccountPage() {
                   </div>
                   <div>
                     <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Subcity / Zone')}</label>
-                    <input type="text" value={subcityOrZone} onChange={e => setSubcityOrZone(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[#f7b5be]" placeholder="Bole, Arada, etc." />
+                    <input type="text" value={subcityOrZone} onChange={e => setSubcityOrZone(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" placeholder="Bole, Arada, etc." />
                   </div>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer mt-2 w-max">
-                  <input type="checkbox" checked={isDefaultAddr} onChange={e => setIsDefaultAddr(e.target.checked)} className="rounded border-[var(--border)] bg-surface text-[var(--accent)] focus:ring-[#f7b5be]" />
+                  <input type="checkbox" checked={isDefaultAddr} onChange={e => setIsDefaultAddr(e.target.checked)} className="rounded border-[var(--border)] bg-surface text-[var(--accent)] focus:ring-[var(--accent)]" />
                   <span className="text-[14.5px] text-[var(--muted)]">{t('Set as default delivery address')}</span>
                 </label>
-                <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">{t('Save Address')}</button>
+                <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold hover:brightness-110 transition-colors">{t('Save Address')}</button>
               </form>
             </div>
 
@@ -831,32 +894,36 @@ export default function AccountPage() {
           <div className="animate-fade-in max-w-2xl">
             <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-6">
               <h3 className="font-display text-[24px] mb-5">{t('Personal Details')}</h3>
-              {profileMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${profileMsg.includes('success') ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'bg-red-950 text-red-200'}`}>{profileMsg}</div>}
+              {profileMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${profileMsg.includes('success') ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'}`}>{profileMsg}</div>}
               
               <div className="mb-6">
                 <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Username / Email')}</label>
                 <div className="h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 flex items-center text-[var(--muted)] opacity-70">
                   {user.email || user.username}
                 </div>
-                <p className="text-[#514345] text-xs mt-1">{t('Username/email cannot be changed here.')}</p>
+                <p className="text-[var(--muted)] text-xs mt-1">{t('Username/email cannot be changed here.')}</p>
               </div>
 
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('First Name')}</label>
-                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[#f7b5be]" />
+                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" />
                   </div>
                   <div>
                     <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Last Name')}</label>
-                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[#f7b5be]" />
+                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Phone Number')}</label>
-                  <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[#f7b5be]" placeholder="+251 911 234567" />
+                  <EthiopianPhoneInput
+                    value={phone}
+                    onChange={val => setPhone(val)}
+                    className="h-11"
+                  />
                 </div>
-                <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold hover:bg-[#ffd9dd] transition-colors">{t('Update Profile')}</button>
+                <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold hover:brightness-110 transition-colors">{t('Update Profile')}</button>
               </form>
             </div>
           </div>
