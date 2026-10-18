@@ -15,6 +15,11 @@ import Reveal from '../components/Reveal';
 import { apiFetch } from '../lib/api';
 import { useCart, readLocalCart, saveLocalCart, clearLocalCart } from '../lib/cart';
 import Link from 'next/link';
+import EthiopianPhoneInput from '../components/EthiopianPhoneInput';
+import { formatEthiopianTime } from '../utils/ethiopianTime';
+import { useCafe } from '../context/CafeContext';
+import ProfileDropdown from '../components/ProfileDropdown';
+import NotificationsDropdown from '../components/NotificationsDropdown';
 
 export interface MenuItem {
     id: number;
@@ -84,6 +89,7 @@ export default function Home() {
     const router = useRouter();
     const { user, loading: authLoading } = useAuth();
     const { t, language, tCategory, tItem } = useLanguage();
+    const { settings: cafeSettings, locations: cafeLocations, primaryLocation } = useCafe();
     const [items, setItems] = useState<MenuItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
@@ -101,40 +107,117 @@ export default function Home() {
     // Order tracking. This used to be a form that always printed a hardcoded
     // "BH-1024 ready for pickup" for any input, which told customers their order was
     // ready before it existed. It now asks the API about their actual orders.
+    // Order and reservation tracking.
     const [trackCode, setTrackCode] = useState('');
     const [trackResult, setTrackResult] = useState<string | null>(null);
+    const [trackLink, setTrackLink] = useState<{ text: string; href: string } | null>(null);
     const [isTracking, setIsTracking] = useState(false);
 
     const handleTrackSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user) {
-            setInitialAuthMode('LOGIN');
-            setIsAuthModalOpen(true);
+        const code = trackCode.trim();
+        if (!code) {
+            if (!user) {
+                setInitialAuthMode('LOGIN');
+                setIsAuthModalOpen(true);
+            }
             return;
         }
-        const code = trackCode.trim();
-        if (!code) return;
 
         setIsTracking(true);
         setTrackResult(null);
+        setTrackLink(null);
+
+        const isResCode = code.toUpperCase().startsWith('RES-');
+
         try {
-            const res = await apiFetch(`/api/v1/orders/?search=${encodeURIComponent(code)}`);
-            if (!res.ok) {
-                setTrackResult(t('We could not check that order right now. Please try again.'));
-                return;
+            if (isResCode) {
+                const res = await apiFetch(`/api/v1/reservations/?search=${encodeURIComponent(code)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const list = Array.isArray(data) ? data : data.results || [];
+                    const match = list.find(
+                        (r: { order_code: string; id: number }) =>
+                            r.order_code?.toUpperCase() === code.toUpperCase() || String(r.id) === code
+                    );
+                    if (match) {
+                        const dateFormatted = new Date(match.date_time).toLocaleString(
+                            language === 'am' ? 'am-ET' : 'en-ET',
+                            { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }
+                        );
+                        const statusText = t(match.status);
+                        const partyText = `${match.party_size} ${t(match.party_size === 1 ? 'guest' : 'guests')}`;
+                        setTrackResult(
+                            `${match.order_code} · ${t('Table Reservation')} (${match.name}, ${partyText}) · ${statusText} · ${dateFormatted}`
+                        );
+                        if (user) {
+                            setTrackLink({ text: t('View Details'), href: '/account?tab=reservations' });
+                        }
+                        setIsTracking(false);
+                        return;
+                    }
+                }
             }
-            const data = await res.json();
-            const orders = Array.isArray(data) ? data : data.results || [];
-            const match = orders.find(
-                (order: { order_number: string }) => order.order_number === code
-            );
-            setTrackResult(
-                match
-                    ? `${match.order_number} · ${t(match.status.replace(/_/g, ' ').toLowerCase())}`
-                    : t('No order with that code on your account.')
-            );
+
+            // Check orders
+            const res = await apiFetch(`/api/v1/orders/?search=${encodeURIComponent(code)}`);
+            if (res.ok) {
+                const data = await res.json();
+                const orders = Array.isArray(data) ? data : data.results || [];
+                const match = orders.find(
+                    (order: { order_number: string }) =>
+                        order.order_number?.toUpperCase() === code.toUpperCase()
+                );
+                if (match) {
+                    const statusLabel = t(match.status.replace(/_/g, ' ').toLowerCase());
+                    setTrackResult(`${match.order_number} · ${t('Order')} · ${statusLabel}`);
+                    if (user) {
+                        setTrackLink({ text: t('View Details'), href: '/account?tab=orders' });
+                    }
+                    setIsTracking(false);
+                    return;
+                }
+            }
+
+            // If not found in orders and didn't start with RES-, also check reservations
+            if (!isResCode) {
+                const resRes = await apiFetch(`/api/v1/reservations/?search=${encodeURIComponent(code)}`);
+                if (resRes.ok) {
+                    const data = await resRes.json();
+                    const list = Array.isArray(data) ? data : data.results || [];
+                    const match = list.find(
+                        (r: { order_code: string; id: number }) =>
+                            r.order_code?.toUpperCase() === code.toUpperCase() || String(r.id) === code
+                    );
+                    if (match) {
+                        const dateFormatted = new Date(match.date_time).toLocaleString(
+                            language === 'am' ? 'am-ET' : 'en-ET',
+                            { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }
+                        );
+                        const statusText = t(match.status);
+                        const partyText = `${match.party_size} ${t(match.party_size === 1 ? 'guest' : 'guests')}`;
+                        setTrackResult(
+                            `${match.order_code} · ${t('Table Reservation')} (${match.name}, ${partyText}) · ${statusText} · ${dateFormatted}`
+                        );
+                        if (user) {
+                            setTrackLink({ text: t('View Details'), href: '/account?tab=reservations' });
+                        }
+                        setIsTracking(false);
+                        return;
+                    }
+                }
+            }
+
+            // Not found
+            if (isResCode) {
+                setTrackResult(`${t('No reservation with that code on your account.')} (${code})`);
+            } else if (code.toUpperCase().startsWith('ORD-') || code.toUpperCase().startsWith('BH')) {
+                setTrackResult(`${t('No order with that code on your account.')} (${code})`);
+            } else {
+                setTrackResult(`${t('No order or reservation with that code on your account.')} (${code})`);
+            }
         } catch {
-            setTrackResult(t('We could not check that order right now. Please try again.'));
+            setTrackResult(t('We could not check that code right now. Please try again.'));
         } finally {
             setIsTracking(false);
         }
@@ -440,7 +523,7 @@ export default function Home() {
                     <div className="max-w-[1360px] mx-auto flex items-center justify-between gap-3 px-4 sm:px-6 h-16">
                         <a href="/?welcome=1" className="flex items-center gap-2.5 min-w-0 group">
                             <span className="w-9 h-9 shrink-0 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
-                            <span className="font-display text-[20px] sm:text-[21px] tracking-wide">Buna Hub</span>
+                            <span className="font-display text-[20px] sm:text-[21px] tracking-wide">{cafeSettings.cafe_name || 'Buna Hub'}</span>
                         </a>
                         <nav className="hidden md:flex items-center gap-8 text-[15px] font-medium text-[var(--muted)]">
                             {navLinks.map((link) => (
@@ -450,19 +533,16 @@ export default function Home() {
                         <div className="flex items-center gap-2">
                             <LanguageToggle className="h-9 px-2.5 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors" />
                             <ThemeToggle />
-                            {user ? (
-                                <Link href="/account" className="hidden sm:flex h-9 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] items-center hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">{t('Account')}</Link>
-                            ) : (
-                                <>
-                                    <button onClick={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }} className="hidden sm:flex h-9 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] items-center hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">{t('Sign In')}</button>
-                                    <button onClick={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }} className="hidden sm:flex h-9 px-4 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold text-[14px] items-center hover:brightness-110 transition-all">{t('Sign Up')}</button>
-                                </>
-                            )}
                             <button onClick={() => setIsCartOpen(true)} className="h-9 px-3 sm:px-4 rounded-full border border-[var(--border)] text-[14px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
                                 <i className="ph ph-shopping-bag-open text-[16px]"></i>
                                 <span className="hidden sm:inline">{t('Cart')}</span>
                                 {language === 'am' ? '' : `(${totalCartCount})`}
                             </button>
+                            {user && <NotificationsDropdown />}
+                            <ProfileDropdown
+                                onOpenSignIn={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
+                                onOpenSignUp={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }}
+                            />
                             <button
                                 onClick={() => setIsMobileMenuOpen((open) => !open)}
                                 aria-label={isMobileMenuOpen ? t('Close menu') : t('Open menu')}
@@ -474,9 +554,9 @@ export default function Home() {
                         </div>
                     </div>
 
-                    {/* Mobile menu — stacked links + auth, no hover required */}
+                    {/* Mobile menu — stacked links + profile actions */}
                     {isMobileMenuOpen && (
-                        <div className="md:hidden border-t border-[var(--border)] px-4 py-4 space-y-1">
+                        <div className="md:hidden border-t border-[var(--border)] px-4 py-4 space-y-2 bg-surface">
                             {navLinks.map((link) => (
                                 <a
                                     key={link.href}
@@ -487,14 +567,60 @@ export default function Home() {
                                     {link.label}
                                 </a>
                             ))}
-                            <div className="pt-3 mt-1 border-t border-[var(--border)] flex gap-2">
+                            <div className="pt-3 border-t border-[var(--border)]">
                                 {user ? (
-                                    <Link href="/account" onClick={() => setIsMobileMenuOpen(false)} className="flex-1 h-11 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold text-[15px] flex items-center justify-center">{t('Account')}</Link>
+                                    <div className="space-y-2">
+                                        <div className="p-3 bg-surface-2 rounded-2xl flex items-center justify-between border border-[var(--border)]">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className="w-8 h-8 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-xs flex items-center justify-center shrink-0">
+                                                    {(user.first_name?.[0] || user.username?.[0] || 'U').toUpperCase()}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-bold truncate text-[var(--text)]">{user.first_name || user.username}</p>
+                                                    <p className="text-[11px] text-[var(--muted)] truncate">{user.email}</p>
+                                                </div>
+                                            </div>
+                                            {user.role && user.role !== 'CUSTOMER' && (
+                                                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] shrink-0">
+                                                    {user.role}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                            <Link href="/account?tab=profile" onClick={() => setIsMobileMenuOpen(false)} className="h-10 px-3 rounded-xl border border-[var(--border)] flex items-center justify-center gap-1.5 font-medium hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
+                                                <i className="ph ph-user-gear text-[15px]"></i>
+                                                <span>{t('Edit Profile')}</span>
+                                            </Link>
+                                            <Link href="/account?tab=orders" onClick={() => setIsMobileMenuOpen(false)} className="h-10 px-3 rounded-xl border border-[var(--border)] flex items-center justify-center gap-1.5 font-medium hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
+                                                <i className="ph ph-receipt text-[15px]"></i>
+                                                <span>{t('My Orders')}</span>
+                                            </Link>
+                                            <Link href="/account?tab=reservations" onClick={() => setIsMobileMenuOpen(false)} className="h-10 px-3 rounded-xl border border-[var(--border)] flex items-center justify-center gap-1.5 font-medium hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
+                                                <i className="ph ph-calendar-check text-[15px]"></i>
+                                                <span>{t('Table Reservations')}</span>
+                                            </Link>
+                                            {(user.role === 'ADMIN' || user.role === 'MANAGER') ? (
+                                                <Link href="/manager" onClick={() => setIsMobileMenuOpen(false)} className="h-10 px-3 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] flex items-center justify-center gap-1.5 font-bold">
+                                                    <i className="ph ph-chart-line-up text-[15px]"></i>
+                                                    <span>{t('Manager Dashboard')}</span>
+                                                </Link>
+                                            ) : (
+                                                <Link href="/account?tab=addresses" onClick={() => setIsMobileMenuOpen(false)} className="h-10 px-3 rounded-xl border border-[var(--border)] flex items-center justify-center gap-1.5 font-medium hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
+                                                    <i className="ph ph-map-pin text-[15px]"></i>
+                                                    <span>{t('Delivery Addresses')}</span>
+                                                </Link>
+                                            )}
+                                        </div>
+                                        <button onClick={() => { setIsMobileMenuOpen(false); logout(); }} className="w-full h-10 rounded-xl border border-red-500/30 text-red-500 hover:bg-red-500/10 text-xs font-bold flex items-center justify-center gap-2 transition-colors">
+                                            <i className="ph ph-sign-out text-[15px]"></i>
+                                            <span>{t('Sign Out')}</span>
+                                        </button>
+                                    </div>
                                 ) : (
-                                    <>
-                                        <button onClick={() => { setIsMobileMenuOpen(false); setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }} className="flex-1 h-11 rounded-full border border-[var(--border)] text-[15px] flex items-center justify-center">{t('Sign In')}</button>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => { setIsMobileMenuOpen(false); setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }} className="flex-1 h-11 rounded-full border border-[var(--border)] text-[15px] flex items-center justify-center font-medium">{t('Sign In')}</button>
                                         <button onClick={() => { setIsMobileMenuOpen(false); setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }} className="flex-1 h-11 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold text-[15px] flex items-center justify-center">{t('Sign Up')}</button>
-                                    </>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -505,17 +631,25 @@ export default function Home() {
                 <section className="px-4 sm:px-6 pt-6 sm:pt-10">
                     <div className="max-w-[1360px] mx-auto grid lg:grid-cols-2 gap-6 lg:gap-12 items-center">
                         <div className="order-2 lg:order-1">
-                            <div className="inline-flex items-center gap-2 text-[13.5px] text-[var(--muted)]">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--gold)]"></span>
-                                {t('Open today')} · 7:00 – 22:00 · Piassa, {t('Addis Ababa')}
+                            <div className="inline-flex items-center gap-2 text-[13.5px] text-[var(--muted)]" suppressHydrationWarning>
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--gold)] shrink-0"></span>
+                                <span>{t('Open today')}</span>
+                                <span>·</span>
+                                <span className="font-mono">
+                                    {language === 'am'
+                                        ? `ከጠዋቱ ${primaryLocation?.opening_hours || cafeSettings.opening_hours || '1:00 – 3:00'}`
+                                        : (primaryLocation?.opening_hours || cafeSettings.opening_hours || '1:00 – 3:00')}
+                                </span>
+                                <span>·</span>
+                                <span>{primaryLocation ? `${primaryLocation.name}, ${primaryLocation.city}` : `Piassa, ${t('Addis Ababa')}`}</span>
                             </div>
                             <h1 className="mt-4 font-display text-[42px] sm:text-[58px] lg:text-[68px] leading-[1.03] tracking-tight">
-                                {'Buna Hub'.split(' ').map((word, i) => (
-                                    <span key={word} className="word-in mr-3 last:mr-0" style={{ animationDelay: `${0.15 + i * 0.18}s` }}>{word}</span>
+                                {(cafeSettings.cafe_name || 'Buna Hub').split(' ').map((word, i) => (
+                                    <span key={`${word}-${i}`} className="word-in mr-3 last:mr-0" style={{ animationDelay: `${0.15 + i * 0.18}s` }}>{word}</span>
                                 ))}
                             </h1>
                             <p className="mt-4 text-[17px] sm:text-[19px] leading-relaxed text-[var(--muted)] max-w-[46ch]">
-                                {t('Three rounds from one jebena — coffee poured the slow way, in the city that invented it.')}
+                                {cafeSettings.description || t('Three rounds from one jebena — coffee poured the slow way, in the city that invented it.')}
                             </p>
                             <div className="mt-7 flex flex-wrap items-center gap-3">
                                 <a href="#menu" className="h-12 px-7 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[16px] font-semibold flex items-center gap-2 hover:brightness-110 transition-all shadow-[var(--shadow)]">{t('View the Menu')} <i className="ph ph-arrow-down text-[15px]"></i></a>
@@ -713,21 +847,56 @@ export default function Home() {
                             <Reveal>
                                 <div className="grid lg:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_380px] rounded-[18px] overflow-hidden border border-[var(--border)] shadow-[var(--shadow)]">
                                     <aside className="bg-[var(--surface-2)] px-6 sm:px-7 py-9 border-b lg:border-b-0 lg:border-r border-[var(--border)]">
-                                        <div className="flex items-center gap-2 text-[14px] text-[var(--gold)]">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--gold)]"></span> {t('Open now')} · {t('kitchen till 22:00')}
+                                        <div className="flex items-center gap-2 text-[14px] text-[var(--gold)]" suppressHydrationWarning>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--gold)] shrink-0"></span>
+                                            <span>{t('Open now')}</span>
+                                            <span>·</span>
+                                            <span>{language === 'am' ? 'ኩሽና እስከ ማታ 3:00' : 'kitchen till 3:00 night'}</span>
                                         </div>
-                                        <h3 className="mt-6 font-display text-[26px] leading-tight">{t('Hours')}</h3>
-                                        <dl className="mt-4 space-y-2.5 text-[15px]">
-                                            <div className="flex justify-between gap-3"><dt className="text-[var(--muted)]">{t('Mon – Thu')}</dt><dd>7:00–22:00</dd></div>
-                                            <div className="flex justify-between gap-3"><dt className="text-[var(--muted)]">{t('Friday')}</dt><dd>7:00–23:00</dd></div>
-                                            <div className="flex justify-between gap-3"><dt className="text-[var(--muted)]">{t('Saturday')}</dt><dd>8:00–23:00</dd></div>
-                                            <div className="flex justify-between gap-3"><dt className="text-[var(--muted)]">{t('Sunday')}</dt><dd>8:00–21:00</dd></div>
+                                        <div className="flex items-baseline justify-between mt-6">
+                                            <h3 className="font-display text-[26px] leading-tight">{t('Hours')}</h3>
+                                            <span className="text-[12px] font-medium text-[var(--gold)]">{t('Ethiopian local time')}</span>
+                                        </div>
+                                        <dl className="mt-4 space-y-2.5 text-[15px]" suppressHydrationWarning>
+                                            <div className="flex justify-between gap-3"><dt className="text-[var(--muted)]">{t('Mon – Thu')}</dt><dd className="font-mono">{language === 'am' ? 'ከጠዋቱ 1:00 – ከምሽቱ 3:00' : '1:00 – 3:00'}</dd></div>
+                                            <div className="flex justify-between gap-3"><dt className="text-[var(--muted)]">{t('Friday')}</dt><dd className="font-mono">{language === 'am' ? 'ከጠዋቱ 1:00 – ከምሽቱ 4:00' : '1:00 – 4:00'}</dd></div>
+                                            <div className="flex justify-between gap-3"><dt className="text-[var(--muted)]">{t('Saturday')}</dt><dd className="font-mono">{language === 'am' ? 'ከጠዋቱ 2:00 – ከምሽቱ 4:00' : '2:00 – 4:00'}</dd></div>
+                                            <div className="flex justify-between gap-3"><dt className="text-[var(--muted)]">{t('Sunday')}</dt><dd className="font-mono">{language === 'am' ? 'ከጠዋቱ 2:00 – ከምሽቱ 3:00' : '2:00 – 3:00'}</dd></div>
                                         </dl>
-                                        <p className="mt-5 text-[14px] italic text-[var(--muted)]">{t('Full ceremony every afternoon from 15:00 — no booking needed, just be near the roast pan.')}</p>
-                                        <div className="mt-8 pt-7 border-t border-[var(--border)]">
-                                            <p className="text-[15px] leading-relaxed text-[var(--muted)]">{t('Gulele Road 14, Piassa')}<br />{t('Addis Ababa')}</p>
-                                            <p className="mt-3 text-[15px]">+251 11 555 0148</p>
-                                            <p className="text-[15px] text-[var(--muted)]">selam@bunahub.et</p>
+                                        <p className="mt-5 text-[14px] italic text-[var(--muted)]" suppressHydrationWarning>
+                                            {language === 'am'
+                                                ? `ባህላዊ የቡና ሥነ-ሥርዓት በየቀኑ ${cafeSettings.ceremony_time || 'ከቀኑ 9:00'} — ቦታ ማስያዝ አያስፈልግም።`
+                                                : `Full ceremony every afternoon from ${cafeSettings.ceremony_time || '9:00'} — no booking needed.`}
+                                        </p>
+                                        <div className="mt-8 pt-7 border-t border-[var(--border)] space-y-4">
+                                            <div>
+                                                <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--accent)] block mb-1">
+                                                    {primaryLocation?.is_primary ? t('Main Branch') : t('Primary Location')}
+                                                </span>
+                                                <p className="text-[15px] font-semibold text-[var(--text)]">{primaryLocation?.name}</p>
+                                                <p className="text-[14px] leading-relaxed text-[var(--muted)]">{primaryLocation?.address}<br />{primaryLocation?.city}</p>
+                                                <p className="mt-2 text-[14px]">{primaryLocation?.phone || cafeSettings.primary_phone}</p>
+                                                {primaryLocation?.email && (
+                                                    <p className="text-[13.5px] text-[var(--muted)]">{primaryLocation.email}</p>
+                                                )}
+                                            </div>
+
+                                            {cafeLocations.filter(loc => loc.id !== primaryLocation?.id && loc.is_active).length > 0 && (
+                                                <div className="pt-3 border-t border-[var(--border)]/60">
+                                                    <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-2">
+                                                        {t('Other Branches')}
+                                                    </span>
+                                                    <div className="space-y-2.5">
+                                                        {cafeLocations.filter(loc => loc.id !== primaryLocation?.id && loc.is_active).map(loc => (
+                                                            <div key={loc.id} className="text-[13.5px]">
+                                                                <p className="font-semibold text-[var(--text)]">{loc.name}</p>
+                                                                <p className="text-[var(--muted)]">{loc.address}, {loc.city}</p>
+                                                                {loc.phone && <p className="text-[12.5px] text-[var(--accent)]">{loc.phone}</p>}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </aside>
 
@@ -740,14 +909,27 @@ export default function Home() {
                                             </div>
                                             <div>
                                                 <label htmlFor="bk-phone" className="block text-[14.5px] text-[var(--muted)] mb-2">{t('Phone')}</label>
-                                                <input id="bk-phone" type="text" required value={bookingData.contact_phone} onChange={(e) => setBookingData({ ...bookingData, contact_phone: e.target.value })} placeholder="+251 911..." className="field w-full h-12 px-4 text-[16px]" />
+                                                <EthiopianPhoneInput
+                                                    id="bk-phone"
+                                                    required
+                                                    value={bookingData.contact_phone}
+                                                    onChange={(val) => setBookingData({ ...bookingData, contact_phone: val })}
+                                                    className="h-12"
+                                                />
                                             </div>
                                             <div>
                                                 <label htmlFor="bk-party" className="block text-[14.5px] text-[var(--muted)] mb-2">{t('Party size')}</label>
                                                 <input id="bk-party" type="number" min="1" required value={bookingData.party_size} onChange={(e) => setBookingData({ ...bookingData, party_size: parseInt(e.target.value) })} placeholder="2 guests" className="field w-full h-12 px-4 text-[16px]" />
                                             </div>
                                             <div className="sm:col-span-2">
-                                                <label htmlFor="bk-date" className="block text-[14.5px] text-[var(--muted)] mb-2">{t('Date & time')}</label>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <label htmlFor="bk-date" className="text-[14.5px] text-[var(--muted)]">{t('Date & time')}</label>
+                                                    {bookingData.date_time && (
+                                                        <span className="text-[12.5px] text-[var(--gold)] font-medium">
+                                                            {t('Ethiopian time:')} {formatEthiopianTime(bookingData.date_time, language)}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <input id="bk-date" type="datetime-local" min={minDateTime} required value={bookingData.date_time} onChange={(e) => setBookingData({ ...bookingData, date_time: e.target.value })} className="field w-full h-12 px-4 text-[16px]" />
                                             </div>
                                             <div className="sm:col-span-2 flex flex-col gap-3 pt-1">
@@ -789,9 +971,11 @@ export default function Home() {
                             <div>
                                 <div className="flex items-center gap-2.5">
                                     <span className="w-9 h-9 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px]"><i className="ph ph-coffee-bean"></i></span>
-                                    <span className="font-display text-[23px]">Buna Hub</span>
+                                    <span className="font-display text-[23px]">{cafeSettings.cafe_name || 'Buna Hub'}</span>
                                 </div>
-                                <p className="mt-4 text-[15px] leading-relaxed text-[var(--muted)] max-w-[34ch]">{t('An Ethiopian coffee house in Piassa — ceremony buna, slow teas, and a kitchen that stays open late.')}</p>
+                                <p className="mt-4 text-[15px] leading-relaxed text-[var(--muted)] max-w-[34ch]">
+                                    {cafeSettings.description || t('An Ethiopian coffee house in Piassa — ceremony buna, slow teas, and a kitchen that stays open late.')}
+                                </p>
                                 <div className="mt-5 flex items-center gap-3 text-[var(--muted)]">
                                     <a href="#" aria-label="Instagram" className="w-9 h-9 rounded-full border border-[var(--border)] flex items-center justify-center text-[17px] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"><i className="ph ph-instagram-logo"></i></a>
                                     <a href="#" aria-label="Telegram" className="w-9 h-9 rounded-full border border-[var(--border)] flex items-center justify-center text-[17px] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"><i className="ph ph-telegram-logo"></i></a>
@@ -801,31 +985,57 @@ export default function Home() {
                             </div>
                             <div>
                                 <h3 className="font-display text-[20px]">{t('Hours')}</h3>
-                                <ul className="mt-4 space-y-2 text-[15px] text-[var(--muted)]">
-                                    <li className="flex justify-between gap-4"><span>{t('Mon – Thu')}</span><span className="text-[var(--text)]">7:00–22:00</span></li>
-                                    <li className="flex justify-between gap-4"><span>{t('Fri')}</span><span className="text-[var(--text)]">7:00–23:00</span></li>
-                                    <li className="flex justify-between gap-4"><span>{t('Sat')}</span><span className="text-[var(--text)]">8:00–23:00</span></li>
-                                    <li className="flex justify-between gap-4"><span>{t('Sun')}</span><span className="text-[var(--text)]">8:00–21:00</span></li>
+                                <p className="text-[12px] text-[var(--gold)] mt-1">{t('Ethiopian local time')}</p>
+                                <ul className="mt-3 space-y-2 text-[15px] text-[var(--muted)]" suppressHydrationWarning>
+                                    <li className="flex justify-between gap-4"><span>{t('Mon – Thu')}</span><span className="text-[var(--text)] font-mono">{language === 'am' ? '1:00 – 3:00' : '1:00 – 3:00'}</span></li>
+                                    <li className="flex justify-between gap-4"><span>{t('Fri')}</span><span className="text-[var(--text)] font-mono">{language === 'am' ? '1:00 – 4:00' : '1:00 – 4:00'}</span></li>
+                                    <li className="flex justify-between gap-4"><span>{t('Sat')}</span><span className="text-[var(--text)] font-mono">{language === 'am' ? '2:00 – 4:00' : '2:00 – 4:00'}</span></li>
+                                    <li className="flex justify-between gap-4"><span>{t('Sun')}</span><span className="text-[var(--text)] font-mono">{language === 'am' ? '2:00 – 3:00' : '2:00 – 3:00'}</span></li>
                                 </ul>
                             </div>
                             <div>
                                 <h3 className="font-display text-[20px]">{t('Find us')}</h3>
                                 <ul className="mt-4 space-y-3 text-[15px] text-[var(--muted)]">
-                                    <li className="flex gap-2.5"><i className="ph ph-map-pin text-[16px] mt-0.5"></i><span>{t('Gulele Road 14, Piassa')}<br />{t('Addis Ababa')}</span></li>
-                                    <li className="flex gap-2.5 items-center"><i className="ph ph-phone text-[16px]"></i>+251 11 555 0148</li>
-                                    <li className="flex gap-2.5 items-center"><i className="ph ph-envelope text-[16px]"></i>selam@bunahub.et</li>
+                                    <li className="flex gap-2.5">
+                                        <i className="ph ph-map-pin text-[16px] mt-0.5"></i>
+                                        <span>
+                                            <strong className="text-[var(--text)] block">{primaryLocation?.name}</strong>
+                                            {primaryLocation?.address}<br />{primaryLocation?.city}
+                                        </span>
+                                    </li>
+                                    <li className="flex gap-2.5 items-center">
+                                        <i className="ph ph-phone text-[16px]"></i>
+                                        {primaryLocation?.phone || cafeSettings.primary_phone || '+251 11 555 0148'}
+                                    </li>
+                                    <li className="flex gap-2.5 items-center">
+                                        <i className="ph ph-envelope text-[16px]"></i>
+                                        {primaryLocation?.email || cafeSettings.contact_email || 'selam@bunahub.et'}
+                                    </li>
+                                    {cafeLocations.filter(loc => loc.id !== primaryLocation?.id && loc.is_active).length > 0 && (
+                                        <li className="pt-2 border-t border-[var(--border)]/50">
+                                            <span className="text-[12px] uppercase tracking-wider text-[var(--accent)] font-bold block mb-1">
+                                                {t('Other Branches')}
+                                            </span>
+                                            {cafeLocations.filter(loc => loc.id !== primaryLocation?.id && loc.is_active).map(loc => (
+                                                <div key={loc.id} className="text-[13px] mb-1.5">
+                                                    <span className="font-medium text-[var(--text)]">{loc.name}: </span>
+                                                    <span>{loc.address}</span>
+                                                </div>
+                                            ))}
+                                        </li>
+                                    )}
                                 </ul>
                             </div>
                             <div>
-                                <h3 className="font-display text-[20px]">{t('Track your order')}</h3>
-                                <p className="mt-4 text-[14.5px] text-[var(--muted)]">{t('Order pickup by phone — +251 11 555 0148. Already ordered? The code on your receipt starts with BH.')}</p>
+                                <h3 className="font-display text-[20px]">{t('Track order or reservation')}</h3>
+                                <p className="mt-4 text-[14.5px] text-[var(--muted)]">{t('Check order status (ORD-...) or table reservation (RES-...). Or call pickup by phone — +251 11 555 0148.')}</p>
                                 <form id="track-form" className="mt-3 flex gap-2.5" onSubmit={handleTrackSubmit}>
                                     <input
                                         type="text"
                                         value={trackCode}
                                         onChange={(e) => setTrackCode(e.target.value)}
-                                        placeholder="ORD-20260930-1234"
-                                        aria-label={t('Order code')}
+                                        placeholder="ORD-20261015-9540 or RES-20261015-8479"
+                                        aria-label={t('Order or reservation code')}
                                         className="field flex-1 h-11 px-4 text-[15px] min-w-0"
                                     />
                                     <button type="submit" disabled={isTracking} className="h-11 px-5 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[15px] font-semibold hover:brightness-110 transition-all shrink-0 disabled:opacity-50">
@@ -833,14 +1043,23 @@ export default function Home() {
                                     </button>
                                 </form>
                                 {trackResult && (
-                                    <p className="mt-4 flex items-center gap-2 text-[14.5px] text-[var(--gold)]">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--gold)]"></span> {trackResult}
-                                    </p>
+                                    <div className="mt-4 flex flex-wrap items-center gap-2 text-[14.5px] text-[var(--gold)]">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--gold)] shrink-0"></span>
+                                        <span>{trackResult}</span>
+                                        {trackLink && (
+                                            <Link
+                                                href={trackLink.href}
+                                                className="underline ml-1 font-semibold text-[var(--accent)] hover:brightness-125 transition-all"
+                                            >
+                                                {trackLink.text}
+                                            </Link>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>
                         <div className="mt-14 pt-6 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-2 text-[13.5px] text-[var(--muted)]">
-                            <span>{t('© 2026 Buna Hub · Buna tetu — come, drink coffee')}</span>
+                            <span>© 2026 {cafeSettings.cafe_name || 'Buna Hub'} · {t('Buna tetu — come, drink coffee')}</span>
                             <span>{t('Photography: Pexels & Unsplash contributors')}</span>
                         </div>
                     </div>
