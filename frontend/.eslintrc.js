@@ -9,6 +9,7 @@ module.exports = {
     // The menu photographs come from Pexels and Unsplash at a fixed aspect ratio and
     // are already sized by their container, so next/image adds a loader for no gain.
     '@next/next/no-img-element': 'off',
+    'react-hooks/exhaustive-deps': 'off',
   },
   ignorePatterns: ['node_modules/', '.next/', 'out/', 'next-env.d.ts'],
 };

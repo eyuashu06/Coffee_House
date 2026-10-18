@@ -86,8 +86,9 @@ class TableReservation(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_code:
+            import uuid
             timestamp_part = time.strftime('%Y%m%d')
-            random_suffix = str(int(time.time() * 1000))[-4:]
+            random_suffix = uuid.uuid4().hex[:6].upper()
             self.order_code = f"RES-{timestamp_part}-{random_suffix}"
         super().save(*args, **kwargs)
 

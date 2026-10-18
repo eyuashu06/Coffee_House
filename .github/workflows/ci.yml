@@ -71,7 +71,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -98,4 +98,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Compose file parses and resolves
+        env:
+          SECRET_KEY: 'ci-only-not-a-secret-4f2c9a1b7e6d5c8a0f3b1e9d7c5a2b8e4f6d0c1a3b5e7f9d'
+          CHAPA_SECRET_KEY: 'CHASECK_TEST-ci-placeholder'
+          CHAPA_WEBHOOK_SECRET: 'ci-webhook-secret-placeholder'
         run: docker compose config --quiet

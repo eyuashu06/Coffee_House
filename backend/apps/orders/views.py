@@ -264,7 +264,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
 class DeliveryZoneViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = DeliveryZone.objects.filter(is_active=True)
+    queryset = DeliveryZone.objects.filter(is_active=True).order_by('id')
     serializer_class = DeliveryZoneSerializer
     permission_classes = [permissions.AllowAny]
 

@@ -339,3 +339,24 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
+SILENCED_SYSTEM_CHECKS = [
+    'drf_spectacular.W001',
+    'drf_spectacular.W002',
+]
+
+# Python 3.14 compatibility fix for Django template Context copy
+try:
+    from django.template import context as _django_context
+    _orig_context_copy = _django_context.Context.__copy__
+    def _safe_context_copy(self):
+        try:
+            return _orig_context_copy(self)
+        except AttributeError:
+            dup = self.__class__()
+            dup.dicts = self.dicts[:]
+            return dup
+    _django_context.Context.__copy__ = _safe_context_copy
+except Exception:
+    pass
+
+

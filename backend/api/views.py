@@ -238,7 +238,7 @@ class TableReservationViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         from rest_framework import permissions
-        if self.action in ['list', 'availability', 'create']:
+        if self.action in ['list', 'availability']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 

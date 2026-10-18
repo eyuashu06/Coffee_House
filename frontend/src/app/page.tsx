@@ -87,7 +87,7 @@ function Kicker({ children }: { children: React.ReactNode }) {
 
 export default function Home() {
     const router = useRouter();
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading, logout } = useAuth();
     const { t, language, tCategory, tItem } = useLanguage();
     const { settings: cafeSettings, locations: cafeLocations, primaryLocation } = useCafe();
     const [items, setItems] = useState<MenuItem[]>([]);

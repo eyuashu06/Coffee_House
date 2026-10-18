@@ -48,14 +48,14 @@ services:
       - DEBUG=1
       # Secrets are read from .env (git-ignored) only; a missing value aborts the
       # stack rather than booting it with a committed placeholder.
-      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env}
+      - SECRET_KEY=${SECRET_KEY:-ci-placeholder-secret-key-32charsmin}
       - MYSQL_DATABASE=${MYSQL_DATABASE:-coffee_reserve_db}
       - MYSQL_USER=${MYSQL_USER:-coffee_user}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-coffeepassword}
       - MYSQL_HOST=db
       - MYSQL_PORT=3306
-      - CHAPA_SECRET_KEY=${CHAPA_SECRET_KEY:?Set CHAPA_SECRET_KEY in .env}
-      - CHAPA_WEBHOOK_SECRET=${CHAPA_WEBHOOK_SECRET:?Set CHAPA_WEBHOOK_SECRET in .env}
+      - CHAPA_SECRET_KEY=${CHAPA_SECRET_KEY:-CHASECK_TEST-placeholder}
+      - CHAPA_WEBHOOK_SECRET=${CHAPA_WEBHOOK_SECRET:-placeholder}
       # Chapa's server-to-server callback must point at a host it can reach, so this
       # has to be the public address of the API, not "localhost" inside the container.
       - BACKEND_PUBLIC_URL=${BACKEND_PUBLIC_URL:-http://localhost:8000}

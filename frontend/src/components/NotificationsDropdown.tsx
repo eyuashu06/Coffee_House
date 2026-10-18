@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
@@ -71,7 +71,7 @@ export default function NotificationsDropdown() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!user) return;
     try {
       const response = await apiFetch('/api/v1/auth/notifications/', {
@@ -84,7 +84,7 @@ export default function NotificationsDropdown() {
     } catch (err) {
       console.error('Failed to fetch notifications', err);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -92,7 +92,7 @@ export default function NotificationsDropdown() {
       const interval = setInterval(fetchNotifications, 12000); // Poll every 12s
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [user, fetchNotifications]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
