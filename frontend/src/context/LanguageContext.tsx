@@ -85,7 +85,7 @@ export function LanguageProvider({
    */
   const t = useCallback(
     (key: string, fallback?: string): string => {
-      if (language === 'en') return fallback || key;
+      if (language === 'en') return key;
       return translations[key] || fallback || key;
     },
     [language]
