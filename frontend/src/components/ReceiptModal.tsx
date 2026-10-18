@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useCafe } from '../context/CafeContext';
 
 interface OrderItem {
   id?: number;
@@ -47,6 +48,8 @@ const lineTotal = (item: OrderItem) =>
 
 export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
   const { t, tItem, locale, language } = useLanguage();
+  const { settings: cafeSettings } = useCafe();
+  const cafeName = cafeSettings.cafe_name || 'Buna Hub';
   const birr = language === 'am' ? 'ብር' : 'ETB';
 
   if (!order) return null;
@@ -62,7 +65,7 @@ export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
     // The downloaded file is a legal-ish artefact the customer keeps, so it is
     // written in the language they were browsing in.
     const text = `====================================
-        ${t('Artisanal Reserve Cafe')}
+        ${cafeName}
 ====================================
 ${t('Receipt Ref:')} ${ref}
 ${t('Date:')} ${new Date(order.created_at).toLocaleString(locale)}
@@ -75,7 +78,7 @@ ${order.items.map(i => `${i.quantity}x ${tItem(i.item_name)}${i.variant_name ? `
 ${t('TOTAL AMOUNT:')} ${order.total_amount_etb} ${birr}
 ${t('Status:')} ${t(order.status, order.status)}
 ====================================
-${t('Thank you for visiting Artisanal Cafe!')}
+${t('Thank you for visiting')} ${cafeName}!
 `;
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
