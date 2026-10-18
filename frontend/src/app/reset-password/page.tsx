@@ -13,9 +13,9 @@ export default function ResetPasswordPage() {
 
 function Shell({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-surface text-[var(--text)] flex items-center justify-center px-5 py-12">
-      <div className="w-full max-w-md space-y-5">
-        <h1 className="font-display text-3xl">Reset your password</h1>
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex items-center justify-center px-5 py-12">
+      <div className="w-full max-w-md space-y-5 bg-surface-2 p-8 rounded-2xl border border-[var(--border)] shadow-xl">
+        <h1 className="font-display text-3xl text-[var(--text)]">Reset your password</h1>
         {children}
       </div>
     </div>
@@ -77,12 +77,12 @@ function ResetPasswordForm() {
   if (status === 'done') {
     return (
       <Shell>
-        <p className="text-[#f7b5be] font-semibold">
+        <p className="text-[var(--accent)] font-semibold">
           Your password has been changed. You can sign in with it now.
         </p>
         <Link
           href="/"
-          className="inline-block py-3 px-7 rounded-full bg-[#f7b5be] text-[#4e232b] font-bold text-sm uppercase tracking-wider"
+          className="inline-block py-3 px-7 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-colors"
         >
           Back to the Coffee House
         </Link>
@@ -93,9 +93,9 @@ function ResetPasswordForm() {
   return (
     <Shell>
       {!linkLooksValid && (
-        <p className="text-red-300 text-sm leading-relaxed">
+        <p className="text-red-600 dark:text-red-300 text-sm leading-relaxed">
           This link is missing its reset code. Open the link from your reset email, or{' '}
-          <Link href="/" className="text-[#f7b5be] underline">
+          <Link href="/" className="text-[var(--accent)] underline">
             request a new one
           </Link>
           .
@@ -104,7 +104,7 @@ function ResetPasswordForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="new-password" className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1.5">
+          <label htmlFor="new-password" className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">
             New password
           </label>
           <input
@@ -115,11 +115,11 @@ function ResetPasswordForm() {
             required
             minLength={6}
             autoComplete="new-password"
-            className="w-full h-12 px-4 rounded-xl bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] focus:border-[#f7b5be] focus:outline-none"
+            className="w-full h-12 px-4 rounded-xl bg-surface border border-[var(--border)] text-[var(--text)] focus:border-[var(--accent)] focus:outline-none"
           />
         </div>
         <div>
-          <label htmlFor="confirm-password" className="block text-xs font-semibold text-[#9e8d8e] uppercase tracking-wider mb-1.5">
+          <label htmlFor="confirm-password" className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">
             Confirm password
           </label>
           <input
@@ -130,16 +130,16 @@ function ResetPasswordForm() {
             required
             minLength={6}
             autoComplete="new-password"
-            className="w-full h-12 px-4 rounded-xl bg-[#1c1b1b] border border-[#514345] text-[#e5e2e1] focus:border-[#f7b5be] focus:outline-none"
+            className="w-full h-12 px-4 rounded-xl bg-surface border border-[var(--border)] text-[var(--text)] focus:border-[var(--accent)] focus:outline-none"
           />
         </div>
 
-        {error && <p className="text-red-300 text-sm leading-relaxed">{error}</p>}
+        {error && <p className="text-red-600 dark:text-red-300 text-sm leading-relaxed">{error}</p>}
 
         <button
           type="submit"
           disabled={status === 'submitting' || !linkLooksValid}
-          className="w-full h-12 rounded-full bg-[#f7b5be] text-[#4e232b] font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full h-12 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {status === 'submitting' ? 'Saving...' : 'Set new password'}
         </button>
