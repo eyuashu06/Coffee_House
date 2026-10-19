@@ -388,7 +388,7 @@ def place_order(user, staged, order_type=None, address=None):
         return None, 'empty_order'
 
     venue = RestaurantSettings.get_settings()
-    if not venue.is_open:
+    if not venue.is_currently_open:
         return None, 'restaurant_closed'
 
     fee = Decimal('0')
