@@ -144,23 +144,61 @@ class PasswordResetRequestSerializer(serializers.Serializer):
         return value
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
-    uidb64 = serializers.CharField()
-    token = serializers.CharField()
+    email = serializers.EmailField(required=False, allow_blank=True)
+    otp_code = serializers.CharField(required=False, allow_blank=True, max_length=10)
+    uidb64 = serializers.CharField(required=False, allow_blank=True)
+    token = serializers.CharField(required=False, allow_blank=True)
     new_password = serializers.CharField(min_length=6, write_only=True)
 
     def validate(self, data):
-        try:
-            uid = force_str(urlsafe_base64_decode(data['uidb64']))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            raise serializers.ValidationError('Invalid reset link user ID.')
+        email = data.get('email', '').strip()
+        otp_code = data.get('otp_code', '').strip()
+        uidb64 = data.get('uidb64', '').strip()
+        token = data.get('token', '').strip()
 
-        token_generator = PasswordResetTokenGenerator()
-        if not token_generator.check_token(user, data['token']):
-            raise serializers.ValidationError('Invalid or expired reset token.')
+        from .models import PasswordResetOTP
+        from django.utils import timezone
 
-        data['user'] = user
-        return data
+        # Scenario 1: OTP Code verification
+        if otp_code:
+            if not email:
+                raise serializers.ValidationError({'email': 'Email is required when resetting password with an OTP code.'})
+            user = User.objects.filter(email__iexact=email).first()
+            if not user:
+                raise serializers.ValidationError({'email': 'No account found with this email address.'})
+
+            otp_obj = PasswordResetOTP.objects.filter(
+                user=user,
+                otp_code=otp_code,
+                is_used=False
+            ).order_by('-created_at').first()
+
+            if not otp_obj:
+                raise serializers.ValidationError({'otp_code': 'Invalid OTP code. Please check your email or request a new code.'})
+
+            if timezone.now() > otp_obj.expires_at:
+                raise serializers.ValidationError({'otp_code': 'This OTP code has expired. Please request a new code.'})
+
+            data['user'] = user
+            data['otp_obj'] = otp_obj
+            return data
+
+        # Scenario 2: Legacy uidb64 + token verification
+        if uidb64 and token:
+            try:
+                uid = force_str(urlsafe_base64_decode(uidb64))
+                user = User.objects.get(pk=uid)
+            except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+                raise serializers.ValidationError({'uidb64': 'Invalid reset link user ID.'})
+
+            token_generator = PasswordResetTokenGenerator()
+            if not token_generator.check_token(user, token):
+                raise serializers.ValidationError({'token': 'Invalid or expired reset token.'})
+
+            data['user'] = user
+            return data
+
+        raise serializers.ValidationError('Either a valid 6-digit OTP code or reset link credentials must be provided.')
 
 class NotificationSerializer(serializers.ModelSerializer):
     from .models import Notification
