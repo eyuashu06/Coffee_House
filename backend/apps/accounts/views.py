@@ -241,28 +241,71 @@ class PasswordResetRequestView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             user = User.objects.get(email__iexact=email)
+
+            import secrets
+            from datetime import timedelta
+            from django.utils import timezone
+            from django.core.mail import EmailMultiAlternatives
+            from .models import PasswordResetOTP
+
+            otp_code = f"{secrets.randbelow(900000) + 100000}"
+            # Invalidate any older unused OTPs for this user
+            PasswordResetOTP.objects.filter(user=user, is_used=False).update(is_used=True)
+            expires_at = timezone.now() + timedelta(minutes=15)
+            PasswordResetOTP.objects.create(
+                user=user,
+                otp_code=otp_code,
+                expires_at=expires_at
+            )
+
             token_generator = PasswordResetTokenGenerator()
             token = token_generator.make_token(user)
             uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
 
-            reset_url = f"{settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else 'http://localhost:3000'}/reset-password?uid={uidb64}&token={token}"
-            
-            send_mail(
-                subject='Artisanal Reserve Password Reset Request',
-                message=f'Hello {user.username},\n\nPlease click the link below to reset your password:\n{reset_url}\n\nIf you did not request this, please ignore this email.',
-                from_email='noreply@artisanalreserve.com',
-                recipient_list=[user.email],
-                fail_silently=True,
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            reset_url = f"{frontend_url}/reset-password?uid={uidb64}&token={token}"
+
+            subject = "Your Artisanal Coffee Password Reset OTP Code"
+            plain_message = (
+                f"Hello {user.get_short_name() or user.username},\n\n"
+                f"Your password recovery verification code is:\n\n"
+                f"    {otp_code}\n\n"
+                f"This code will expire in 15 minutes. Enter this code on the reset page to set a new password.\n\n"
+                f"Alternatively, you may reset your password using this link:\n{reset_url}\n\n"
+                f"If you did not request this code, you can safely ignore this email.\n\n"
+                f"Artisanal Coffee Reserve Team"
             )
+            html_message = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0c0a09; color: #f5f5f4; margin: 0; padding: 24px;">
+  <div style="max-width: 520px; margin: 0 auto; background: #1c1917; border: 1px solid #292524; border-radius: 16px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+    <h2 style="color: #f7b5be; margin-top: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px;">Artisanal Coffee Reserve</h2>
+    <p style="font-size: 15px; line-height: 1.5; color: #d6d3d1;">Hello {user.get_short_name() or user.username},</p>
+    <p style="font-size: 15px; line-height: 1.5; color: #d6d3d1;">We received a request to recover your password. Use the 6-digit verification code below:</p>
+    <div style="margin: 28px 0; text-align: center;">
+      <div style="display: inline-block; background: #292524; border: 2px dashed #f7b5be; border-radius: 12px; padding: 14px 28px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #f7b5be; font-family: monospace;">
+        {otp_code}
+      </div>
+      <p style="font-size: 12px; color: #a8a29e; margin-top: 10px;">Valid for 15 minutes</p>
+    </div>
+    <p style="font-size: 13px; color: #a8a29e; line-height: 1.5;">If you prefer using a direct link, you can also <a href="{reset_url}" style="color: #f7b5be; text-decoration: underline;">click here to reset your password</a>.</p>
+    <hr style="border: none; border-top: 1px solid #292524; margin: 24px 0;">
+    <p style="font-size: 11px; color: #78716c; margin-bottom: 0;">If you did not request this recovery code, please ignore this email.</p>
+  </div>
+</body>
+</html>"""
+
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@artisanalreserve.com')
+            email_msg = EmailMultiAlternatives(subject, plain_message, from_email, [user.email])
+            email_msg.attach_alternative(html_message, "text/html")
+            email_msg.send(fail_silently=False)
 
             payload = {
-                'message': 'Password reset instructions have been sent to your email address.',
+                'message': 'A 6-digit verification code has been sent to your email address.',
             }
-            # A working reset token in the response body means anyone who can call this
-            # endpoint can take over any account - no mailbox access needed. It was
-            # there for local development, where the console mail backend prints the
-            # link anyway, so it is opt-in now rather than on by default.
             if getattr(settings, 'EXPOSE_PASSWORD_RESET_TOKEN', False):
+                payload['otp_code'] = otp_code
                 payload['uidb64'] = uidb64
                 payload['token'] = token
             return Response(payload, status=status.HTTP_200_OK)
@@ -280,6 +323,12 @@ class PasswordResetConfirmView(APIView):
             new_password = serializer.validated_data['new_password']
             user.set_password(new_password)
             user.save()
+
+            otp_obj = serializer.validated_data.get('otp_obj')
+            if otp_obj:
+                otp_obj.is_used = True
+                otp_obj.save()
+
             return Response({'message': 'Password has been reset successfully. Please log in.'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
