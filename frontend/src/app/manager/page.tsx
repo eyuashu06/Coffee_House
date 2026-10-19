@@ -239,7 +239,7 @@ interface RevenueReport {
 
 export default function ManagerDashboard() {
   const { user, loading, logout, sessionExpired, reportUnauthorized } = useAuth();
-  const { t, tItem, tCategory, locale, language } = useLanguage();
+  const { t, tItem, tCategory, tItemDescription, locale, language } = useLanguage();
   const birr = language === 'am' ? 'ብር' : 'ETB';
   const {
     settings: cafeSettings,
@@ -259,6 +259,7 @@ export default function ManagerDashboard() {
   const [lastSync, setLastSync] = useState<Date | null>(null);
   
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'reservations' | 'reports' | 'cafe'>('dashboard');
+  const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [isOpen, setIsOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -1011,15 +1012,15 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
 
   return (
     <div className="bg-surface text-[var(--text)] font-body min-h-screen flex flex-col md:flex-row">
-      {/* SIDEBAR */}
-      <aside className="w-full md:w-64 bg-surface-2 border-r border-[var(--border)] md:min-h-screen flex flex-col flex-shrink-0 relative z-20">
+      {/* DESKTOP SIDEBAR (hidden on mobile) */}
+      <aside className="hidden md:flex md:w-64 bg-surface-2 border-r border-[var(--border)] md:min-h-screen flex-col flex-shrink-0 relative z-20">
         <div className="p-6 border-b border-[var(--border)]">
           <Link href="/?welcome=1" className="flex items-center gap-2.5 group">
             <span className="w-8 h-8 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
             <span className="font-display text-[21px] tracking-wide text-[var(--text)]">{t('Manager')}</span>
           </Link>
         </div>
-        <nav className="flex-1 p-4 space-y-2 flex flex-row md:flex-col overflow-x-auto hide-scrollbar">
+        <nav className="flex-1 p-4 space-y-2 flex flex-col">
           <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-[15.5px] transition-colors whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-bold' : 'text-[var(--muted)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]'}`}>
             <i className="ph ph-chart-line-up text-xl"></i> {t('Dashboard')}
           </button>
@@ -1053,7 +1054,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             <i className="ph ph-buildings text-xl"></i> {t('Cafe & Branches')}
           </button>
         </nav>
-        <div className="p-4 border-t border-[var(--border)] hidden md:block">
+        <div className="p-4 border-t border-[var(--border)]">
           <Link
             href="/?welcome=1"
             className="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[14.5px] text-[var(--muted)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] transition-colors"
@@ -1063,29 +1064,66 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
         </div>
       </aside>
 
+      {/* MOBILE STICKY TOP APP BAR */}
+      <header className="md:hidden sticky top-0 z-40 bg-surface-2/95 backdrop-blur-md border-b border-[var(--border)] px-3.5 h-14 flex items-center justify-between shrink-0">
+        <Link href="/?welcome=1" className="flex items-center gap-2 group min-w-0">
+          <span className="w-8 h-8 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[15px] shrink-0">
+            <i className="ph ph-coffee-bean"></i>
+          </span>
+          <div className="min-w-0">
+            <span className="font-display text-[17px] font-bold tracking-wide truncate block leading-tight text-[var(--text)]">
+              {t('Manager')}
+            </span>
+            <span className="text-[11px] text-[var(--muted)] flex items-center gap-1 leading-tight">
+              <i className="ph ph-storefront"></i> {t('Customer Site')}
+            </span>
+          </div>
+        </Link>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Quick Store Open/Close Status Pill */}
+          <button
+            type="button"
+            onClick={toggleStoreStatus}
+            className={`h-8 px-2.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0 ${
+              isOpen
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full shrink-0 ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+            <span>{isOpen ? t('OPEN') : t('CLOSED')}</span>
+          </button>
+
+          {/* Notifications & Profile Icon Pair */}
+          <div className="flex items-center gap-1 shrink-0">
+            <NotificationsDropdown />
+            <ProfileDropdown isManagerPage={true} />
+          </div>
+        </div>
+      </header>
+
       {/* MAIN CONTENT */}
-      <main className="flex-1 p-6 md:p-10 md:h-screen overflow-y-auto">
+      <main className="flex-1 p-3.5 sm:p-6 md:p-10 md:h-screen overflow-y-auto pb-24 md:pb-10">
         
-        {/* Status Bar */}
-        <div className="relative z-30 flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8 bg-surface-2 border border-[var(--border)] p-4 sm:p-5 rounded-[18px]">
+        {/* DESKTOP Store Overview Card (hidden on mobile, because mobile top bar already displays status and tools) */}
+        <div className="hidden md:flex relative z-30 flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 sm:mb-8 bg-surface-2 border border-[var(--border)] p-4 sm:p-5 rounded-[18px]">
           <div>
             <h1 className="font-display text-[26px] md:text-[32px] leading-none mb-1 text-[var(--text)]">{t('Store Overview')}</h1>
             <p className="text-[var(--muted)] text-[14.5px]">{t('Manage incoming orders and store status.')}</p>
           </div>
           <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-            {/* 1. STORE OPEN / STORE CLOSED Status Indicator */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border border-[var(--border)]">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border border-[var(--border)] shrink-0">
               <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
-              <span className="text-[13px] sm:text-[14px] font-bold tracking-wide whitespace-nowrap">
+              <span className="text-[13.5px] font-bold tracking-wide whitespace-nowrap">
                 {isOpen ? t('STORE OPEN') : t('STORE CLOSED')}
               </span>
             </div>
 
-            {/* 2. Close Store / Open Store Toggle Button */}
             <button 
               type="button"
               onClick={toggleStoreStatus}
-              className={`h-9 px-3.5 sm:px-4 rounded-full text-xs sm:text-[12.5px] font-bold transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              className={`h-9 px-4 rounded-full text-[12.5px] font-bold transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${
                 isOpen 
                   ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/20' 
                   : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
@@ -1095,17 +1133,12 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
               <span>{isOpen ? t('Close Store') : t('Open Store')}</span>
             </button>
 
-            {/* 3. Language Toggle (translate 🇪🇹 አማ) */}
-            <LanguageToggle className="h-9 px-2.5 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors whitespace-nowrap cursor-pointer" />
-
-            {/* 4. Theme Toggle (dark_mode / light_mode) */}
+            <LanguageToggle className="h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors whitespace-nowrap cursor-pointer shrink-0" />
             <ThemeToggle className="h-9 w-9 shrink-0 cursor-pointer" />
-
-            {/* 5. Notifications Dropdown */}
-            <NotificationsDropdown />
-
-            {/* 6. Profile Dropdown (right next to notification icon) */}
-            <ProfileDropdown isManagerPage={true} />
+            <div className="flex items-center gap-2 shrink-0">
+              <NotificationsDropdown />
+              <ProfileDropdown isManagerPage={true} />
+            </div>
           </div>
         </div>
 
@@ -1271,7 +1304,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
               </div>
             )}
 
-            <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-1 -mx-3.5 px-3.5 sm:mx-0 sm:px-0 sm:flex-wrap">
               {STATUS_FILTERS.map(status => {
                 const count = status === 'ALL' 
                   ? orders.length 
@@ -1284,7 +1317,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                       setFilterStatus(status);
                       if (status === 'ALL') setOrderSearch('');
                     }}
-                    className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-bold tracking-wide transition-all border flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-bold tracking-wide transition-all border flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                       filterStatus === status 
                         ? 'bg-[var(--accent)] text-[var(--accent-contrast)] border-[var(--accent)] shadow-sm' 
                         : 'bg-transparent text-[var(--muted)] border-[var(--border)] hover:text-[var(--text)] hover:border-[var(--muted)]'
@@ -1331,7 +1364,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                   <div
                     key={order.id}
                     id={`order-${order.order_number}`}
-                    className={`bg-surface-2 rounded-[18px] p-5 flex flex-col justify-between transition-all duration-500 ${
+                    className={`bg-surface-2 rounded-[18px] p-4 sm:p-5 flex flex-col justify-between transition-all duration-500 ${
                       highlightOrder === order.order_number
                         ? 'border-2 border-[var(--accent)] ring-4 ring-[var(--accent)]/30 shadow-2xl scale-[1.01]'
                         : 'border border-[var(--border)]'
@@ -1341,7 +1374,14 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <span className="text-[20px] font-display font-bold text-[var(--text)]">#{order.order_number}</span>
-                          <span className="block text-[12px] text-[var(--muted)] mt-1">{new Date(order.created_at).toLocaleTimeString(locale)}</span>
+                          <span className="block text-[12px] text-[var(--muted)] mt-1">
+                            {new Date(order.created_at).toLocaleString(locale, {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </span>
                         </div>
                         <span className={`px-2 py-1 rounded text-[11px] font-bold uppercase ${STATUS_BADGE[order.status] || 'bg-surface text-[var(--muted)] border border-[var(--border)]'}`}>
                           {t(STATUS_LABELS[order.status] || order.status)}
@@ -1351,7 +1391,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                       <div className="text-[14px] text-[var(--muted)] mb-4 space-y-1">
                         <p><strong className="text-[var(--text)]">{t('Type:')}</strong> {t(order.order_type, order.order_type)} {order.table_number && `(${t('Table')} ${order.table_number})`}</p>
                         <p><strong className="text-[var(--text)]">{t('Customer:')}</strong> {order.contact_name}</p>
-                        <p><strong className="text-[var(--text)]">{t('Phone:')}</strong> {order.contact_phone}</p>
+                        <p><strong className="text-[var(--text)]">{t('Phone:')}</strong> {order.contact_phone ? <a href={`tel:${order.contact_phone}`} className="text-[var(--accent)] underline font-semibold ml-1">{order.contact_phone}</a> : t('N/A')}</p>
                         <p className="pt-1">
                           <span
                             className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
@@ -1533,7 +1573,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             </div>
 
             {/* Menu Items Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 md:gap-5">
               {menuItems
                 .filter(item => {
                   const matchesCategory = menuCategoryFilter === 'ALL' || item.category_slug === menuCategoryFilter || (item.category && typeof item.category === 'object' && item.category.slug === menuCategoryFilter);
@@ -1545,12 +1585,12 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                   return (
                     <div
                       key={item.id}
-                      className={`bg-surface-2 border rounded-[20px] overflow-hidden flex flex-col justify-between transition-all hover:shadow-md ${
-                        item.is_available ? 'border-[var(--border)]' : 'border-red-300 dark:border-red-900/50 opacity-75'
+                      className={`bg-surface-2 border rounded-[16px] md:rounded-[20px] overflow-hidden flex flex-row md:flex-col justify-between transition-all hover:shadow-md ${
+                        item.is_available ? 'border-[var(--border)]' : 'border-red-300 dark:border-red-900/50 opacity-90'
                       }`}
                     >
-                      {/* Image Header with Badge Overlay */}
-                      <div className="relative h-40 bg-[var(--surface)] overflow-hidden flex items-center justify-center">
+                      {/* Image: Compact thumbnail on mobile (< md), visual header on desktop (md+) */}
+                      <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-full md:h-36 bg-[var(--surface)] overflow-hidden shrink-0 flex items-center justify-center m-2.5 md:m-0 rounded-[12px] md:rounded-none">
                         {itemImg ? (
                           <img
                             src={itemImg}
@@ -1559,11 +1599,12 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                           />
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center text-[var(--muted)]/50 bg-[var(--accent-soft)]/20">
-                            <i className="ph ph-coffee text-4xl mb-1"></i>
-                            <span className="text-[11px] font-mono">No Image</span>
+                            <i className="ph ph-coffee text-2xl md:text-4xl mb-0.5 md:mb-1"></i>
+                            <span className="text-[9px] md:text-[11px] font-mono">No Image</span>
                           </div>
                         )}
-                        <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
+                        {/* Desktop badges */}
+                        <div className="absolute top-2.5 left-2.5 hidden md:flex flex-wrap gap-1.5">
                           <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold tracking-wide uppercase bg-black/60 text-white backdrop-blur-sm">
                             {tCategory(item.category_name || (item.category && typeof item.category === 'object' ? item.category.name : ''))}
                           </span>
@@ -1573,7 +1614,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                             </span>
                           )}
                         </div>
-                        <div className="absolute top-2.5 right-2.5">
+                        <div className="absolute top-2.5 right-2.5 hidden md:block">
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold tracking-wide uppercase backdrop-blur-sm ${
                               item.is_available
@@ -1584,31 +1625,54 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                             {item.is_available ? t('Available') : t('Sold Out')}
                           </span>
                         </div>
+                        {/* Mobile signature star badge */}
+                        {item.is_signature && (
+                          <div className="absolute top-1 left-1 md:hidden bg-amber-500 text-white rounded-full p-1 shadow-sm">
+                            <i className="ph ph-star-fill text-[9px]"></i>
+                          </div>
+                        )}
                       </div>
 
                       {/* Content */}
-                      <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div className="p-2.5 md:p-4 flex-1 min-w-0 flex flex-col justify-between">
                         <div>
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <h4 className="font-display text-[18px] text-[var(--text)] leading-snug line-clamp-1">
+                          {/* Mobile Category & Status */}
+                          <div className="flex items-center justify-between gap-1.5 md:hidden mb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate">
+                              {tCategory(item.category_name || (item.category && typeof item.category === 'object' ? item.category.name : ''))}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase shrink-0 ${
+                                item.is_available
+                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                  : 'bg-red-500/15 text-red-600 dark:text-red-400'
+                              }`}
+                            >
+                              {item.is_available ? t('Available') : t('Sold Out')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h4 className="font-display text-[15px] md:text-[18px] text-[var(--text)] leading-snug line-clamp-2">
                               {tItem(item.name)}
                             </h4>
-                            <span className="text-[16px] text-[var(--accent)] font-bold shrink-0">
+                            <span className="text-[14px] md:text-[16px] text-[var(--accent)] font-bold shrink-0 font-mono">
                               {Number(item.price ?? item.base_price_etb ?? 0).toFixed(2)} {birr}
                             </span>
                           </div>
+
                           {item.description && (
-                            <p className="text-[12.5px] text-[var(--muted)] line-clamp-2 leading-relaxed mb-3">
-                              {item.description}
+                            <p className="text-[12px] md:text-[12.5px] text-[var(--muted)] line-clamp-1 md:line-clamp-2 leading-relaxed mb-2 md:mb-3">
+                              {tItemDescription(item.description)}
                             </p>
                           )}
                         </div>
 
                         {/* Actions */}
-                        <div className="pt-3 border-t border-[var(--border)]/60 flex items-center gap-2 mt-auto">
+                        <div className="pt-2 md:pt-3 border-t border-[var(--border)]/60 flex items-center gap-1.5 md:gap-2 mt-auto">
                           <button
                             onClick={() => toggleMenuItemAvailability(item)}
-                            className={`flex-1 h-9 rounded-[10px] text-[12px] font-bold border transition-colors ${
+                            className={`flex-1 h-8 md:h-9 rounded-[8px] md:rounded-[10px] text-[11px] md:text-[12px] font-bold border transition-colors ${
                               item.is_available
                                 ? 'border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-soft)]'
                                 : 'bg-red-100 border-red-300 text-red-700 hover:bg-red-200 dark:bg-red-950/40 dark:border-red-900/80 dark:text-red-400'
@@ -1619,17 +1683,17 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                           </button>
                           <button
                             onClick={() => handleOpenEditItem(item)}
-                            className="w-9 h-9 rounded-[10px] border border-[var(--border)] text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)] flex items-center justify-center transition-colors shrink-0"
+                            className="w-8 h-8 md:w-9 md:h-9 rounded-[8px] md:rounded-[10px] border border-[var(--border)] text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)] flex items-center justify-center transition-colors shrink-0"
                             title={t('Edit Menu Item')}
                           >
-                            <i className="ph ph-pencil-simple text-[16px]"></i>
+                            <i className="ph ph-pencil-simple text-[14px] md:text-[16px]"></i>
                           </button>
                           <button
                             onClick={() => setDeleteConfirmItem(item)}
-                            className="w-9 h-9 rounded-[10px] border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50 flex items-center justify-center transition-colors shrink-0"
+                            className="w-8 h-8 md:w-9 md:h-9 rounded-[8px] md:rounded-[10px] border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50 flex items-center justify-center transition-colors shrink-0"
                             title={t('Delete Menu Item')}
                           >
-                            <i className="ph ph-trash text-[16px]"></i>
+                            <i className="ph ph-trash text-[14px] md:text-[16px]"></i>
                           </button>
                         </div>
                       </div>
@@ -1665,7 +1729,13 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                         <div>
                           <span className="text-[20px] font-display font-bold text-[var(--text)]">{reservation.name}</span>
                           <span className="block text-[11px] font-mono text-[var(--muted)] mt-0.5 tracking-wide">{reservation.order_code || `#${reservation.id}`}</span>
-                          <span className="block text-[12px] text-[var(--muted)] mt-1">{t('Booked on')} {new Date(reservation.created_at).toLocaleDateString(locale)}</span>
+                          <span className="block text-[12px] text-[var(--muted)] mt-1">
+                            {t('Booked on')} {new Date(reservation.created_at).toLocaleDateString(locale, {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
                         </div>
                         <span className={`px-2 py-1 rounded text-[11px] font-bold uppercase ${
                           reservation.status === 'PENDING' ? 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-yellow-900/50 dark:text-yellow-400 dark:border-yellow-800' :
@@ -1677,15 +1747,27 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                         </span>
                       </div>
                       
-                      <div className="text-[14px] text-[var(--muted)] mb-4 space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p><strong className="text-[var(--text)]">{t('Date & Time:')}</strong> {new Date(reservation.date_time).toLocaleString(locale)}</p>
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--gold)]/15 text-[var(--gold)] font-medium">
+                      <div className="text-[14px] text-[var(--muted)] mb-4 space-y-1.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                          <p>
+                            <strong className="text-[var(--text)]">{t('Date & Time:')}</strong>{' '}
+                            <span className="font-semibold text-[var(--text)]">
+                              {new Date(reservation.date_time).toLocaleString(locale, {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </p>
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--gold)]/15 text-[var(--gold)] font-medium w-fit">
                             🇪🇹 {formatEthiopianTime(reservation.date_time, language)}
                           </span>
                         </div>
                         <p><strong className="text-[var(--text)]">{t('Party Size:')}</strong> {reservation.party_size} {t('people')}</p>
-                        <p><strong className="text-[var(--text)]">{t('Phone:')}</strong> {reservation.contact_phone || t('N/A')}</p>
+                        <p><strong className="text-[var(--text)]">{t('Phone:')}</strong> {reservation.contact_phone ? <a href={`tel:${reservation.contact_phone}`} className="text-[var(--accent)] underline font-semibold ml-1">{reservation.contact_phone}</a> : t('N/A')}</p>
                       </div>
                     </div>
 
@@ -2739,6 +2821,160 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
           onClose={() => setSelectedReceiptOrder(null)}
           order={selectedReceiptOrder}
         />
+      )}
+
+      {/* MOBILE STICKY BOTTOM NAVIGATION BAR */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface-2/95 backdrop-blur-md border-t border-[var(--border)] px-1 py-1.5 flex items-center justify-around shadow-2xl safe-area-inset-bottom">
+        <button
+          type="button"
+          onClick={() => setActiveTab('dashboard')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+            activeTab === 'dashboard'
+              ? 'text-[var(--accent)] bg-[var(--accent-soft)] font-bold'
+              : 'text-[var(--muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <i className="ph ph-chart-line-up text-[20px] mb-0.5"></i>
+          <span>{t('Dashboard')}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('orders');
+            setFilterStatus('ALL');
+            setOrderSearch('');
+            setHighlightOrder(null);
+          }}
+          className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+            activeTab === 'orders'
+              ? 'text-[var(--accent)] bg-[var(--accent-soft)] font-bold'
+              : 'text-[var(--muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <i className="ph ph-receipt text-[20px] mb-0.5"></i>
+          <span>{t('Orders')}</span>
+          {liveOrderCount > 0 && (
+            <span className="absolute top-0.5 right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[9px] font-bold flex items-center justify-center shadow-sm">
+              {liveOrderCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('menu')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+            activeTab === 'menu'
+              ? 'text-[var(--accent)] bg-[var(--accent-soft)] font-bold'
+              : 'text-[var(--muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <i className="ph ph-list-dashes text-[20px] mb-0.5"></i>
+          <span>{t('Menu')}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('reservations')}
+          className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+            activeTab === 'reservations'
+              ? 'text-[var(--accent)] bg-[var(--accent-soft)] font-bold'
+              : 'text-[var(--muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <i className="ph ph-calendar-blank text-[20px] mb-0.5"></i>
+          <span>{t('Tables')}</span>
+          {reservations.filter(r => r.status === 'PENDING').length > 0 && (
+            <span className="absolute top-0.5 right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-blue-500 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
+              {reservations.filter(r => r.status === 'PENDING').length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsMobileMoreOpen(true)}
+          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+            activeTab === 'reports' || activeTab === 'cafe' || isMobileMoreOpen
+              ? 'text-[var(--accent)] bg-[var(--accent-soft)] font-bold'
+              : 'text-[var(--muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <i className="ph ph-dots-three-outline text-[20px] mb-0.5"></i>
+          <span>{t('More')}</span>
+        </button>
+      </nav>
+
+      {/* MOBILE "MORE" TOOLS BOTTOM SHEET MODAL */}
+      {isMobileMoreOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm animate-fade-in md:hidden"
+          onClick={() => setIsMobileMoreOpen(false)}
+        >
+          <div 
+            className="bg-surface-2 border-t border-[var(--border)] rounded-t-[24px] p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+              <div className="flex items-center gap-2">
+                <i className="ph ph-squares-four text-xl text-[var(--accent)]"></i>
+                <h3 className="font-display text-[18px] font-bold text-[var(--text)]">{t('More Management Tools')}</h3>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsMobileMoreOpen(false)} 
+                className="w-8 h-8 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] cursor-pointer"
+              >
+                <i className="ph ph-x text-base"></i>
+              </button>
+            </div>
+
+            {/* Quick Navigation Items */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => { setActiveTab('reports'); setIsMobileMoreOpen(false); }}
+                className={`w-full flex items-center gap-3 p-3 rounded-[14px] text-[15px] font-medium transition-colors cursor-pointer ${
+                  activeTab === 'reports' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-bold' : 'bg-surface border border-[var(--border)] text-[var(--text)]'
+                }`}
+              >
+                <i className="ph ph-chart-line-up text-xl text-[var(--accent)]"></i>
+                <span>{t('Reports & Analytics')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setActiveTab('cafe'); setIsMobileMoreOpen(false); }}
+                className={`w-full flex items-center gap-3 p-3 rounded-[14px] text-[15px] font-medium transition-colors cursor-pointer ${
+                  activeTab === 'cafe' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-bold' : 'bg-surface border border-[var(--border)] text-[var(--text)]'
+                }`}
+              >
+                <i className="ph ph-buildings text-xl text-[var(--accent)]"></i>
+                <span>{t('Cafe & Branches')}</span>
+              </button>
+            </div>
+
+            {/* Preferences (Language & Theme) & Store Link */}
+            <div className="pt-2 border-t border-[var(--border)] space-y-3">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface border border-[var(--border)]">
+                <span className="text-[13px] font-semibold text-[var(--muted)]">{t('Language & Theme')}</span>
+                <div className="flex items-center gap-2">
+                  <LanguageToggle className="h-9 px-3 rounded-full border border-[var(--border)] text-[13px] text-[var(--muted)]" />
+                  <ThemeToggle className="h-9 w-9 shrink-0" />
+                </div>
+              </div>
+
+              <Link
+                href="/?welcome=1"
+                className="w-full flex items-center justify-center gap-2 h-11 rounded-[14px] border border-[var(--border)] bg-surface text-[var(--text)] font-semibold text-[14px] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+              >
+                <i className="ph ph-storefront text-lg"></i>
+                <span>{t('View Customer Site')}</span>
+              </Link>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
