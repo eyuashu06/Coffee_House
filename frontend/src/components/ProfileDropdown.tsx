@@ -144,29 +144,33 @@ export default function ProfileDropdown({
 
   if (loading) {
     return (
-      <div className="h-9 w-24 bg-surface-2 animate-pulse rounded-full border border-[var(--border)]" />
+      <div className="h-9.5 w-9.5 sm:w-24 bg-surface-2 animate-pulse rounded-full border border-[var(--border)] shrink-0" />
     );
   }
 
   if (!user) {
     return (
-      <div className={`flex items-center gap-2 ${className}`}>
+      <div className={`flex items-center gap-1.5 sm:gap-2 shrink-0 ${className}`}>
         {onOpenSignIn ? (
           <button
             type="button"
             onClick={onOpenSignIn}
-            className="h-9 px-3.5 sm:px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] sm:text-[14px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+            className="h-9.5 w-9.5 sm:w-auto p-0 sm:px-3.5 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] sm:text-[14px] flex items-center justify-center sm:justify-start gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors cursor-pointer shrink-0"
+            title={t('Sign In')}
+            aria-label={t('Sign In')}
           >
-            <i className="ph ph-sign-in text-[16px]"></i>
-            <span>{t('Sign In')}</span>
+            <i className="ph ph-user text-[17px]"></i>
+            <span className="hidden sm:inline">{t('Sign In')}</span>
           </button>
         ) : (
           <Link
             href="/account"
-            className="h-9 px-3.5 sm:px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] sm:text-[14px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+            className="h-9.5 w-9.5 sm:w-auto p-0 sm:px-3.5 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] sm:text-[14px] flex items-center justify-center sm:justify-start gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors cursor-pointer shrink-0"
+            title={t('Sign In')}
+            aria-label={t('Sign In')}
           >
-            <i className="ph ph-sign-in text-[16px]"></i>
-            <span>{t('Sign In')}</span>
+            <i className="ph ph-user text-[17px]"></i>
+            <span className="hidden sm:inline">{t('Sign In')}</span>
           </Link>
         )}
 
@@ -174,7 +178,7 @@ export default function ProfileDropdown({
           <button
             type="button"
             onClick={onOpenSignUp}
-            className="hidden sm:flex h-9 px-4 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold text-[13.5px] sm:text-[14px] items-center hover:brightness-110 transition-all shadow-sm cursor-pointer"
+            className="hidden sm:flex h-9.5 px-4 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold text-[13.5px] sm:text-[14px] items-center hover:brightness-110 transition-all shadow-sm cursor-pointer shrink-0"
           >
             {t('Sign Up')}
           </button>
@@ -206,7 +210,7 @@ export default function ProfileDropdown({
 
   return (
     <>
-      <div className={`relative ${className}`} ref={dropdownRef}>
+      <div className={`relative shrink-0 ${className}`} ref={dropdownRef}>
         {/* Trigger Button */}
         <button
           type="button"
@@ -217,7 +221,7 @@ export default function ProfileDropdown({
           aria-expanded={isOpen}
           aria-haspopup="true"
           aria-label={t('Account')}
-          className={`h-9.5 px-2.5 sm:px-3 rounded-full border transition-all flex items-center gap-2 select-none cursor-pointer group ${
+          className={`h-9.5 w-9.5 sm:w-auto p-0 sm:px-3 rounded-full border transition-all flex items-center justify-center sm:justify-start gap-2 select-none cursor-pointer group shrink-0 ${
             isOpen
               ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-md'
               : 'bg-surface-2 border-[var(--border)] text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
@@ -229,7 +233,7 @@ export default function ProfileDropdown({
           </div>
 
           {/* Display Name */}
-          <span className="text-[13.5px] font-medium max-w-[110px] sm:max-w-[140px] truncate leading-none">
+          <span className="hidden sm:inline text-[13.5px] font-medium max-w-[110px] sm:max-w-[140px] truncate leading-none">
             {displayName}
           </span>
 
@@ -244,7 +248,7 @@ export default function ProfileDropdown({
 
           {/* Caret Chevron */}
           <i
-            className={`ph ph-caret-down text-[13px] transition-transform duration-200 ${
+            className={`hidden sm:inline ph ph-caret-down text-[13px] transition-transform duration-200 ${
               isOpen ? 'rotate-180 text-[var(--accent)]' : 'text-[var(--muted)] group-hover:text-[var(--accent)]'
             }`}
           ></i>
@@ -255,7 +259,7 @@ export default function ProfileDropdown({
           <div
             className={`absolute ${
               align === 'right' ? 'right-0' : 'left-0'
-            } mt-2 w-[calc(100vw-32px)] max-w-xs sm:w-72 bg-surface-2 border border-[var(--border)] rounded-[20px] shadow-2xl py-2 z-[100] animate-fade-in text-[var(--text)] backdrop-blur-md`}
+            } mt-2 w-[calc(100vw-32px)] max-w-[280px] sm:max-w-xs sm:w-72 bg-surface-2 border border-[var(--border)] rounded-[20px] shadow-2xl py-2 z-[100] animate-fade-in text-[var(--text)] backdrop-blur-md`}
           >
             {/* User Profile Card Header */}
             <div className="px-4 py-3 border-b border-[var(--border)] bg-surface/50 rounded-t-[19px] mb-1">

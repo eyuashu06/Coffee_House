@@ -179,7 +179,7 @@ export default function NotificationsDropdown() {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative shrink-0" ref={dropdownRef}>
       <button
         type="button"
         onClick={(e) => {
@@ -188,9 +188,9 @@ export default function NotificationsDropdown() {
         }}
         aria-label={t('Notifications')}
         aria-expanded={isOpen}
-        className={`relative w-9.5 h-9.5 sm:w-10 sm:h-10 flex items-center justify-center rounded-full transition-all border cursor-pointer ${
+        className={`relative w-9.5 h-9.5 flex items-center justify-center rounded-full transition-all border cursor-pointer shrink-0 ${
           isOpen
-            ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)]'
+            ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-md'
             : 'bg-surface-2 border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
         }`}
       >
