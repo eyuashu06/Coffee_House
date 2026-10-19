@@ -86,6 +86,8 @@ def check_availability(date_str, time_str, guests):
     when = parse_date_time(date_str, time_str)
     if when is None:
         return False, 'invalid_datetime'
+    if when < timezone.now() - timedelta(minutes=1):
+        return False, 'past_date'
     if guests and guests > max_guests():
         return False, 'too_large'
 
@@ -108,8 +110,11 @@ def suggest_alternative_times(date_str, time_str, guests, count=3):
     if when is None:
         return []
     suggestions = []
+    now = timezone.now()
     for offset_minutes in (60, 120, 180, -60, -120):
         candidate = when + timedelta(minutes=offset_minutes)
+        if candidate < now:
+            continue
         ok, _ = check_availability(candidate.date().isoformat(), candidate.strftime('%H:%M'), guests)
         if ok:
             suggestions.append(candidate.strftime('%H:%M'))
