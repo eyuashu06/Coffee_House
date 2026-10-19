@@ -57,6 +57,12 @@ export default function AuthModal({
   const [lastName, setLastName] = useState('');
   const [resetEmail, setResetEmail] = useState('');
 
+  // 6-digit OTP Password Recovery States
+  const [forgotStep, setForgotStep] = useState<'EMAIL' | 'OTP'>('EMAIL');
+  const [otpCode, setOtpCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
   if (!isOpen) return null;
 
   // Format phone number into +251 format
@@ -150,20 +156,78 @@ export default function AuthModal({
           }
         }, 500);
       } else if (mode === 'FORGOT_PASSWORD') {
-        const res = await fetch('/api/v1/auth/password-reset/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: resetEmail }),
-        });
-        const contentType = res.headers.get('content-type') || '';
-        if (!contentType.includes('application/json')) {
-          throw new Error('Server error sending reset email.');
+        if (forgotStep === 'EMAIL') {
+          const emailError = validateSignupEmail(resetEmail);
+          if (emailError) {
+            setError(emailError);
+            return;
+          }
+          const res = await fetch('/api/v1/auth/password-reset/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: resetEmail }),
+          });
+          const contentType = res.headers.get('content-type') || '';
+          if (!contentType.includes('application/json')) {
+            throw new Error('Server error sending reset code.');
+          }
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.email?.[0] || data.detail || 'Password reset request failed.');
+          }
+          setForgotStep('OTP');
+          setSuccess(
+            language === 'am'
+              ? 'ባለ 6-አሃዝ የማረጋገጫ ኮድ ወደ Gmail ኢሜይልዎ ተልኳል። እባክዎ ከዚህ በታች ያስገቡት።'
+              : 'A 6-digit verification code was sent to your Gmail inbox. Enter it below.'
+          );
+        } else {
+          // Verify OTP and reset password
+          if (!otpCode || otpCode.trim().length !== 6) {
+            setError(language === 'am' ? 'እባክዎ ባለ 6-አሃዝ የማረጋገጫ ኮድ ያስገቡ።' : 'Please enter the 6-digit OTP code.');
+            return;
+          }
+          if (newPassword !== confirmNewPassword) {
+            setError(language === 'am' ? 'የይለፍ ቃሎቹ አይዛመዱም።' : 'The passwords do not match.');
+            return;
+          }
+          if (newPassword.length < 6) {
+            setError(language === 'am' ? 'የይለፍ ቃል ቢያንስ 6 ቁምፊዎች መሆን አለበት።' : 'Password must be at least 6 characters long.');
+            return;
+          }
+
+          const res = await fetch('/api/v1/auth/password-reset/confirm/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: resetEmail,
+              otp_code: otpCode.trim(),
+              new_password: newPassword,
+            }),
+          });
+          const contentType = res.headers.get('content-type') || '';
+          if (!contentType.includes('application/json')) {
+            throw new Error('Server error confirming password reset.');
+          }
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.otp_code?.[0] || data.new_password?.[0] || data.detail || 'Failed to reset password.');
+          }
+          setSuccess(
+            language === 'am'
+              ? 'የይለፍ ቃልዎ በተሳካ ሁኔታ ተቀይሯል! አሁን መግባት ይችላሉ።'
+              : 'Password reset successfully! You can now sign in.'
+          );
+          setTimeout(() => {
+            setMode('LOGIN');
+            setForgotStep('EMAIL');
+            setOtpCode('');
+            setNewPassword('');
+            setConfirmNewPassword('');
+            setError(null);
+            setSuccess(null);
+          }, 1500);
         }
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.email?.[0] || 'Password reset request failed.');
-        }
-        setSuccess('Password reset link sent to your email.');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred. Please try again.');
@@ -393,7 +457,7 @@ export default function AuthModal({
             </>
           )}
 
-          {mode === 'FORGOT_PASSWORD' && (
+          {mode === 'FORGOT_PASSWORD' && forgotStep === 'EMAIL' && (
             <div>
               <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                 {t('Registered Email Address')}
@@ -408,6 +472,80 @@ export default function AuthModal({
                 placeholder={t('Enter your account email')}
                 className="w-full px-3.5 py-2.5 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[var(--accent)]"
               />
+              <p className="text-[11px] text-[var(--muted)] mt-1.5 leading-relaxed">
+                {language === 'am'
+                  ? 'የይለፍ ቃል መልሶ ማግኛ ባለ 6-አሃዝ የማረጋገጫ ኮድ በቀጥታ ወደ Gmail ኢሜይልዎ ይላካል።'
+                  : "We'll send a 6-digit OTP verification code directly to your Gmail inbox."}
+              </p>
+            </div>
+          )}
+
+          {mode === 'FORGOT_PASSWORD' && forgotStep === 'OTP' && (
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg bg-surface-2 border border-[var(--border)] flex items-center justify-between text-xs">
+                <div className="truncate mr-2">
+                  <span className="text-[var(--muted)] block text-[10.5px] uppercase font-bold tracking-wider">
+                    {language === 'am' ? 'ኮድ የተላከበት ኢሜይል' : 'Code sent to'}
+                  </span>
+                  <span className="font-medium text-[var(--text)]">{resetEmail}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setForgotStep('EMAIL'); setError(null); setSuccess(null); }}
+                  className="text-[var(--accent)] hover:underline shrink-0 font-semibold"
+                >
+                  {language === 'am' ? 'ቀይር' : 'Change'}
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1 text-center">
+                  {language === 'am' ? 'ባለ 6-አሃዝ የማረጋገጫ ኮድ (OTP)' : '6-Digit Verification Code (OTP)'}
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  required
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="••••••"
+                  className="w-full h-12 text-center text-xl font-mono tracking-[0.4em] rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--accent)] focus:outline-none focus:border-[var(--accent)] font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
+                  {language === 'am' ? 'አዲስ የይለፍ ቃል' : 'New Password'}
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={6}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder={language === 'am' ? 'አዲስ የይለፍ ቃል ያስገቡ (ቢያንስ 6 ፊደላት)' : 'At least 6 characters'}
+                  className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[var(--accent)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
+                  {language === 'am' ? 'የይለፍ ቃል ያረጋግጡ' : 'Confirm New Password'}
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={6}
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  placeholder={language === 'am' ? 'የይለፍ ቃሉን በድጋሚ ያስገቡ' : 'Re-enter your password'}
+                  className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[var(--accent)]"
+                />
+              </div>
             </div>
           )}
 
@@ -422,12 +560,49 @@ export default function AuthModal({
             ) : (
               <>
                 <span>
-                  {mode === 'LOGIN' ? t('Sign In') : mode === 'REGISTER' ? t('Create Account') : t('Send Reset Link')}
+                  {mode === 'LOGIN'
+                    ? t('Sign In')
+                    : mode === 'REGISTER'
+                    ? t('Create Account')
+                    : forgotStep === 'EMAIL'
+                    ? (language === 'am' ? 'የማረጋገጫ ኮድ ላክ' : 'Send 6-Digit OTP Code')
+                    : (language === 'am' ? 'ኮዱን አረጋግጥ እና ይለፍ ቃል ቀይር' : 'Verify OTP & Reset Password')}
                 </span>
                 <span className="material-symbols-outlined text-base">arrow_forward</span>
               </>
             )}
           </button>
+
+          {mode === 'FORGOT_PASSWORD' && forgotStep === 'OTP' && (
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={async () => {
+                setIsSubmitting(true);
+                setError(null);
+                try {
+                  const res = await fetch('/api/v1/auth/password-reset/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: resetEmail }),
+                  });
+                  if (res.ok) {
+                    setSuccess(
+                      language === 'am'
+                        ? 'አዲስ የማረጋገጫ ኮድ ወደ Gmail ኢሜይልዎ ተልኳል!'
+                        : 'A new OTP code has been sent to your Gmail inbox!'
+                    );
+                  }
+                } catch {
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+              className="w-full text-center text-xs text-[var(--accent)] hover:underline mt-2 font-medium"
+            >
+              {language === 'am' ? 'ኮዱ አልደረሰዎትም? በድጋሚ ላክ' : "Didn't receive the code? Resend OTP"}
+            </button>
+          )}
         </form>
 
         {/* Mode Footer Switch */}
