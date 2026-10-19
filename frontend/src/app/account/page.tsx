@@ -557,25 +557,27 @@ export default function AccountPage() {
     <div className="bg-[var(--bg)] text-[var(--text)] font-body min-h-screen pb-24">
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-[var(--bg-deep)] border-b border-[var(--border)]/60">
-        <div className="flex items-center justify-between px-6 h-14">
-          <div className="flex items-center gap-4">
-            <Link href="/?welcome=1" className="flex items-center gap-2 group text-[var(--muted)] hover:text-[var(--accent)] transition-colors" aria-label="Back to Home">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 h-14">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <Link href="/?welcome=1" className="flex items-center gap-2 group text-[var(--muted)] hover:text-[var(--accent)] transition-colors shrink-0" aria-label="Back to Home">
               <i className="ph ph-arrow-left text-[20px]"></i>
             </Link>
-            <Link href="/?welcome=1" className="flex items-center gap-2.5 group">
-              <span className="w-8 h-8 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
-              <span className="font-display text-[21px] tracking-wide">Buna Hub</span>
+            <Link href="/?welcome=1" className="flex items-center gap-2.5 group min-w-0">
+              <span className="w-8 h-8 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px] group-hover:scale-105 transition-transform shrink-0"><i className="ph ph-coffee-bean"></i></span>
+              <span className="font-display text-[19px] sm:text-[21px] tracking-wide truncate">Buna Hub</span>
             </Link>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <LanguageToggle className="h-9 px-2.5 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors" />
-            <ThemeToggle className="h-9 w-9" />
-            <Link href="/?welcome=1" className="h-9 px-3.5 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] hidden sm:flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors" aria-label="Back to Home">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            <LanguageToggle className="hidden sm:flex h-9 px-2 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13px] sm:text-[13.5px] items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" />
+            <ThemeToggle className="hidden sm:flex h-9 w-9 shrink-0" />
+            <Link href="/?welcome=1" className="h-9 px-3.5 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] hidden sm:flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" aria-label="Back to Home">
               <i className="ph ph-storefront text-[16px]"></i>
               <span>{t('Store')}</span>
             </Link>
-            <NotificationsDropdown />
-            <ProfileDropdown />
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <NotificationsDropdown />
+              <ProfileDropdown />
+            </div>
           </div>
         </div>
       </header>
@@ -594,23 +596,23 @@ export default function AccountPage() {
       )}
 
       {/* MAIN CONTENT */}
-      <main className="max-w-4xl mx-auto px-4 mt-8">
-        <div className="flex items-center justify-between gap-4 mb-8">
-          <h1 className="font-display text-[40px] leading-none">{t('Your Account')}</h1>
+      <main className="max-w-4xl mx-auto px-3.5 sm:px-4 mt-6 sm:mt-8">
+        <div className="flex items-center justify-between gap-4 mb-6 sm:mb-8">
+          <h1 className="font-display text-[28px] sm:text-[34px] md:text-[40px] leading-tight">{t('Your Account')}</h1>
           {isConfirmingPayment && (
-            <span className="flex items-center gap-2 text-[13px] text-blue-200 bg-blue-950/50 border border-blue-500/30 rounded-full px-3 py-1.5">
+            <span className="flex items-center gap-2 text-[13px] text-blue-200 bg-blue-950/50 border border-blue-500/30 rounded-full px-3 py-1.5 shrink-0">
               <i className="ph ph-spinner-gap animate-spin"></i>
               {t('Confirming payment…')}
             </span>
           )}
         </div>
         
-        {/* TABS */}
-        <div className="flex flex-wrap gap-2 mb-8 border-b border-[var(--border)] pb-4">
-          <button onClick={() => handleTabChange('orders')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'orders' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('My Orders')}</button>
-          <button onClick={() => handleTabChange('reservations')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'reservations' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Table Reservations')}</button>
-          <button onClick={() => handleTabChange('addresses')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'addresses' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Delivery Addresses')}</button>
-          <button onClick={() => handleTabChange('profile')} className={`h-10 px-5 rounded-full text-[15.5px] transition-colors ${activeTab === 'profile' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Profile Settings')}</button>
+        {/* TABS (Horizontal Swipeable Rail on Mobile) */}
+        <div className="flex gap-2 mb-6 sm:mb-8 border-b border-[var(--border)] pb-3 overflow-x-auto no-scrollbar scroll-smooth">
+          <button onClick={() => handleTabChange('orders')} className={`h-9.5 px-4 sm:px-5 rounded-full text-[14px] sm:text-[15.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'orders' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('My Orders')}</button>
+          <button onClick={() => handleTabChange('reservations')} className={`h-9.5 px-4 sm:px-5 rounded-full text-[14px] sm:text-[15.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'reservations' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Table Reservations')}</button>
+          <button onClick={() => handleTabChange('addresses')} className={`h-9.5 px-4 sm:px-5 rounded-full text-[14px] sm:text-[15.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'addresses' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Delivery Addresses')}</button>
+          <button onClick={() => handleTabChange('profile')} className={`h-9.5 px-4 sm:px-5 rounded-full text-[14px] sm:text-[15.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'profile' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Profile Settings')}</button>
         </div>
 
         {/* TAB: ORDERS */}
@@ -736,7 +738,15 @@ export default function AccountPage() {
                                 'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-900'
                               }`}>{t(STATUS_LABELS[order.status] || order.status)}</span>
                             </div>
-                            <p className="text-[14.5px] text-[var(--muted)] mb-1">{new Date(order.created_at).toLocaleDateString(locale)} • {order.items.length} {t('items')}</p>
+                            <p className="text-[14.5px] text-[var(--muted)] mb-1">
+                              {new Date(order.created_at).toLocaleString(locale, {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })} • {order.items.length} {t('items')}
+                            </p>
                             {order.status === 'EXPIRED' ? (
                               <p className="text-[13px] text-amber-700 dark:text-yellow-300/90 mb-1">
                                 {t('This order expired before we received payment. Place it again below and we will make it fresh.')}
