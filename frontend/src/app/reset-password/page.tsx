@@ -27,6 +27,8 @@ function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [email, setEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
 
   // The backend builds this URL as
   //   {FRONTEND_URL}/reset-password?uid=<uidb64>&token=<token>
@@ -35,7 +37,7 @@ function ResetPasswordForm() {
   );
   const uid = params.get('uid') ?? '';
   const token = params.get('token') ?? '';
-  const linkLooksValid = Boolean(uid && token);
+  const hasLinkTokens = Boolean(uid && token);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,21 +52,38 @@ function ResetPasswordForm() {
       return;
     }
 
+    if (!hasLinkTokens && (!otpCode.trim() || !email.trim())) {
+      setError('Please provide your email and 6-digit OTP code.');
+      return;
+    }
+
     setStatus('submitting');
     try {
+      const payload: Record<string, string> = { new_password: password };
+      if (hasLinkTokens) {
+        payload.uidb64 = uid;
+        payload.token = token;
+      } else {
+        payload.email = email.trim();
+        payload.otp_code = otpCode.trim();
+      }
+
       const res = await fetch('/api/v1/auth/password-reset/confirm/', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uidb64: uid, token, new_password: password }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setStatus('done');
       } else {
         setError(
+          data.otp_code?.[0] ||
+          data.new_password?.[0] ||
+          data.email?.[0] ||
           Object.values(data).flat().join(' ') ||
-            'That reset link is no longer valid. Please request a new one.'
+          'Invalid or expired recovery details. Please request a new code.'
         );
         setStatus('idle');
       }
@@ -78,7 +97,7 @@ function ResetPasswordForm() {
     return (
       <Shell>
         <p className="text-[var(--accent)] font-semibold">
-          Your password has been changed. You can sign in with it now.
+          Your password has been changed successfully. You can sign in with it now.
         </p>
         <Link
           href="/"
@@ -92,17 +111,49 @@ function ResetPasswordForm() {
 
   return (
     <Shell>
-      {!linkLooksValid && (
-        <p className="text-red-600 dark:text-red-300 text-sm leading-relaxed">
-          This link is missing its reset code. Open the link from your reset email, or{' '}
-          <Link href="/" className="text-[var(--accent)] underline">
-            request a new one
-          </Link>
-          .
-        </p>
+      {!hasLinkTokens && (
+        <div className="p-3 rounded-xl bg-surface border border-[var(--border)] text-xs text-[var(--muted)] leading-relaxed">
+          Enter your registered email and the 6-digit OTP code received in your Gmail inbox to reset your password.
+        </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {!hasLinkTokens && (
+          <>
+            <div>
+              <label htmlFor="reset-email" className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">
+                Registered Email
+              </label>
+              <input
+                id="reset-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="e.g. name@gmail.com"
+                className="w-full h-12 px-4 rounded-xl bg-surface border border-[var(--border)] text-[var(--text)] focus:border-[var(--accent)] focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="otp-code" className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">
+                6-Digit OTP Code
+              </label>
+              <input
+                id="otp-code"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                required
+                placeholder="••••••"
+                className="w-full h-12 px-4 rounded-xl bg-surface border border-[var(--border)] text-[var(--accent)] font-mono text-center tracking-[0.4em] text-lg font-bold focus:border-[var(--accent)] focus:outline-none"
+              />
+            </div>
+          </>
+        )}
+
         <div>
           <label htmlFor="new-password" className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">
             New password
@@ -138,11 +189,17 @@ function ResetPasswordForm() {
 
         <button
           type="submit"
-          disabled={status === 'submitting' || !linkLooksValid}
+          disabled={status === 'submitting'}
           className="w-full h-12 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {status === 'submitting' ? 'Saving...' : 'Set new password'}
         </button>
+
+        <div className="text-center pt-2">
+          <Link href="/" className="text-xs text-[var(--muted)] hover:text-[var(--accent)] transition-colors">
+            ← Back to Home
+          </Link>
+        </div>
       </form>
     </Shell>
   );
