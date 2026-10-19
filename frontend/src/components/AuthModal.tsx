@@ -143,7 +143,11 @@ export default function AuthModal({
         setSuccess(t('Account created successfully!'));
         setTimeout(() => {
           onClose();
-          if (onSuccessCallback) onSuccessCallback();
+          if (postLoginRedirect) {
+            router.push(postLoginRedirect);
+          } else if (onSuccessCallback) {
+            onSuccessCallback();
+          }
         }, 500);
       } else if (mode === 'FORGOT_PASSWORD') {
         const res = await fetch('/api/v1/auth/password-reset/', {
