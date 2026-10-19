@@ -145,6 +145,44 @@ export default function Home() {
     const [minDateTime, setMinDateTime] = useState('');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const isSubmittingReservationRef = useRef<boolean>(false);
+    const [isOpenNow, setIsOpenNow] = useState<boolean>(true);
+
+    useEffect(() => {
+        const checkStoreStatus = async () => {
+            try {
+                const res = await apiFetch('/api/v1/restaurant-settings/');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (typeof data.is_open === 'boolean') {
+                        setIsOpenNow(data.is_open);
+                        return;
+                    }
+                }
+            } catch {}
+
+            // Fallback calculation in East Africa Time (UTC+3)
+            const now = new Date();
+            const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+            const eatTime = new Date(utc + 3600000 * 3);
+            const day = eatTime.getDay(); // 0 is Sunday, 5 is Friday, 6 is Saturday
+            const mins = eatTime.getHours() * 60 + eatTime.getMinutes();
+
+            if (day === 5 || day === 6) {
+                // Friday & Saturday: 07:00 (1:00 day) to 22:00 (4:00 night)
+                setIsOpenNow(mins >= 7 * 60 && mins < 22 * 60);
+            } else if (day === 0) {
+                // Sunday: 08:00 (2:00 day) to 21:00 (3:00 night)
+                setIsOpenNow(mins >= 8 * 60 && mins < 21 * 60);
+            } else {
+                // Monday - Thursday: 07:00 (1:00 day) to 21:00 (3:00 night)
+                setIsOpenNow(mins >= 7 * 60 && mins < 21 * 60);
+            }
+        };
+
+        checkStoreStatus();
+        const timer = setInterval(checkStoreStatus, 60000);
+        return () => clearInterval(timer);
+    }, []);
 
     // Order tracking. This used to be a form that always printed a hardcoded
     // "BH-1024 ready for pickup" for any input, which told customers their order was
@@ -826,8 +864,8 @@ export default function Home() {
                     <div className="max-w-[1360px] mx-auto grid lg:grid-cols-2 gap-6 lg:gap-12 items-center">
                         <div className="order-2 lg:order-1">
                             <div className="inline-flex items-center gap-2 text-[13.5px] text-[var(--muted)]" suppressHydrationWarning>
-                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--gold)] shrink-0"></span>
-                                <span>{t('Open today')}</span>
+                                <span className={`w-2 h-2 rounded-full shrink-0 ${isOpenNow ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
+                                <span>{isOpenNow ? t('Open today') : (language === 'am' ? 'በአሁኑ ሰዓት ዝግ ነው' : 'Closed right now')}</span>
                                 <span>·</span>
                                 <span className="font-mono">
                                     {language === 'am'
@@ -1072,11 +1110,15 @@ export default function Home() {
                             <Reveal>
                                 <div className="grid lg:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_380px] rounded-[18px] overflow-hidden border border-[var(--border)] shadow-[var(--shadow)]">
                                     <aside className="bg-[var(--surface-2)] px-6 sm:px-7 py-9 border-b lg:border-b-0 lg:border-r border-[var(--border)]">
-                                        <div className="flex items-center gap-2 text-[14px] text-[var(--gold)]" suppressHydrationWarning>
-                                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--gold)] shrink-0"></span>
-                                            <span>{t('Open now')}</span>
+                                        <div className={`flex items-center gap-2 text-[14px] ${isOpenNow ? 'text-[var(--gold)]' : 'text-red-400'}`} suppressHydrationWarning>
+                                            <span className={`w-2 h-2 rounded-full shrink-0 ${isOpenNow ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
+                                            <span>{isOpenNow ? t('Open now') : (language === 'am' ? 'በአሁኑ ሰዓት ዝግ ነው' : 'Closed now')}</span>
                                             <span>·</span>
-                                            <span>{language === 'am' ? 'ኩሽና እስከ ማታ 3:00' : 'kitchen till 3:00 night'}</span>
+                                            <span>
+                                                {isOpenNow
+                                                    ? (language === 'am' ? 'ኩሽና እስከ ማታ 3:00 (አርብ/ቅዳሜ 4:00)' : 'kitchen till 3:00 night (Fri/Sat 4:00)')
+                                                    : (language === 'am' ? 'ጧት 1:00 ይከፈታል' : 'opens at 1:00 morning')}
+                                            </span>
                                         </div>
                                         <div className="flex items-baseline justify-between mt-6">
                                             <h3 className="font-display text-[26px] leading-tight">{t('Hours')}</h3>
