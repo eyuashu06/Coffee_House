@@ -49,7 +49,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         # A closed cafe must not accept web orders (FR-C5). The assistant already
         # refuses; without this the checkout button still created them.
         venue = RestaurantSettings.get_settings()
-        if not venue.is_open:
+        if not venue.is_currently_open:
             return Response(
                 {'error': 'We are closed right now and are not accepting orders. '
                           'Our opening hours are ' + venue.opening_hours},
@@ -190,7 +190,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         Duplicates an existing order's items and configuration into a new PENDING_PAYMENT order.
         """
         venue = RestaurantSettings.get_settings()
-        if not venue.is_open:
+        if not venue.is_currently_open:
             return Response(
                 {'error': 'We are closed right now and are not accepting orders. '
                           'Our opening hours are ' + venue.opening_hours},
