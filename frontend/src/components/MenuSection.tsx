@@ -36,7 +36,7 @@ const CATEGORIES = [
 ];
 
 export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) {
-  const { t, tItem } = useLanguage();
+  const { t, tItem, tItemDescription } = useLanguage();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<{ [key: number]: { temp: string; milk: string } }>({});
@@ -168,7 +168,7 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <h3 className="font-headline text-lg text-[var(--text)] font-semibold">{tItem(item.name)}</h3>
-                    <p className="text-xs text-outline mt-1 leading-relaxed">{item.description}</p>
+                    <p className="text-xs text-outline mt-1 leading-relaxed">{tItemDescription(item.description)}</p>
                   </div>
                   <span className="font-headline text-lg text-secondary font-bold whitespace-nowrap">{Number(item.price).toFixed(2)} ETB</span>
                 </div>

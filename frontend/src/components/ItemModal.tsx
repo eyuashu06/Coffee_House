@@ -33,7 +33,7 @@ interface ItemModalProps {
 const etb = (value: number, currency = 'Br') => `${value.toFixed(2)} ${currency}`;
 
 export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemModalProps) {
-  const { t, tItem, language } = useLanguage();
+  const { t, tItem, tItemDescription, language } = useLanguage();
   const [quantity, setQuantity] = useState(1);
   const [quantityText, setQuantityText] = useState('1');
   const [temperature, setTemperature] = useState('Hot');
@@ -295,7 +295,7 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
 
           {item.description && (
             <p className="text-[13px] text-[var(--muted)] leading-relaxed border-t border-[var(--border)] pt-3">
-              {item.description}
+              {tItemDescription(item.description)}
             </p>
           )}
         </div>
