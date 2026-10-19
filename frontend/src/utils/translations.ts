@@ -928,7 +928,6 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Pulled chicken in smoky BBQ sauce, caramelized onions, red peppers, smoked cheddar, coriander leaves.':
     'የተከተፈ የዶሮ ሥጋ በጢስ ቢቢኪዩ ሶስ፣ የበሰለ ሽንኩርት፣ ቀይ ቃሪያ፣ ቼዳር ቺዝ እና የድንብላል ቅጠል።',
   // Shawarma & Wraps
-  'Classic Chicken Shawarma': 'የዶሮ ሸዋርማ',
   'Marinated rotisserie chicken, garlic toum, pickled turnip, fresh tomato, parsley in warm flatbread.':
     'የተጠበሰ የዶሮ ሥጋ፣ የነጭ ሽንኩርት ቱም፣ ፒክልስ፣ ትኩስ ቲማቲም እና ፐርስሊ በሞቀ የአረብ ዳቦ።',
   'Slow-roasted spiced beef and lamb shoulder strips, tahini, pickles, tomato, onion in pillowy Arabic bread.':
@@ -954,8 +953,6 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Savoiardi soaked in Yirgacheffe espresso, layered with mascarpone cream, dusted with Valrhona cocoa.':
     'በይርጋጨፌ ኤስፕሬሶ የራሰ ሳቮያርዲ፣ በማስካርፖኔ ክሬም እና በቫልሮና ኮኮዋ የተሸፈነ ቲራሚሱ።',
   // Cafe & Fallbacks
-  'An Ethiopian coffee house in Piassa — ceremony buna, slow teas, and a kitchen that stays open late.':
-    'የኢትዮጵያ የቡና ቤት በፒያሳ — የጀበና ቡና፣ የተመረጡ ሻይዎች እና እስከ ምሽት ክፍት የሆነ ኩሽና።',
   'Single-origin micro-lots, signature espresso infusions, and AI RAG Coffee Sommelier recommendations.':
     'ልዩ የተመረጡ ቡናዎች፣ የኤስፕሬሶ መጠጦች እና የአይ-ኤ አጋዥ የቡና ምክሮች።',
 };
