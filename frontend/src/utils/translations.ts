@@ -223,6 +223,20 @@ export const translations: Record<string, string> = {
     'ጠረጴዛዎ ተይዟል! ለማረጋገጥ በቅርቡ እንደውላለን።',
   'There was an error booking your table. Please try again.':
     'ቦታ በማስያዝ ላይ ስህተት ተከሰተ። እባክዎ እንደገና ይሞክሩ።',
+  'Reservation time cannot be in the past. Please select an upcoming time.':
+    'የቦታ ማስያዣ ሰዓት ካለፈ ሰዓት ሊሆን አይችልም። እባክዎ ወደፊት ያለ ሰዓት ይምረጡ።',
+  'Sign in or create an account to complete your table reservation.':
+    'የጠረጴዛ ማስያዣዎን ለማጠናቀቅ ይግቡ ወይም መለያ ይፍጠሩ።',
+  'Please enter your name.':
+    'እባክዎ ስምዎን ያስገቡ።',
+  'Please enter your contact phone number.':
+    'እባክዎ ስልክ ቁጥርዎን ያስገቡ።',
+  'Choose a date and time for the table.':
+    'እባክዎ ለጠረጴዛው ቀን እና ሰዓት ይምረጡ።',
+  'That time has already passed. Pick a slot in the future.':
+    'ያ ሰዓት አልፏል። እባክዎ ወደፊት ያለ ክፍት ሰዓት ይምረጡ።',
+  'Booking your table...':
+    'ጠረጴዛዎን በማስያዝ ላይ...',
   'Book': 'ያስታውሱ/ያዝ',
   'Order': 'ትዕዛዝ',
 
@@ -870,3 +884,79 @@ export const addonTranslations: Record<string, string> = {
   'Extra Cheese Sauce': 'ተጨማሪ ቺዝ ሶስ',
   'Extra Guacamole': 'ተጨማሪ ጉዋካሞሌ',
 };
+
+export const itemDescriptionTranslations: Record<string, string> = {
+  // Coffee
+  'Complex jasmine aromas, vibrant bergamot acidity, and a silky honeycomb body from Gedeo region.':
+    'የጃስሚን መዓዛ፣ ደማቅ የበርጋሞት ኮምጣጣነት እና የሐር ልስላሴ ያለው ከጌዴኦ ዞን የተገኘ ምርጥ ቡና።',
+  'Wild blueberry sweetness, dark chocolate undertones, and a velvet mouthfeel from Guji highlands.':
+    'የዱር እንጆሪ ጣዕም፣ የጥቁር ቸኮሌት ቃና እና የሐር ልስላሴ ያለው የጉጂ ደጋማ ቦታዎች ቡና።',
+  'Crisp peach and lemon acidity with a clean, tea-like finish. Sourced from high-altitude Bombe kebele.':
+    'የአተርፍስክና ሎሚ ቃና ያለው፣ ንፁህ የሻይ መሰል ጣዕም ያለው ከቦምቤ ቀበሌ የተገኘ ቡና።',
+  // Espresso & Cold Brew
+  'Double shot Geisha espresso infused with artisanal Ethiopian green cardamom and velvety steamed milk.':
+    'በአገር በቀል የኢትዮጵያ አረንጓዴ ሄል እና በለሰለሰ ወተት የተዘጋጀ ድርብ ሾት ጌሻ ኤስፕሬሶ።',
+  'Rich espresso, house-made hazelnut truffle syrup, steamed oat milk, dark chocolate shavings on top.':
+    'የተመረጠ ኤስፕሬሶ፣ የቤት ውስጥ ሃዘልነት ትረፍል ሲረፕ፣ የኦት ወተት እና የጥቁር ቸኮሌት ፍቅፋቂ በላዩ ላይ።',
+  '18-hour slow cold-steep using Guji Natural. Whiskey-like oak notes, incredibly smooth and low acid.':
+    'በጉጂ ተፈጥሯዊ ቡና ለ18 ሰዓታት በቅዝቃዜ የተዘጋጀ፣ ልዩ ጣዕም ያለውና እጅግ የለሰለሰ ቀዝቃዛ ቡና።',
+  // Tea
+  'Fresh ginger root, lemon zest, and wild Ethiopian honey steeped in boiling spring water. Warming and vibrant.':
+    'ትኩስ የዝንጅብል ስር፣ የሎሚ ልጣጭ እና የዱር ማር በሚፈላ የተፈጥሮ ውሃ የተዘጋጀ የሚያሞቅ ሻይ።',
+  'Gunpowder green tea leaves brewed with fresh spearmint. Traditionally sweetened with rock sugar.':
+    'ከአዲስ ናዕናዕ ቅጠል ጋር የተፈላ አረንጓዴ ሻይ፣ በባህላዊ የስኳር ድንጋይ የሚጣፍጥ።',
+  'Assam CTC black tea simmered with whole spices — cardamom, cloves, ginger, black pepper — steamed with whole milk.':
+    'በተሟሉ ቅመሞች (ሄል፣ ቅርንፉድ፣ ዝንጅብል፣ ቁንዶ በርበሬ) እና በወተት የፈላ ልዩ ጥቁር ሻይ።',
+  'Vibrant crimson blend of dried hibiscus flowers and rosehip, served chilled with honey and citrus.':
+    'ከደረቁ የኮርከዴ አበቦች እና ሮዝሂፕ የተዘጋጀ ቀይ ቀዝቃዛ ሻይ፣ ከማርና ሲትረስ ጋር የሚቀርብ።',
+  // Burgers
+  'Double smash patty of premium wagyu beef, American cheese, caramelized onions, house pickles & secret sauce on a toasted brioche.':
+    'ድርብ የዋግዩ የበሬ ሥጋ፣ አሜሪካን ቺዝ፣ የበሰለ ሽንኩርት፣ ፒክልስ እና ልዩ ሶስ በብሪዮሽ ዳቦ ውስጥ።',
+  'Buttermilk-marinated fried chicken thigh, coleslaw, jalapeños, honey mustard, pickled cucumber on brioche bun.':
+    'በቅቤ ወተት የለዘበ የተጠበሰ የዶሮ ጭን፣ ኮልስሎው፣ ቃሪያ፣ የማር ሰናፍጭ እና ኪያር በብሪዮሽ ዳቦ።',
+  'Beyond Meat patty, vegan cheese, roasted tomato, rocket lettuce, chipotle mayo, on a seeded whole-wheat bun.':
+    'የቢዮንድ ሚት አትክልት ፓቲ፣ የቪጋን ቺዝ፣ የተጠበሰ ቲማቲም፣ ሰላጣ እና ቺፖትሌ ማዮኔዝ በስንዴ ዳቦ።',
+  'Angus beef patty glazed with house BBQ sauce, cheddar, crispy bacon, fried egg, tomato, and lettuce.':
+    'የአንጉስ በሬ ሥጋ በቢቢኪዩ ሶስ፣ ቼዳር ቺዝ፣ ጥብስ ቤከን፣ የተጠበሰ እንቁላል፣ ቲማቲም እና ሰላጣ።',
+  // Pizza
+  'Wood-fired sourdough crust, fior di latte mozzarella, roasted forest mushrooms, truffle oil emulsion, fresh thyme.':
+    'በእንጨት እሳት የተጋገረ ፒዛ፣ ሞዛሬላ ቺዝ፣ የተጠበሰ የደን እንጉዳይ፣ የትረፍል ዘይት እና አዲስ ታይም።',
+  'San Marzano tomato, hand-pulled fior di latte, fresh basil, extra virgin olive oil on wood-fired Neapolitan crust.':
+    'የሳን ማርዛኖ ቲማቲም፣ ሞዛሬላ ቺዝ፣ ትኩስ ባሲል እና የወይራ ዘይት በእንጨት እሳት በተጋገረ ኔፖሊታን ፒዛ።',
+  'Double pepperoni, fiery Calabrian nduja, honey chilli drizzle, smoked mozzarella, and fresh chilli rings.':
+    'ድርብ ፔፕሮኒ፣ የሚያቃጥል ንዱጃ፣ የማር ቃሪያ ሶስ፣ የጢስ ሞዛሬላ ቺዝ እና ትኩስ የቃሪያ ቀለበቶች።',
+  'Pulled chicken in smoky BBQ sauce, caramelized onions, red peppers, smoked cheddar, coriander leaves.':
+    'የተከተፈ የዶሮ ሥጋ በጢስ ቢቢኪዩ ሶስ፣ የበሰለ ሽንኩርት፣ ቀይ ቃሪያ፣ ቼዳር ቺዝ እና የድንብላል ቅጠል።',
+  // Shawarma & Wraps
+  'Classic Chicken Shawarma': 'የዶሮ ሸዋርማ',
+  'Marinated rotisserie chicken, garlic toum, pickled turnip, fresh tomato, parsley in warm flatbread.':
+    'የተጠበሰ የዶሮ ሥጋ፣ የነጭ ሽንኩርት ቱም፣ ፒክልስ፣ ትኩስ ቲማቲም እና ፐርስሊ በሞቀ የአረብ ዳቦ።',
+  'Slow-roasted spiced beef and lamb shoulder strips, tahini, pickles, tomato, onion in pillowy Arabic bread.':
+    'በዝግታ የተጠበሰ የበሬና የበግ ሥጋ፣ ታሂኒ፣ ፒክልስ፣ ቲማቲም እና ሽንኩርት በለሰለሰ የአረብ ዳቦ።',
+  'Crispy herb falafel, creamy hummus, roasted red pepper, cucumber, rocket, and lemon tahini dressing.':
+    'ጥብስ ፋላፌል፣ ሁሙስ፣ የተጠበሰ ቀይ ቃሪያ፣ ኪያር፣ ሰላጣ እና የሎሚ ታሂኒ ሶስ።',
+  'Charred aubergine, zucchini, bell peppers, halloumi, pomegranate molasses glaze in a herb flatbread.':
+    'የተጠበሰ ደበርጃን፣ ዙኪኒ፣ ጣፋጭ ቃሪያ፣ ሃሉሚ ቺዝ እና የሮማን ሞላሰስ በቅመም ዳቦ ውስጥ።',
+  // Fast Food
+  'Crispy golden fries topped with nacho cheese sauce, jalapeños, sour cream, spring onion, and smoked paprika.':
+    'ወርቃማ ጥብስ ድንች በናቾ ቺዝ ሶስ፣ ቃሪያ፣ ሳወር ክሬም፣ ባሮ ሽንኩርት እና ፓፕሪካ የታጀበ።',
+  'Double-battered chicken wings, your choice of Buffalo, Honey Garlic, or BBQ sauce. Served with blue cheese dip.':
+    'በጥንቃቄ የተጠበሱ የዶሮ ክንፎች በቡፋሎ፣ በማር ነጭ ሽንኩርት ወይም በቢቢኪዩ ሶስ፣ ከብሉ ቺዝ ዲፕ ጋር።',
+  'Triple-decker with grilled chicken, turkey ham, crispy bacon, egg, cheddar, lettuce, tomato and mayo.':
+    'የተጠበሰ ዶሮ፣ የቱርክ ሃም፣ ጥብስ ቤከን፣ እንቁላል፣ ቼዳር ቺዝ፣ ሰላጣ፣ ቲማቲም እና ማዮኔዝ ያለው ባለሦስት ድርብ ሳንድዊች።',
+  'Jumbo all-beef frankfurter in a toasted brioche roll, chilli con carne, sriracha mayo, crispy onions.':
+    'ትልቅ የበሬ ፍራንክፈርተር በብሪዮሽ ዳቦ፣ ቺሊ ኮን ካርኔ፣ ስሪራቻ ማዮኔዝ እና ጥብስ ሽንኩርት።',
+  'Tortilla chips piled with beef chilli, melted cheese, guacamole, jalapeños, pico de gallo, and sour cream.':
+    'ቶርቲላ ቺፕስ በበሬ ሥጋ፣ የቀለጠ ቺዝ፣ ጓካሞሌ፣ ቃሪያ፣ ፒኮ ደ ጋሎ እና ሳወር ክሬም ጋር።',
+  // Bakery & Pastry
+  'Authentic French laminated dough with 27 layers of Normandy butter. Baked fresh each morning.':
+    'በየማለዳው ትኩስ ሆኖ የሚጋገር፣ 27 ንብርብሮች ያሉት ትክክለኛ የፈረንሳይ ቅቤ ክሩዋሳን።',
+  'Savoiardi soaked in Yirgacheffe espresso, layered with mascarpone cream, dusted with Valrhona cocoa.':
+    'በይርጋጨፌ ኤስፕሬሶ የራሰ ሳቮያርዲ፣ በማስካርፖኔ ክሬም እና በቫልሮና ኮኮዋ የተሸፈነ ቲራሚሱ።',
+  // Cafe & Fallbacks
+  'An Ethiopian coffee house in Piassa — ceremony buna, slow teas, and a kitchen that stays open late.':
+    'የኢትዮጵያ የቡና ቤት በፒያሳ — የጀበና ቡና፣ የተመረጡ ሻይዎች እና እስከ ምሽት ክፍት የሆነ ኩሽና።',
+  'Single-origin micro-lots, signature espresso infusions, and AI RAG Coffee Sommelier recommendations.':
+    'ልዩ የተመረጡ ቡናዎች፣ የኤስፕሬሶ መጠጦች እና የአይ-ኤ አጋዥ የቡና ምክሮች።',
+};
+
