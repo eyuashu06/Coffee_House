@@ -124,6 +124,16 @@ class ReservationAvailabilityTests(TestCase):
         )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_availability_endpoint_rejects_past_datetime(self):
+        past = timezone.localtime(timezone.now() - timedelta(hours=2))
+        res = self.client.get(
+            '/api/v1/reservations/availability/',
+            {'date': past.date().isoformat(), 'time': past.strftime('%H:%M'), 'guests': 2},
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertFalse(res.data['available'])
+        self.assertEqual(res.data['reason'], 'past_date')
+
     def test_alternative_suggestions_are_actually_free(self):
         for index in range(2):
             TableReservation.objects.create(
