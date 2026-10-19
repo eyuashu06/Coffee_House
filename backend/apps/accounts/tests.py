@@ -209,6 +209,68 @@ class AuthAndProfileAPITests(TestCase):
         })
         self.assertEqual(login_res.status_code, status.HTTP_200_OK)
 
+    def test_password_reset_with_otp_flow(self):
+        """
+        Verify the 6-digit email OTP password recovery method.
+        """
+        from django.core import mail
+        from datetime import timedelta
+        from django.utils import timezone
+        from apps.accounts.models import PasswordResetOTP
+
+        # 1. Request OTP reset
+        req_res = self.client.post('/api/v1/auth/password-reset/', {
+            'email': EXISTING_EMAIL
+        })
+        self.assertEqual(req_res.status_code, status.HTTP_200_OK)
+        self.assertIn('message', req_res.data)
+
+        # 2. Verify OTP was saved in DB
+        otp_entry = PasswordResetOTP.objects.filter(user=self.user, is_used=False).first()
+        self.assertIsNotNone(otp_entry)
+        self.assertEqual(len(otp_entry.otp_code), 6)
+        self.assertTrue(otp_entry.otp_code.isdigit())
+
+        # 3. Verify OTP was included in emailed message
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(otp_entry.otp_code, mail.outbox[0].body)
+
+        # 4. Attempt reset with wrong OTP fails
+        fail_res = self.client.post('/api/v1/auth/password-reset/confirm/', {
+            'email': EXISTING_EMAIL,
+            'otp_code': '000000',
+            'new_password': 'BrandNewPassword123!'
+        })
+        self.assertEqual(fail_res.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # 5. Reset with valid OTP succeeds
+        success_res = self.client.post('/api/v1/auth/password-reset/confirm/', {
+            'email': EXISTING_EMAIL,
+            'otp_code': otp_entry.otp_code,
+            'new_password': 'BrandNewPassword123!'
+        })
+        self.assertEqual(success_res.status_code, status.HTTP_200_OK)
+
+        # 6. Verify OTP is now marked as used
+        otp_entry.refresh_from_db()
+        self.assertTrue(otp_entry.is_used)
+
+        # 7. Re-using the same OTP fails
+        reuse_res = self.client.post('/api/v1/auth/password-reset/confirm/', {
+            'email': EXISTING_EMAIL,
+            'otp_code': otp_entry.otp_code,
+            'new_password': 'AnotherPassword123!'
+        })
+        self.assertEqual(reuse_res.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # 8. User can authenticate with the newly set password
+        login_res = self.client.post('/api/v1/auth/login/', {
+            'username_or_email': EXISTING_EMAIL,
+            'password': 'BrandNewPassword123!'
+        })
+        self.assertEqual(login_res.status_code, status.HTTP_200_OK)
+
+
 
 @override_settings(REQUIRE_EMAIL_MX=False)
 class ExpiredAccessCookieTests(TestCase):
