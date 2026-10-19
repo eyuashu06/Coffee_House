@@ -722,3 +722,57 @@ class RestaurantSettingsApiTests(TestCase):
         self.assertTrue(venue.is_open)
         self.assertNotEqual(venue.contact_phone, '+251911999999')
         self.assertNotEqual(venue.opening_hours, 'Always')
+
+    def test_store_operating_hours_schedule(self):
+        import datetime
+        from django.utils import timezone
+        import zoneinfo
+
+        eat_tz = zoneinfo.ZoneInfo('Africa/Addis_Ababa')
+        venue = RestaurantSettings.get_settings()
+
+        # Monday: 07:00 (1:00 day) to 21:00 (3:00 night)
+        # 2026-10-19 is a Monday
+        mon_early = datetime.datetime(2026, 10, 19, 6, 59, tzinfo=eat_tz)
+        mon_open = datetime.datetime(2026, 10, 19, 7, 0, tzinfo=eat_tz)
+        mon_noon = datetime.datetime(2026, 10, 19, 12, 0, tzinfo=eat_tz)
+        mon_late = datetime.datetime(2026, 10, 19, 20, 59, tzinfo=eat_tz)
+        mon_closed = datetime.datetime(2026, 10, 19, 21, 0, tzinfo=eat_tz)
+        mon_night = datetime.datetime(2026, 10, 19, 23, 0, tzinfo=eat_tz)
+
+        self.assertFalse(venue.is_store_within_operating_hours(mon_early))
+        self.assertTrue(venue.is_store_within_operating_hours(mon_open))
+        self.assertTrue(venue.is_store_within_operating_hours(mon_noon))
+        self.assertTrue(venue.is_store_within_operating_hours(mon_late))
+        self.assertFalse(venue.is_store_within_operating_hours(mon_closed))
+        self.assertFalse(venue.is_store_within_operating_hours(mon_night))
+
+        # Friday: 07:00 (1:00 day) to 22:00 (4:00 night) - extended service
+        # 2026-10-23 is a Friday
+        fri_open = datetime.datetime(2026, 10, 23, 7, 0, tzinfo=eat_tz)
+        fri_extended = datetime.datetime(2026, 10, 23, 21, 30, tzinfo=eat_tz)
+        fri_closed = datetime.datetime(2026, 10, 23, 22, 0, tzinfo=eat_tz)
+
+        self.assertTrue(venue.is_store_within_operating_hours(fri_open))
+        self.assertTrue(venue.is_store_within_operating_hours(fri_extended))
+        self.assertFalse(venue.is_store_within_operating_hours(fri_closed))
+
+        # Saturday: 07:00 (1:00 day) to 22:00 (4:00 night) - extended service
+        # 2026-10-24 is a Saturday
+        sat_open = datetime.datetime(2026, 10, 24, 7, 0, tzinfo=eat_tz)
+        sat_extended = datetime.datetime(2026, 10, 24, 21, 45, tzinfo=eat_tz)
+        sat_closed = datetime.datetime(2026, 10, 24, 22, 0, tzinfo=eat_tz)
+
+        self.assertTrue(venue.is_store_within_operating_hours(sat_open))
+        self.assertTrue(venue.is_store_within_operating_hours(sat_extended))
+        self.assertFalse(venue.is_store_within_operating_hours(sat_closed))
+
+        # Sunday: 08:00 (2:00 day) to 21:00 (3:00 night)
+        # 2026-10-25 is a Sunday
+        sun_early = datetime.datetime(2026, 10, 25, 7, 30, tzinfo=eat_tz)
+        sun_open = datetime.datetime(2026, 10, 25, 8, 0, tzinfo=eat_tz)
+        sun_closed = datetime.datetime(2026, 10, 25, 21, 0, tzinfo=eat_tz)
+
+        self.assertFalse(venue.is_store_within_operating_hours(sun_early))
+        self.assertTrue(venue.is_store_within_operating_hours(sun_open))
+        self.assertFalse(venue.is_store_within_operating_hours(sun_closed))
