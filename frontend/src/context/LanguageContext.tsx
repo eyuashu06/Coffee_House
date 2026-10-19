@@ -7,6 +7,7 @@ import {
   itemTranslations,
   variantTranslations,
   addonTranslations,
+  itemDescriptionTranslations,
 } from '../utils/translations';
 
 type Language = 'en' | 'am';
@@ -22,6 +23,8 @@ interface LanguageContextType {
   tCategory: (name?: string) => string;
   /** Translate a menu item, variant or add-on name. */
   tItem: (name?: string) => string;
+  /** Translate a menu item description. */
+  tItemDescription: (desc?: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -121,9 +124,14 @@ export function LanguageProvider({
     [lookup]
   );
 
+  const tItemDescription = useCallback(
+    (desc?: string) => lookup(desc, itemDescriptionTranslations),
+    [lookup]
+  );
+
   const value = useMemo(
-    () => ({ language, setLanguage, toggleLanguage, t, locale, tCategory, tItem }),
-    [language, setLanguage, toggleLanguage, t, locale, tCategory, tItem]
+    () => ({ language, setLanguage, toggleLanguage, t, locale, tCategory, tItem, tItemDescription }),
+    [language, setLanguage, toggleLanguage, t, locale, tCategory, tItem, tItemDescription]
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
