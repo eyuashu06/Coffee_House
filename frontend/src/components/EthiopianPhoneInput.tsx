@@ -143,7 +143,7 @@ export default function EthiopianPhoneInput({
         onKeyDown={handleKeyDown}
         placeholder={defaultPlaceholder}
         aria-label={ariaLabel || (language === 'am' ? 'የስልክ ቁጥር' : 'Phone number')}
-        className={`w-full h-full px-3.5 py-2.5 bg-transparent text-[var(--text)] text-[15px] font-mono tracking-wide placeholder:text-[var(--muted)]/60 placeholder:font-sans placeholder:text-[13px] focus:outline-none ${inputClassName}`}
+        className={`w-full h-full px-3.5 py-2.5 bg-transparent text-[16px] sm:text-[15px] font-mono tracking-wide placeholder:text-[var(--muted)]/60 placeholder:font-sans placeholder:text-[13.5px] sm:placeholder:text-[13px] focus:outline-none ${inputClassName}`}
       />
     </div>
   );
