@@ -359,4 +359,26 @@ try:
 except Exception:
     pass
 
+import sys
+TESTING = 'test' in sys.argv or any('test' in arg for arg in sys.argv)
+
+# Email configuration for OTP & transactional delivery (Gmail SMTP)
+GMAIL_USER = os.environ.get('GMAIL_USER', 'eashenafi82@gmail.com').strip()
+GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', 'mmry aavx sceg ckid').strip().replace(' ', '')
+
+if TESTING:
+    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = GMAIL_USER
+    EMAIL_HOST_PASSWORD = GMAIL_APP_PASSWORD
+    EMAIL_TIMEOUT = 10
+
+DEFAULT_FROM_EMAIL = f"Artisanal Coffee Reserve <{GMAIL_USER}>"
+SERVER_EMAIL = GMAIL_USER
+
+
 

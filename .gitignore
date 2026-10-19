@@ -14,6 +14,7 @@ __pycache__/
 
 # Env & OS
 .env
+.env*.local
 .DS_Store
 *.log
 
