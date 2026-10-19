@@ -14,9 +14,20 @@ class DeliveryZoneSerializer(serializers.ModelSerializer):
 
 
 class RestaurantSettingsSerializer(serializers.ModelSerializer):
+    is_currently_open = serializers.BooleanField(read_only=True)
+    manual_is_open = serializers.BooleanField(source='is_open', read_only=True)
+
     class Meta:
         model = RestaurantSettings
         fields = '__all__'
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Reflect actual effective operating status to clients
+        data['is_open'] = instance.is_currently_open
+        data['manual_is_open'] = instance.is_open
+        data['is_currently_open'] = instance.is_currently_open
+        return data
 
 
 class OrderItemAddOnSerializer(serializers.ModelSerializer):
