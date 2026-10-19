@@ -320,6 +320,7 @@ class TableReservationViewSet(viewsets.ModelViewSet):
                              'Please book two tables or contact us for a group.',
                 'fully_booked': 'That slot is fully booked.',
                 'invalid_datetime': 'That date and time could not be read.',
+                'past_date': 'That time has already passed. Pick a slot in the future.',
             }.get(reason, 'That slot is not available.')
             response = {'date_time': [message], 'reason': reason}
             if reason == 'fully_booked':
