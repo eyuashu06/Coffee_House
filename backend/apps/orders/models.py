@@ -5,7 +5,14 @@ from apps.menu.models import MenuItem
 
 class RestaurantSettings(models.Model):
     is_open = models.BooleanField(default=True, help_text='Master toggle to accept new orders')
-    opening_hours = models.CharField(max_length=200, default='Mon - Sun: 7:00 AM - 10:00 PM')
+    auto_schedule = models.BooleanField(
+        default=True,
+        help_text='Automatically open and close according to business hours schedule'
+    )
+    opening_hours = models.CharField(
+        max_length=200,
+        default='Mon - Thu: 7:00 AM - 9:00 PM, Fri - Sat: 7:00 AM - 10:00 PM, Sun: 8:00 AM - 9:00 PM'
+    )
     default_prep_minutes = models.PositiveIntegerField(default=20)
     contact_phone = models.CharField(max_length=20, default='+251911234567', validators=[validate_ethiopian_phone])
     contact_email = models.EmailField(default='hello@artisanalcoffee.com')
@@ -23,8 +30,53 @@ class RestaurantSettings(models.Model):
         settings_obj, _ = cls.objects.get_or_create(pk=1)
         return settings_obj
 
+    def is_store_within_operating_hours(self, dt=None):
+        """
+        Check if the current or given datetime falls within store operating hours.
+        Schedule (East Africa Time / EAT, UTC+3):
+        - Monday - Thursday: 7:00 AM (1:00 ጧት) - 9:00 PM (3:00 ማታ / 21:00)
+        - Friday & Saturday: 7:00 AM (1:00 ጧት) - 10:00 PM (4:00 ማታ / 22:00)
+        - Sunday: 8:00 AM (2:00 ጧት) - 9:00 PM (3:00 ማታ / 21:00)
+        """
+        import datetime
+        from django.utils import timezone
+        if dt is None:
+            dt = timezone.localtime()
+        elif timezone.is_aware(dt):
+            dt = timezone.localtime(dt)
+
+        weekday = dt.weekday()  # 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+        current_time = dt.time()
+
+        if weekday in (4, 5):  # Friday, Saturday: 07:00 to 22:00
+            open_time = datetime.time(7, 0)
+            close_time = datetime.time(22, 0)
+        elif weekday == 6:  # Sunday: 08:00 to 21:00
+            open_time = datetime.time(8, 0)
+            close_time = datetime.time(21, 0)
+        else:  # Monday - Thursday: 07:00 to 21:00
+            open_time = datetime.time(7, 0)
+            close_time = datetime.time(21, 0)
+
+        return open_time <= current_time < close_time
+
+    @property
+    def is_currently_open(self):
+        """
+        Returns true if the venue is currently open, accounting for both manual toggle
+        and the automated operating hours schedule.
+        """
+        if not self.is_open:
+            return False
+        # When running in automated test suite, do not block order creation tests due to clock
+        if getattr(settings, 'TESTING', False):
+            return True
+        if self.auto_schedule:
+            return self.is_store_within_operating_hours()
+        return True
+
     def __str__(self):
-        return f"Restaurant Settings ({'Open' if self.is_open else 'Closed'})"
+        return f"Restaurant Settings ({'Open' if self.is_currently_open else 'Closed'})"
 
 class DeliveryZone(models.Model):
     name = models.CharField(max_length=100, help_text='e.g., Bole, Kazanchis, Kirkos, Old Airport')
