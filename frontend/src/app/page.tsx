@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import CartDrawer, { CartItem } from '../components/CartDrawer';
 import AuthModal from '../components/AuthModal';
@@ -20,6 +20,46 @@ import { formatEthiopianTime } from '../utils/ethiopianTime';
 import { useCafe } from '../context/CafeContext';
 import ProfileDropdown from '../components/ProfileDropdown';
 import NotificationsDropdown from '../components/NotificationsDropdown';
+
+const PENDING_RESERVATION_KEY = 'artisanal-reserve:pending-reservation';
+
+export interface PendingReservationData {
+    name: string;
+    date_time: string;
+    party_size: number;
+    contact_phone: string;
+    autoSubmit?: boolean;
+}
+
+export const getLocalNowString = (): string => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+};
+
+const getPendingReservation = (): PendingReservationData | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+        const raw = window.localStorage.getItem(PENDING_RESERVATION_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+};
+
+const savePendingReservation = (data: PendingReservationData) => {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.setItem(PENDING_RESERVATION_KEY, JSON.stringify(data));
+    } catch { /* ignore */ }
+};
+
+const clearPendingReservation = () => {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.removeItem(PENDING_RESERVATION_KEY);
+    } catch { /* ignore */ }
+};
 
 export interface MenuItem {
     id: number;
@@ -88,7 +128,7 @@ function Kicker({ children }: { children: React.ReactNode }) {
 export default function Home() {
     const router = useRouter();
     const { user, loading: authLoading, logout } = useAuth();
-    const { t, language, tCategory, tItem } = useLanguage();
+    const { t, language, tCategory, tItem, tItemDescription, locale } = useLanguage();
     const { settings: cafeSettings, locations: cafeLocations, primaryLocation } = useCafe();
     const [items, setItems] = useState<MenuItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
@@ -96,6 +136,7 @@ export default function Home() {
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
     const [initialAuthMode, setInitialAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [authPromptMessage, setAuthPromptMessage] = useState<string | null>(null);
     const [postLoginRedirect, setPostLoginRedirect] = useState<string | null>(null);
     const [activeCat, setActiveCat] = useState('all');
     const [bookingData, setBookingData] = useState({ name: '', date_time: '', party_size: 2, contact_phone: '' });
@@ -103,6 +144,7 @@ export default function Home() {
     const [bookingError, setBookingError] = useState<string | null>(null);
     const [minDateTime, setMinDateTime] = useState('');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const isSubmittingReservationRef = useRef<boolean>(false);
 
     // Order tracking. This used to be a form that always printed a hardcoded
     // "BH-1024 ready for pickup" for any input, which told customers their order was
@@ -263,47 +305,53 @@ export default function Home() {
         if (isSignedIn) void syncGuestCart();
     }, [isSignedIn, syncGuestCart]);
 
-    useEffect(() => {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0);
-        tomorrow.setMinutes(tomorrow.getMinutes() - tomorrow.getTimezoneOffset());
-        setMinDateTime(tomorrow.toISOString().slice(0, 16));
-        async function fetchMenu() {
-            try {
-                const res = await fetch('/api/v1/menu/items/?page_size=200');
-                if (res.ok) {
-                    const data = await res.json();
-                    const list: MenuItem[] = Array.isArray(data) ? data : data.results || [];
-                    setItems(list.filter(item => item.is_available !== false));
+    const handleBookingFieldChange = (field: keyof typeof bookingData, val: any) => {
+        setBookingData(prev => {
+            const next = { ...prev, [field]: val };
+            savePendingReservation({ ...next, autoSubmit: false });
+            return next;
+        });
+        if (field === 'date_time') {
+            if (val) {
+                const chosen = new Date(val);
+                if (!isNaN(chosen.getTime()) && chosen.getTime() < Date.now()) {
+                    setBookingError(t('Reservation time cannot be in the past. Please select an upcoming time.'));
+                } else if (bookingError && bookingError.includes(t('Reservation time cannot be in the past'))) {
+                    setBookingError(null);
                 }
-            } catch (e) {
-                console.error(e);
+            } else if (bookingError && bookingError.includes(t('Reservation time cannot be in the past'))) {
+                setBookingError(null);
             }
         }
-        fetchMenu();
-    }, []);
+    };
 
-    const handleBookingSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user) {
-            setInitialAuthMode('LOGIN');
-            setIsAuthModalOpen(true);
-            return;
-        }
-
+    const executeReservation = async (dataToSubmit: typeof bookingData) => {
+        if (isSubmittingReservationRef.current) return false;
+        isSubmittingReservationRef.current = true;
         setBookingStatus('LOADING');
         setBookingError(null);
         try {
             const res = await apiFetch('/api/v1/reservations/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(bookingData),
+                body: JSON.stringify(dataToSubmit),
             });
             if (res.ok) {
                 setBookingStatus('SUCCESS');
-                setBookingData({ name: '', date_time: '', party_size: 2, contact_phone: '' });
-                setTimeout(() => setBookingStatus('IDLE'), 5000);
+                clearPendingReservation();
+                const userName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username : '';
+                setBookingData({
+                    name: userName,
+                    date_time: '',
+                    party_size: 2,
+                    contact_phone: user?.phone || '',
+                });
+                setTimeout(() => setBookingStatus('IDLE'), 6000);
+                setTimeout(() => {
+                    const el = document.getElementById('booking-form') || document.getElementById('visit');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+                return true;
             } else {
                 // The API explains why (slot full, party too large, past date) and can
                 // suggest free times nearby - showing that beats a bare "failed".
@@ -325,13 +373,148 @@ export default function Home() {
                 );
                 setBookingStatus('ERROR');
                 setTimeout(() => setBookingStatus('IDLE'), 8000);
+                const el = document.getElementById('booking-form');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
             }
         } catch {
             setBookingError(t('Network error. Please check your connection and try again.'));
             setBookingStatus('ERROR');
             setTimeout(() => setBookingStatus('IDLE'), 5000);
+            return false;
+        } finally {
+            isSubmittingReservationRef.current = false;
         }
     };
+
+    const handleAuthSuccess = async () => {
+        setIsAuthModalOpen(false);
+        setAuthPromptMessage(null);
+        const pending = getPendingReservation();
+        if (pending && pending.autoSubmit && !isSubmittingReservationRef.current) {
+            const chosen = new Date(pending.date_time);
+            if (!pending.date_time || isNaN(chosen.getTime()) || chosen.getTime() < Date.now()) {
+                setBookingError(t('Reservation time cannot be in the past. Please select an upcoming time.'));
+                setBookingStatus('ERROR');
+            } else {
+                void executeReservation(pending);
+            }
+        }
+    };
+
+    const handleBookingSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        // 1. Validate fields
+        if (!bookingData.name.trim()) {
+            setBookingError(t('Please enter your name.'));
+            setBookingStatus('ERROR');
+            return;
+        }
+        if (!bookingData.contact_phone.trim()) {
+            setBookingError(t('Please enter your contact phone number.'));
+            setBookingStatus('ERROR');
+            return;
+        }
+        if (!bookingData.date_time) {
+            setBookingError(t('Choose a date and time for the table.'));
+            setBookingStatus('ERROR');
+            return;
+        }
+        const chosen = new Date(bookingData.date_time);
+        if (isNaN(chosen.getTime()) || chosen.getTime() < Date.now()) {
+            setBookingError(t('Reservation time cannot be in the past. Please select an upcoming time.'));
+            setBookingStatus('ERROR');
+            return;
+        }
+
+        // 2. If guest (not signed in), save form state with autoSubmit and prompt to sign in/up
+        if (!user) {
+            savePendingReservation({ ...bookingData, autoSubmit: true });
+            setAuthPromptMessage(t('Sign in or create an account to complete your table reservation.'));
+            setInitialAuthMode('LOGIN');
+            setIsAuthModalOpen(true);
+            return;
+        }
+
+        // 3. User is signed in, execute reservation directly
+        await executeReservation(bookingData);
+    };
+
+    useEffect(() => {
+        // Starts from today at current time onwards, not tomorrow
+        setMinDateTime(getLocalNowString());
+        const timer = setInterval(() => {
+            setMinDateTime(getLocalNowString());
+        }, 60000);
+
+        // Restore any saved guest reservation on load
+        const pending = getPendingReservation();
+        if (pending) {
+            setBookingData(prev => ({
+                name: pending.name || prev.name,
+                date_time: pending.date_time || prev.date_time,
+                party_size: pending.party_size || prev.party_size,
+                contact_phone: pending.contact_phone || prev.contact_phone,
+            }));
+        }
+
+        async function fetchMenu() {
+            try {
+                const res = await fetch('/api/v1/menu/items/?page_size=200');
+                if (res.ok) {
+                    const data = await res.json();
+                    const list: MenuItem[] = Array.isArray(data) ? data : data.results || [];
+                    setItems(list.filter(item => item.is_available !== false));
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        fetchMenu();
+
+        return () => clearInterval(timer);
+    }, []);
+
+    useEffect(() => {
+        if (!user) return;
+        const pending = getPendingReservation();
+        const userFullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+        if (pending) {
+            const updated = {
+                name: pending.name || userFullName,
+                date_time: pending.date_time || '',
+                party_size: pending.party_size || 2,
+                contact_phone: pending.contact_phone || user.phone || '',
+            };
+            setBookingData(prev => ({
+                ...prev,
+                ...updated,
+            }));
+
+            if (pending.autoSubmit && !isSubmittingReservationRef.current) {
+                const chosen = new Date(pending.date_time);
+                if (!pending.date_time || isNaN(chosen.getTime()) || chosen.getTime() < Date.now()) {
+                    savePendingReservation({ ...updated, autoSubmit: false });
+                    setBookingError(t('Reservation time cannot be in the past. Please select an upcoming time.'));
+                    setBookingStatus('ERROR');
+                    const el = document.getElementById('booking-form');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    void executeReservation(updated);
+                }
+            }
+        } else if (user) {
+            setBookingData(prev => {
+                const nextName = prev.name || userFullName;
+                const nextPhone = prev.contact_phone || user.phone || '';
+                if (nextName !== prev.name || nextPhone !== prev.contact_phone) {
+                    return { ...prev, name: nextName, contact_phone: nextPhone };
+                }
+                return prev;
+            });
+        }
+    }, [user]);
 
     const handleOpenItemModal = (item: MenuItem) => {
         setSelectedItem(item);
@@ -530,24 +713,26 @@ export default function Home() {
                                 <a key={link.href} className="hover:text-[var(--accent)] transition-colors" href={link.href}>{link.label}</a>
                             ))}
                         </nav>
-                        <div className="flex items-center gap-2">
-                            <LanguageToggle className="h-9 px-2.5 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors" />
-                            <ThemeToggle />
-                            <button onClick={() => setIsCartOpen(true)} className="h-9 px-3 sm:px-4 rounded-full border border-[var(--border)] text-[14px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                            <LanguageToggle className="hidden sm:flex h-9 px-2 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13px] sm:text-[13.5px] items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" />
+                            <ThemeToggle className="hidden sm:flex shrink-0" />
+                            <button onClick={() => setIsCartOpen(true)} className="h-9 px-2.5 sm:px-4 rounded-full border border-[var(--border)] text-[13.5px] sm:text-[14px] flex items-center gap-1 sm:gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0">
                                 <i className="ph ph-shopping-bag-open text-[16px]"></i>
                                 <span className="hidden sm:inline">{t('Cart')}</span>
                                 {language === 'am' ? '' : `(${totalCartCount})`}
                             </button>
-                            {user && <NotificationsDropdown />}
-                            <ProfileDropdown
-                                onOpenSignIn={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
-                                onOpenSignUp={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }}
-                            />
+                            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                                {user && <NotificationsDropdown />}
+                                <ProfileDropdown
+                                    onOpenSignIn={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
+                                    onOpenSignUp={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }}
+                                />
+                            </div>
                             <button
                                 onClick={() => setIsMobileMenuOpen((open) => !open)}
                                 aria-label={isMobileMenuOpen ? t('Close menu') : t('Open menu')}
                                 aria-expanded={isMobileMenuOpen}
-                                className="md:hidden h-9 w-9 rounded-full border border-[var(--border)] text-[var(--muted)] flex items-center justify-center hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+                                className="md:hidden h-9 w-9 rounded-full border border-[var(--border)] text-[var(--muted)] flex items-center justify-center hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0"
                             >
                                 <i className={`ph ${isMobileMenuOpen ? 'ph-x' : 'ph-list'} text-[19px]`}></i>
                             </button>
@@ -556,7 +741,16 @@ export default function Home() {
 
                     {/* Mobile menu — stacked links + profile actions */}
                     {isMobileMenuOpen && (
-                        <div className="md:hidden border-t border-[var(--border)] px-4 py-4 space-y-2 bg-surface">
+                        <div className="md:hidden border-t border-[var(--border)] px-4 py-4 space-y-3 bg-surface animate-fade-in shadow-xl">
+                            {/* Mobile Preferences (Language + Theme) */}
+                            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+                                <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">{t('Preferences')}</span>
+                                <div className="flex items-center gap-2">
+                                    <LanguageToggle className="h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors" />
+                                    <ThemeToggle className="h-9 w-9 shrink-0" />
+                                </div>
+                            </div>
+
                             {navLinks.map((link) => (
                                 <a
                                     key={link.href}
@@ -789,24 +983,54 @@ export default function Home() {
                                         <p className="mt-2 text-[15px]">{t('Please ensure your Django backend is running on port 8000 so the menu can be loaded!')}</p>
                                     </div>
                                 ) : (
-                                    filteredItems.map((item) => (
-                                        <div key={item.id} className="dish-card p-5 flex flex-col">
-                                            <div className="dish-well w-full aspect-square rounded-full overflow-hidden border border-[var(--border)]">
-                                                <img src={item.image_url || 'https://images.pexels.com/photos/37756986/pexels-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80'} alt={tItem(item.name)} className="w-full h-full object-cover" />
+                                    filteredItems.map((item) => {
+                                        const itemImg = (item as any).image_display || item.image_url || 'https://images.pexels.com/photos/37756986/pexels-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80';
+                                        return (
+                                            <div
+                                                key={item.id}
+                                                className="dish-card p-3.5 sm:p-5 flex flex-row sm:flex-col items-center sm:items-stretch gap-3.5 sm:gap-0 rounded-[20px] transition-all hover:border-[var(--accent)]/50"
+                                            >
+                                                {/* Thumbnail: compact square on mobile (< sm), elegant well on tablet/desktop (sm+) */}
+                                                <div className="dish-well w-20 h-20 sm:w-full sm:aspect-square rounded-[14px] sm:rounded-full overflow-hidden border border-[var(--border)] shrink-0">
+                                                    <img
+                                                        src={itemImg}
+                                                        alt={tItem(item.name)}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+
+                                                {/* Details */}
+                                                <div className="flex-1 min-w-0 flex flex-col justify-between sm:mt-5">
+                                                    <div>
+                                                        <div className="flex flex-wrap items-baseline justify-between gap-1">
+                                                            <h3 className="font-display text-[16px] sm:text-[22px] leading-snug sm:leading-tight text-[var(--text)]">
+                                                                {tItem(item.name)}{' '}
+                                                                {item.is_signature && (
+                                                                    <span className="ml-1 align-middle text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold font-body text-[var(--accent)]">
+                                                                        ★ {t('Signature')}
+                                                                    </span>
+                                                                )}
+                                                            </h3>
+                                                            <span className="italic font-body text-[14px] sm:text-[15px] text-[var(--gold)] whitespace-nowrap font-semibold">
+                                                                {parseFloat(item.price)} {language === 'am' ? 'ብር' : 'Br'}
+                                                            </span>
+                                                        </div>
+                                                        <p className="mt-1 text-[13px] sm:text-[14.5px] leading-snug text-[var(--muted)] line-clamp-2 sm:line-clamp-none flex-1">
+                                                            {tItemDescription(item.description)}
+                                                        </p>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => handleOpenItemModal(item)}
+                                                        className="mt-2.5 sm:mt-4 h-8 sm:h-10 px-4 sm:px-6 w-full rounded-full border border-[var(--border)] text-[12.5px] sm:text-[14.5px] font-medium hover:border-[var(--accent)] hover:text-[var(--accent)] hover:bg-[var(--accent-soft)] transition-colors flex items-center justify-center gap-1.5"
+                                                    >
+                                                        <i className="ph ph-shopping-bag text-[14px] sm:text-[16px]"></i>
+                                                        <span>{t('Add to Cart')}</span>
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <h3 className="mt-5 font-display text-[22px] leading-tight">
-                                                {tItem(item.name)}{' '}
-                                                <span className="italic font-body text-[15px] text-[var(--gold)] whitespace-nowrap">{parseFloat(item.price)} {language === 'am' ? 'ብር' : 'Br'}</span>
-                                                {item.is_signature && (
-                                                    <span className="ml-1.5 align-middle text-[11px] uppercase tracking-wider font-semibold font-body text-[var(--accent)]">{t('Signature')}</span>
-                                                )}
-                                            </h3>
-                                            <p className="mt-1.5 text-[14.5px] leading-snug text-[var(--muted)] flex-1">{item.description}</p>
-                                            <button onClick={() => handleOpenItemModal(item)} className="mt-4 w-full h-10 rounded-full border border-[var(--border)] text-[14.5px] font-medium hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
-                                                {t('Add to Cart')}
-                                            </button>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
                         </div>
@@ -837,7 +1061,8 @@ export default function Home() {
                     </section>
 
                     {/* ======================= VISIT & BOOKING ======================= */}
-                    <section id="visit" className="scroll-mt-20 px-4 sm:px-6 py-16 sm:py-20">
+                    <section id="visit" className="scroll-mt-20 px-4 sm:px-6 py-16 sm:py-20 relative">
+                        <div id="book" className="absolute -top-20" />
                         <div className="max-w-[1360px] mx-auto">
                             <Reveal className="max-w-2xl mb-10">
                                 <Kicker>{t('Visit us')}</Kicker>
@@ -905,7 +1130,7 @@ export default function Home() {
                                         <form id="booking-form" onSubmit={handleBookingSubmit} className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5 max-w-[560px]">
                                             <div className="sm:col-span-2">
                                                 <label htmlFor="bk-name" className="block text-[14.5px] text-[var(--muted)] mb-2">{t('Name')}</label>
-                                                <input id="bk-name" type="text" required value={bookingData.name} onChange={(e) => setBookingData({ ...bookingData, name: e.target.value })} placeholder="Aster Kebede" className="field w-full h-12 px-4 text-[16px]" />
+                                                <input id="bk-name" type="text" required value={bookingData.name} onChange={(e) => handleBookingFieldChange('name', e.target.value)} placeholder="Aster Kebede" className="field w-full h-12 px-4 text-[16px]" />
                                             </div>
                                             <div>
                                                 <label htmlFor="bk-phone" className="block text-[14.5px] text-[var(--muted)] mb-2">{t('Phone')}</label>
@@ -913,29 +1138,52 @@ export default function Home() {
                                                     id="bk-phone"
                                                     required
                                                     value={bookingData.contact_phone}
-                                                    onChange={(val) => setBookingData({ ...bookingData, contact_phone: val })}
+                                                    onChange={(val) => handleBookingFieldChange('contact_phone', val)}
                                                     className="h-12"
                                                 />
                                             </div>
                                             <div>
                                                 <label htmlFor="bk-party" className="block text-[14.5px] text-[var(--muted)] mb-2">{t('Party size')}</label>
-                                                <input id="bk-party" type="number" min="1" required value={bookingData.party_size} onChange={(e) => setBookingData({ ...bookingData, party_size: parseInt(e.target.value) })} placeholder="2 guests" className="field w-full h-12 px-4 text-[16px]" />
+                                                <input id="bk-party" type="number" min="1" required value={bookingData.party_size} onChange={(e) => handleBookingFieldChange('party_size', parseInt(e.target.value) || 1)} placeholder="2 guests" className="field w-full h-12 px-4 text-[16px]" />
                                             </div>
                                             <div className="sm:col-span-2">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <label htmlFor="bk-date" className="text-[14.5px] text-[var(--muted)]">{t('Date & time')}</label>
-                                                    {bookingData.date_time && (
-                                                        <span className="text-[12.5px] text-[var(--gold)] font-medium">
-                                                            {t('Ethiopian time:')} {formatEthiopianTime(bookingData.date_time, language)}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <input id="bk-date" type="datetime-local" min={minDateTime} required value={bookingData.date_time} onChange={(e) => setBookingData({ ...bookingData, date_time: e.target.value })} className="field w-full h-12 px-4 text-[16px]" />
+                                                <label htmlFor="bk-date" className="block text-[14.5px] text-[var(--muted)] mb-2">{t('Date & time')}</label>
+                                                <input
+                                                    id="bk-date"
+                                                    type="datetime-local"
+                                                    min={minDateTime}
+                                                    required
+                                                    value={bookingData.date_time}
+                                                    onFocus={() => setMinDateTime(getLocalNowString())}
+                                                    onChange={(e) => handleBookingFieldChange('date_time', e.target.value)}
+                                                    className="field w-full h-12 px-3.5 sm:px-4 text-[15px] sm:text-[16px]"
+                                                />
+                                                {bookingData.date_time && (
+                                                    <div className="mt-2.5 p-3 rounded-[12px] bg-[var(--surface-2,var(--surface))] border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[13px]">
+                                                        <div className="flex items-center gap-2 text-[var(--text)]">
+                                                            <i className="ph ph-calendar-check text-[var(--accent)] text-[16px]"></i>
+                                                            <span className="font-semibold">
+                                                                {new Date(bookingData.date_time).toLocaleString(locale, {
+                                                                    weekday: 'short',
+                                                                    month: 'short',
+                                                                    day: 'numeric',
+                                                                    year: 'numeric',
+                                                                    hour: 'numeric',
+                                                                    minute: '2-digit',
+                                                                })}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-[var(--gold)] font-medium">
+                                                            <i className="ph ph-clock text-[14px]"></i>
+                                                            <span>{t('Ethiopian time:')} {formatEthiopianTime(bookingData.date_time, language)}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="sm:col-span-2 flex flex-col gap-3 pt-1">
                                                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                                                     <button id="bk-btn" type="submit" disabled={bookingStatus === 'LOADING'} className="h-12 px-8 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[16px] font-semibold hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                                                        {user ? t('Book a table') : t('Sign in to book')}
+                                                        {bookingStatus === 'LOADING' ? t('Booking your table...') : user ? t('Book a table') : t('Sign in to book')}
                                                     </button>
                                                     <p id="bk-note" className="text-[13.5px] italic text-[var(--muted)]">{t('No deposit — we hold your table for 20 minutes.')}</p>
                                                 </div>
@@ -1069,9 +1317,14 @@ export default function Home() {
             {/* Auth and Cart Modals */}
             <AuthModal
                 isOpen={isAuthModalOpen}
-                onClose={() => setIsAuthModalOpen(false)}
+                onClose={() => {
+                    setIsAuthModalOpen(false);
+                    setAuthPromptMessage(null);
+                }}
                 initialMode={initialAuthMode}
+                promptMessage={authPromptMessage}
                 postLoginRedirect={postLoginRedirect}
+                onSuccessCallback={handleAuthSuccess}
             />
             <ItemModal
                 isOpen={isItemModalOpen}
