@@ -50,6 +50,11 @@ interface Order {
     tx_ref: string;
     status: 'PENDING' | 'SUCCESS' | 'FAILED' | 'ABANDONED';
     payment_method: string;
+    transaction_reference?: string;
+    phone_number?: string;
+    approved_by?: string;
+    approved_at?: string;
+    approval_notes?: string;
     failure_reason?: string;
     checkout_url?: string;
     created_at: string;
