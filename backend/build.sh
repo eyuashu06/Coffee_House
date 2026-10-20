@@ -10,3 +10,7 @@ python manage.py collectstatic --no-input
 
 # Apply database migrations
 python manage.py migrate
+
+# Seed initial restaurant settings, menu, delivery zones, and default accounts
+python manage.py seed_data
+
