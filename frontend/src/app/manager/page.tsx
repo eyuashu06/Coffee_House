@@ -48,6 +48,11 @@ interface Order {
     tx_ref: string;
     status: 'PENDING' | 'SUCCESS' | 'FAILED' | 'ABANDONED';
     payment_method: string;
+    transaction_reference?: string;
+    phone_number?: string;
+    approved_by?: string;
+    approved_at?: string;
+    approval_notes?: string;
     failure_reason?: string;
     created_at: string;
     verified_at?: string | null;
@@ -57,9 +62,22 @@ interface Order {
   payment_state?: 'paid' | 'settling' | 'failed' | 'unpaid';
 }
 
+export interface PaymentAccount {
+  id: number;
+  method: string;
+  method_display: string;
+  account_name: string;
+  account_number: string;
+  bank_name?: string;
+  instructions?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 const PAYMENT_LABELS: Record<string, string> = {
-  telebirr: 'Telebirr', cbebirr: 'CBE Birr', mpesa: 'M-Pesa', awashbirr: 'Awash Birr',
-  ebirr: 'E-Birr', card: 'Card / Bank', cash: 'Cash on Delivery',
+  telebirr: 'Telebirr', cbebirr: 'CBE Birr / CBE', mpesa: 'M-Pesa', awashbirr: 'Awash Bank / Birr',
+  ebirr: 'E-Birr', card: 'Chapa Online (Card/Bank)', cash: 'Cash (Delivery/Onsite/Table)',
 };
 
 /**
@@ -389,6 +407,21 @@ export default function ManagerDashboard() {
   const [deleteConfirmLocation, setDeleteConfirmLocation] = useState<CafeLocation | null>(null);
   const [isDeletingLocation, setIsDeletingLocation] = useState(false);
 
+  // Payment Accounts (Telebirr, CBE, Awash, E-Birr) State
+  const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<PaymentAccount | null>(null);
+  const [accountForm, setAccountForm] = useState({
+    method: 'telebirr',
+    account_name: '',
+    account_number: '',
+    bank_name: '',
+    instructions: '',
+    is_active: true,
+  });
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
+  const [isApprovingPayment, setIsApprovingPayment] = useState<number | null>(null);
+
   // Reports state
   const [reportData, setReportData] = useState<RevenueReport | null>(null);
   const [reportRange, setReportRange] = useState<'7d' | '30d' | '90d'>('30d');
@@ -433,6 +466,7 @@ export default function ManagerDashboard() {
     fetchStoreStatus();
     fetchMenuItems();
     fetchCategories();
+    fetchPaymentAccounts();
     fetchAnalytics();
     fetchReservations();
 
@@ -503,6 +537,100 @@ export default function ManagerDashboard() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const fetchPaymentAccounts = async () => {
+    try {
+      const res = await apiFetch('/api/v1/payments/accounts/');
+      if (res.ok) {
+        const data = await res.json();
+        setPaymentAccounts(Array.isArray(data) ? data : data.results || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleOpenAddAccount = () => {
+    setEditingAccount(null);
+    setAccountForm({
+      method: 'telebirr',
+      account_name: '',
+      account_number: '',
+      bank_name: '',
+      instructions: '',
+      is_active: true,
+    });
+    setIsAccountModalOpen(true);
+  };
+
+  const handleOpenEditAccount = (acc: PaymentAccount) => {
+    setEditingAccount(acc);
+    setAccountForm({
+      method: acc.method,
+      account_name: acc.account_name,
+      account_number: acc.account_number,
+      bank_name: acc.bank_name || '',
+      instructions: acc.instructions || '',
+      is_active: acc.is_active,
+    });
+    setIsAccountModalOpen(true);
+  };
+
+  const handleToggleAccountActive = async (acc: PaymentAccount) => {
+    try {
+      const res = await apiFetch(`/api/v1/payments/accounts/${acc.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !acc.is_active }),
+      });
+      if (res.ok) {
+        fetchPaymentAccounts();
+      }
+    } catch {}
+  };
+
+  const handleSaveAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingAccount(true);
+    try {
+      const url = editingAccount
+        ? `/api/v1/payments/accounts/${editingAccount.id}/`
+        : '/api/v1/payments/accounts/';
+      const method = editingAccount ? 'PATCH' : 'POST';
+      const res = await apiFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(accountForm),
+      });
+      if (res.ok) {
+        setIsAccountModalOpen(false);
+        setActionMsg(`✅ ${editingAccount ? t('Payment account updated!') : t('Payment account added!')}`);
+        setTimeout(() => setActionMsg(null), 3000);
+        await fetchPaymentAccounts();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || err.detail || t('Failed to save payment account.'));
+      }
+    } catch (err: any) {
+      alert(err.message || t('Error saving payment account.'));
+    } finally {
+      setIsSavingAccount(false);
+    }
+  };
+
+  const handleDeleteAccount = async (accId: number) => {
+    if (!confirm(t('Are you sure you want to delete this payment account?'))) return;
+    try {
+      const res = await apiFetch(`/api/v1/payments/accounts/${accId}/`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setActionMsg(`🗑️ ${t('Payment account deleted.')}`);
+        setTimeout(() => setActionMsg(null), 3000);
+        await fetchPaymentAccounts();
+      }
+    } catch {}
   };
 
   const handleOpenAddItem = () => {
@@ -935,6 +1063,59 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
     }
   };
 
+  const handleApprovePayment = async (paymentId?: number, orderId?: number) => {
+    if (!paymentId && !orderId) return;
+    const targetId = paymentId || orderId;
+    setIsApprovingPayment(orderId || null);
+    setActionMsg(null);
+    try {
+      const res = await apiFetch(`/api/v1/payments/${targetId}/approve/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: 'Verified and approved by manager portal' }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActionMsg(`✅ ${data.message || t('Payment approved and order sent to kitchen!')}`);
+        setTimeout(() => setActionMsg(null), 3500);
+        await fetchOrders();
+        fetchAnalytics();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setActionMsg(err.error || err.detail || t('Failed to approve payment.'));
+      }
+    } catch (e: any) {
+      setActionMsg(e.message || t('Error approving payment.'));
+    } finally {
+      setIsApprovingPayment(null);
+    }
+  };
+
+  const handleRejectPayment = async (paymentId?: number, orderId?: number) => {
+    const reason = prompt(t('Enter rejection reason:'), t('Payment verification failed.'));
+    if (reason === null) return;
+    const targetId = paymentId || orderId;
+    setActionMsg(null);
+    try {
+      const res = await apiFetch(`/api/v1/payments/${targetId}/reject/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason || 'Rejected by manager', cancel_order: true }),
+      });
+      if (res.ok) {
+        setActionMsg(`❌ ${t('Payment rejected.')}`);
+        setTimeout(() => setActionMsg(null), 3000);
+        await fetchOrders();
+        fetchAnalytics();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setActionMsg(err.error || err.detail || t('Failed to reject payment.'));
+      }
+    } catch (e: any) {
+      setActionMsg(e.message || t('Error rejecting payment.'));
+    }
+  };
+
   const handleUpdateReservationStatus = async (reservationId: number, newStatus: string) => {
     setActionMsg(null);
     try {
@@ -985,6 +1166,16 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
   }
 
   if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) {
+    if (!user) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/?welcome=1';
+      }
+      return (
+        <div className="min-h-screen bg-surface flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-surface text-[var(--text)] flex flex-col items-center justify-center font-body">
         <span className="material-symbols-outlined text-5xl text-red-500 mb-4">gavel</span>
@@ -1371,10 +1562,11 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                     }`}
                   >
                     <div>
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <span className="text-[20px] font-display font-bold text-[var(--text)]">#{order.order_number}</span>
-                          <span className="block text-[12px] text-[var(--muted)] mt-1">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-3 pb-2.5 border-b border-[var(--border)]/40">
+                        <div className="min-w-0">
+                          <span className="text-[14px] sm:text-[15.5px] font-mono font-bold text-[var(--text)] tracking-tight block">#{order.order_number}</span>
+                          <span className="inline-flex items-center gap-1.5 text-[11px] sm:text-[11.5px] text-[var(--muted)] mt-0.5">
+                            <i className="ph ph-clock text-[12px]"></i>
                             {new Date(order.created_at).toLocaleString(locale, {
                               month: 'short',
                               day: 'numeric',
@@ -1383,9 +1575,11 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                             })}
                           </span>
                         </div>
-                        <span className={`px-2 py-1 rounded text-[11px] font-bold uppercase ${STATUS_BADGE[order.status] || 'bg-surface text-[var(--muted)] border border-[var(--border)]'}`}>
-                          {t(STATUS_LABELS[order.status] || order.status)}
-                        </span>
+                        <div className="flex items-center gap-2 self-start shrink-0">
+                          <span className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold uppercase tracking-wider ${STATUS_BADGE[order.status] || 'bg-surface text-[var(--muted)] border border-[var(--border)]'}`}>
+                            {t(STATUS_LABELS[order.status] || order.status)}
+                          </span>
+                        </div>
                       </div>
                       
                       <div className="text-[14px] text-[var(--muted)] mb-4 space-y-1">
@@ -1397,17 +1591,25 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                             className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
                               isOrderPaid(order)
                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800'
-                                : order.status === 'PENDING_PAYMENT'
-                                  ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
-                                  : 'bg-surface text-[var(--muted)] border border-[var(--border)]'
+                                : order.latest_payment?.payment_method === 'cash'
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
+                                  : order.latest_payment?.transaction_reference
+                                    ? 'bg-blue-100 text-blue-800 border border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800'
+                                    : order.status === 'PENDING_PAYMENT'
+                                      ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+                                      : 'bg-surface text-[var(--muted)] border border-[var(--border)]'
                             }`}
                           >
-                            <i className={`ph ${isOrderPaid(order) ? 'ph-check-circle' : 'ph-warning'}`}></i>
+                            <i className={`ph ${isOrderPaid(order) ? 'ph-check-circle' : order.latest_payment?.payment_method === 'cash' ? 'ph-hand-coins' : order.latest_payment?.transaction_reference ? 'ph-clock' : 'ph-warning'}`}></i>
                             {isOrderPaid(order)
                               ? `${t('Paid')} · ${t(PAYMENT_LABELS[order.latest_payment?.payment_method || ''] || order.latest_payment?.payment_method || '')}`
-                              : order.status === 'PENDING_PAYMENT'
-                                ? t('Not paid yet', 'እስካሁን አልተከፈለም')
-                                : t('Payment status unknown', 'የክፍያ ሁኔታ የማወቅ አልተቻለም')}
+                              : order.latest_payment?.payment_method === 'cash'
+                                ? t('Cash · Pending Staff Approval', 'ጥሬ ገንዘብ · ማረጋገጫ ይጠብቃል')
+                                : order.latest_payment?.transaction_reference
+                                  ? `${t(PAYMENT_LABELS[order.latest_payment.payment_method] || 'Transfer')} · ${t('Verification Required', 'ማረጋገጫ ይጠብቃል')}`
+                                  : order.status === 'PENDING_PAYMENT'
+                                    ? t('Not paid yet', 'እስካሁን አልተከፈለም')
+                                    : t('Payment status unknown', 'የክፍያ ሁኔታ የማወቅ አልተቻለም')}
                           </span>
                         </p>
                         {order.latest_payment?.status === 'FAILED' && order.latest_payment.failure_reason && (
@@ -1448,11 +1650,112 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
 
                     <div className="flex flex-col gap-2 mt-auto">
                       {order.status === 'PENDING_PAYMENT' && (
-                        <div className="flex gap-2">
-                          <div className="flex-1 h-10 rounded-[12px] bg-red-100 border border-red-300 text-red-800 dark:bg-red-950/50 dark:border-red-800 dark:text-red-300 text-[13px] font-semibold flex items-center justify-center px-3 text-center">
-                            {t('Unpaid — waiting on the customer')}
-                          </div>
-                          <button onClick={() => handleUpdateStatus(order.id, 'CANCELLED', 'Customer never completed payment.')} className="h-10 rounded-[12px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[13px] px-4 dark:hover:bg-red-950">{t('Cancel')}</button>
+                        <div className="space-y-2.5">
+                          {order.latest_payment?.payment_method === 'cash' ? (
+                            <div className="p-3.5 rounded-[14px] bg-amber-500/10 border border-amber-500/30 text-xs space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5 text-[12.5px]">
+                                  <i className="ph ph-hand-coins text-base"></i>
+                                  {t('Cash Payment Approval Required', 'የጥሬ ገንዘብ ክፍያ ማረጋገጫ')}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                                  {t(order.order_type)}
+                                </span>
+                              </div>
+                              <p className="text-[12px] text-[var(--text)] leading-relaxed">
+                                {order.order_type === 'DELIVERY'
+                                  ? t('Collect cash upon delivery to customer:')
+                                  : order.order_type === 'DINE_IN'
+                                    ? `${t('Collect cash at Table')} ${order.table_number || ''}:`
+                                    : t('Collect cash at pickup counter:')}{' '}
+                                <strong className="font-mono text-[var(--accent)] font-bold">{order.total_amount_etb} {birr}</strong>
+                              </p>
+                              <div className="flex gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  disabled={isApprovingPayment === order.id}
+                                  onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
+                                  className="flex-1 h-9 rounded-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[12px] flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                >
+                                  {isApprovingPayment === order.id ? (
+                                    <i className="ph ph-spinner animate-spin"></i>
+                                  ) : (
+                                    <i className="ph ph-check-circle text-base"></i>
+                                  )}
+                                  <span>{t('Approve Cash Received', 'ጥሬ ገንዘብ መቀበልን አረጋግጥ')}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRejectPayment(order.latest_payment?.id, order.id)}
+                                  className="h-9 px-3 rounded-[10px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[12px] transition-colors cursor-pointer"
+                                >
+                                  {t('Reject', 'አትቀበል')}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (order.latest_payment?.transaction_reference || ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(order.latest_payment?.payment_method || '')) ? (
+                            <div className="p-3.5 rounded-[14px] bg-blue-500/10 border border-blue-500/30 text-xs space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-blue-800 dark:text-blue-300 flex items-center gap-1.5 text-[12.5px]">
+                                  <i className="ph ph-bank text-base"></i>
+                                  {t(PAYMENT_LABELS[order.latest_payment?.payment_method || ''] || 'Transfer')} {t('Verification', 'ማረጋገጫ')}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-800 dark:text-blue-300">
+                                  {t('Check Account', 'ሂሳብዎን ይፈትሹ')}
+                                </span>
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-surface border border-[var(--border)] font-mono text-[11.5px] space-y-1">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[var(--muted)] font-sans">{t('Transaction Ref:')}</span>
+                                  <strong className="text-[var(--accent)] text-[12.5px] select-all font-bold tracking-wider">
+                                    {order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref || 'N/A'}
+                                  </strong>
+                                </div>
+                                {order.latest_payment?.phone_number && (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-[var(--muted)] font-sans">{t('Sender Phone:')}</span>
+                                    <span>{order.latest_payment.phone_number}</span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[var(--muted)] font-sans">{t('Amount:')}</span>
+                                  <span className="font-bold text-[var(--text)]">{order.total_amount_etb} {birr}</span>
+                                </div>
+                              </div>
+                              <p className="text-[11px] text-[var(--muted)]">
+                                {t('Check your cafe bank/wallet balance for this reference before approving.', 'ከማፅደቅዎ በፊት የባንክ/ቴሌብር ሂሳብዎን ይፈትሹ።')}
+                              </p>
+                              <div className="flex gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  disabled={isApprovingPayment === order.id}
+                                  onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
+                                  className="flex-1 h-9 rounded-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[12px] flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                >
+                                  {isApprovingPayment === order.id ? (
+                                    <i className="ph ph-spinner animate-spin"></i>
+                                  ) : (
+                                    <i className="ph ph-check-circle text-base"></i>
+                                  )}
+                                  <span>{t('Approve Payment (Funds Verified)', 'ክፍያውን አፅድቅ (ገንዘቡ ገብቷል)')}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRejectPayment(order.latest_payment?.id, order.id)}
+                                  className="h-9 px-3 rounded-[10px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[12px] transition-colors cursor-pointer"
+                                >
+                                  {t('Reject', 'አትቀበል')}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <div className="flex-1 h-10 rounded-[12px] bg-red-100 border border-red-300 text-red-800 dark:bg-red-950/50 dark:border-red-800 dark:text-red-300 text-[13px] font-semibold flex items-center justify-center px-3 text-center">
+                                {t('Unpaid — waiting on the customer')}
+                              </div>
+                              <button onClick={() => handleUpdateStatus(order.id, 'CANCELLED', 'Customer never completed payment.')} className="h-10 rounded-[12px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[13px] px-4 dark:hover:bg-red-950 cursor-pointer">{t('Cancel')}</button>
+                            </div>
+                          )}
                         </div>
                       )}
                       {order.status === 'PLACED' && (
@@ -1589,8 +1892,8 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                         item.is_available ? 'border-[var(--border)]' : 'border-red-300 dark:border-red-900/50 opacity-90'
                       }`}
                     >
-                      {/* Image: Compact thumbnail on mobile (< md), visual header on desktop (md+) */}
-                      <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-full md:h-36 bg-[var(--surface)] overflow-hidden shrink-0 flex items-center justify-center m-2.5 md:m-0 rounded-[12px] md:rounded-none">
+                      {/* Image: Clear thumbnail on mobile (< md), prominent visual header on desktop (md+) */}
+                      <div className="relative w-24 h-24 md:w-full md:h-44 md:aspect-[16/10] bg-[var(--surface)] overflow-hidden shrink-0 flex items-center justify-center m-2.5 md:m-0 rounded-[14px] md:rounded-none">
                         {itemImg ? (
                           <img
                             src={itemImg}
@@ -2292,6 +2595,114 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                 </div>
               </div>
             </div>
+
+            {/* PAYMENT ACCOUNTS (TELEBIRR, CBE, AWASH, E-BIRR) */}
+            <div className="bg-surface-2 border border-[var(--border)] rounded-[20px] p-6 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center">
+                      <i className="ph ph-wallet text-lg"></i>
+                    </div>
+                    <h3 className="font-display text-[20px] text-[var(--text)]">
+                      {t('Payment Accounts (Customer Transfer Numbers)', 'የክፍያ ሂሳቦችና ስልክ ቁጥሮች')}
+                    </h3>
+                  </div>
+                  <p className="text-[13px] text-[var(--muted)] mt-1">
+                    {t(
+                      'Manage designated account and phone numbers where customers transfer funds (Telebirr, CBE, Awash, E-Birr). Customers submit their transaction code for manager approval.',
+                      'ደንበኞች ገንዘብ የሚያስተላልፉባቸውን የቴሌብር፣ ንግድ ባንክ፣ አዋሽ እና ኢ-ብር ሂሳቦችና ስልክ ቁጥሮች ያስተዳድሩ። ደንበኞች ከከፈሉ በኋላ የማረጋገጫ ኮድ ይልካሉ፣ እርስዎ ፈትሸው ያፀድቃሉ።'
+                    )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddAccount}
+                  className="h-10 px-5 rounded-[12px] bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-[13.5px] flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-sm shrink-0 cursor-pointer"
+                >
+                  <i className="ph ph-plus-circle text-lg"></i>
+                  <span>{t('Add Payment Account', 'አዲስ የክፍያ ሂሳብ ጨምር')}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {paymentAccounts.length === 0 ? (
+                  <div className="col-span-full py-8 text-center text-[var(--muted)] bg-surface rounded-[14px] border border-[var(--border)]">
+                    <p>{t('No payment accounts configured yet. Click above to add Telebirr, CBE, Awash, or E-Birr accounts.')}</p>
+                  </div>
+                ) : (
+                  paymentAccounts.map((acc) => (
+                    <div
+                      key={acc.id}
+                      className={`p-4 rounded-[16px] bg-surface border transition-all flex flex-col justify-between ${
+                        acc.is_active ? 'border-[var(--border)] shadow-xs' : 'border-dashed border-[var(--border)] opacity-60'
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30">
+                            {acc.method_display || acc.method}
+                          </span>
+                          <span
+                            className={`w-2.5 h-2.5 rounded-full ${
+                              acc.is_active ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-stone-400'
+                            }`}
+                            title={acc.is_active ? t('Active') : t('Inactive')}
+                          />
+                        </div>
+
+                        <div>
+                          <p className="text-[11px] text-[var(--muted)] uppercase tracking-wider">{acc.bank_name || t('Account Holder')}</p>
+                          <h4 className="font-bold text-[15px] text-[var(--text)] truncate">{acc.account_name}</h4>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-surface-2 border border-[var(--border)] font-mono">
+                          <p className="text-[10px] text-[var(--muted)] font-sans uppercase">{t('Account / Number')}</p>
+                          <p className="text-[16px] font-bold text-[var(--accent)] tracking-wider select-all">{acc.account_number}</p>
+                        </div>
+
+                        {acc.instructions && (
+                          <p className="text-[11px] text-[var(--muted)] line-clamp-2 italic">
+                            {acc.instructions}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-[var(--border)]/60">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAccountActive(acc)}
+                          className={`text-[11.5px] font-semibold cursor-pointer ${
+                            acc.is_active ? 'text-amber-600 hover:underline' : 'text-emerald-600 hover:underline'
+                          }`}
+                        >
+                          {acc.is_active ? t('Deactivate') : t('Activate')}
+                        </button>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditAccount(acc)}
+                            className="w-8 h-8 rounded-[10px] border border-[var(--border)] text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)] flex items-center justify-center transition-colors cursor-pointer"
+                            title={t('Edit Account')}
+                          >
+                            <i className="ph ph-pencil-simple text-sm"></i>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAccount(acc.id)}
+                            className="w-8 h-8 rounded-[10px] border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50 flex items-center justify-center transition-colors cursor-pointer"
+                            title={t('Delete Account')}
+                          >
+                            <i className="ph ph-trash text-sm"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         )}
       </main>
@@ -2811,6 +3222,137 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                 {isDeletingLocation ? t('Saving...') : t('Delete')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT ACCOUNT ADD / EDIT MODAL */}
+      {isAccountModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-surface-2 border border-[var(--border)] rounded-[22px] max-w-md w-full p-6 shadow-2xl space-y-4 my-8 text-[var(--text)] animate-fade-in">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+              <h3 className="font-display text-[20px] text-[var(--text)]">
+                {editingAccount ? t('Edit Payment Account', 'የክፍያ ሂሳብ አርትዕ') : t('Add Payment Account', 'አዲስ የክፍያ ሂሳብ ጨምር')}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAccountModalOpen(false)}
+                className="w-8 h-8 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
+              >
+                <i className="ph ph-x"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAccount} className="space-y-4">
+              <div>
+                <label className="block text-[12.5px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1.5">
+                  {t('Payment Method / Provider')} <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={accountForm.method}
+                  onChange={(e) => setAccountForm({ ...accountForm, method: e.target.value })}
+                  className="w-full h-11 px-3.5 rounded-[12px] bg-surface border border-[var(--border)] text-[var(--text)] text-[14px] focus:border-[var(--accent)] focus:outline-none"
+                >
+                  <option value="telebirr">Telebirr (ቴሌብር)</option>
+                  <option value="cbebirr">Commercial Bank of Ethiopia / CBE Birr (ንግድ ባንክ)</option>
+                  <option value="awashbirr">Awash Bank / Awash Birr (አዋሽ ባንክ)</option>
+                  <option value="ebirr">E-Birr (ኢ-ብር)</option>
+                  <option value="mpesa">M-Pesa</option>
+                  <option value="other">{t('Other Bank / Wallet')}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[12.5px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1.5">
+                  {t('Account / Business Name')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={accountForm.account_name}
+                  onChange={(e) => setAccountForm({ ...accountForm, account_name: e.target.value })}
+                  placeholder="e.g. Buna Hub Coffee PLC"
+                  className="w-full h-11 px-4 rounded-[12px] bg-surface border border-[var(--border)] text-[var(--text)] text-[14px] focus:border-[var(--accent)] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12.5px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1.5">
+                  {t('Account Number or Mobile Number')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={accountForm.account_number}
+                  onChange={(e) => setAccountForm({ ...accountForm, account_number: e.target.value })}
+                  placeholder="e.g. 100012345678 or 0911223344"
+                  className="w-full h-11 px-4 rounded-[12px] bg-surface border border-[var(--border)] font-mono text-[14.5px] font-bold text-[var(--accent)] focus:border-[var(--accent)] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12.5px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1.5">
+                  {t('Bank / Wallet Label (Optional)')}
+                </label>
+                <input
+                  type="text"
+                  value={accountForm.bank_name}
+                  onChange={(e) => setAccountForm({ ...accountForm, bank_name: e.target.value })}
+                  placeholder="e.g. Commercial Bank of Ethiopia"
+                  className="w-full h-11 px-4 rounded-[12px] bg-surface border border-[var(--border)] text-[var(--text)] text-[14px] focus:border-[var(--accent)] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12.5px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1.5">
+                  {t('Payment Instructions for Customer')}
+                </label>
+                <textarea
+                  rows={2}
+                  value={accountForm.instructions}
+                  onChange={(e) => setAccountForm({ ...accountForm, instructions: e.target.value })}
+                  placeholder="e.g. Transfer the total amount via Telebirr and submit your confirmation code below."
+                  className="w-full p-3 rounded-[12px] bg-surface border border-[var(--border)] text-[var(--text)] text-[13px] focus:border-[var(--accent)] focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="account_is_active"
+                  checked={accountForm.is_active}
+                  onChange={(e) => setAccountForm({ ...accountForm, is_active: e.target.checked })}
+                  className="w-4 h-4 rounded text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer"
+                />
+                <label htmlFor="account_is_active" className="text-[13px] font-medium text-[var(--text)] cursor-pointer">
+                  {t('Active (visible to customers during checkout)')}
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-3 border-t border-[var(--border)]">
+                <button
+                  type="button"
+                  onClick={() => setIsAccountModalOpen(false)}
+                  className="flex-1 h-11 rounded-[12px] border border-[var(--border)] text-[var(--muted)] font-semibold text-[14px] hover:text-[var(--text)] transition-colors cursor-pointer"
+                >
+                  {t('Cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingAccount}
+                  className="flex-1 h-11 rounded-[12px] bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-[14px] flex items-center justify-center gap-2 hover:brightness-110 transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                >
+                  {isSavingAccount ? (
+                    <>
+                      <i className="ph ph-spinner animate-spin"></i>
+                      <span>{t('Saving...')}</span>
+                    </>
+                  ) : (
+                    <span>{editingAccount ? t('Save Changes') : t('Add Account')}</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
