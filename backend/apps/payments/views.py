@@ -14,10 +14,15 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from . import gateway
-from .models import Payment
-from .serializers import PaymentSerializer, InitializePaymentSerializer
-from apps.orders.models import Order
+from .models import Payment, PaymentAccount
+from .serializers import (
+    PaymentSerializer,
+    InitializePaymentSerializer,
+    PaymentAccountSerializer,
+)
+from apps.orders.models import Order, OrderStatusHistory
 from apps.accounts.models import normalize_ethiopian_phone
+from apps.accounts.permissions import IsManager
 from apps.accounts.validators import is_deliverable_email
 from apps.core.throttling import ScopedThrottle
 
@@ -144,6 +149,7 @@ class InitializePaymentView(APIView):
         order_id = serializer.validated_data['order_id']
         payment_method = serializer.validated_data['payment_method']
         raw_phone = serializer.validated_data.get('phone_number', '')
+        transaction_reference = serializer.validated_data.get('transaction_reference', '').strip()
 
         try:
             order = Order.objects.get(pk=order_id)
@@ -187,23 +193,28 @@ class InitializePaymentView(APIView):
             tx_ref=tx_ref,
             payment_method=payment_method,
             phone_number=clean_phone,
+            transaction_reference=transaction_reference,
             amount_etb=amount_etb,
             currency='ETB',
             status='PENDING'
         )
 
-        # ── Cash on Delivery ────────────────────────────────────────────────
+        # ── Cash (Delivery / Onsite / Dine-in Table) ─────────────────────────
+        # Cash payments MUST be approved by staff/manager upon delivery, pickup,
+        # or at table. They remain PENDING until approved so chef prepares only confirmed orders.
         if payment_method == 'cash':
-            payment.mark_as_success(chapa_ref='CASH_ON_DELIVERY', raw_data='Cash on delivery order')
+            payment.raw_response = 'Cash order submitted; pending staff confirmation upon delivery, onsite, or table.'
+            payment.save()
             return Response({
-                'message': 'Cash on delivery order placed successfully.',
+                'message': 'Cash order placed successfully. Staff will confirm payment upon delivery, pickup, or at your table.',
                 'payment': PaymentSerializer(payment).data,
                 'checkout_url': '',
-                'test_mode': True,
+                'pending_approval': True,
+                'test_mode': False,
             }, status=status.HTTP_200_OK)
 
         # ── Automated Test / Mock Phone Scenarios ────────────────────────────
-        # Only simulated for mobile-money methods; card always goes to real Chapa.
+        # Only simulated for mobile-money test numbers in test suites; card always goes to real Chapa.
         mock_outcome = MOCK_TEST_PHONES.get(clean_phone) if payment_method in MOCK_METHODS else None
 
         if mock_outcome == 'success':
@@ -238,6 +249,21 @@ class InitializePaymentView(APIView):
                 'payment': PaymentSerializer(payment).data,
                 'checkout_url': '',
                 'test_mode': True,
+            }, status=status.HTTP_200_OK)
+
+        # ── Manual Digital Transfers (Telebirr, CBE, Awash, E-Birr, M-Pesa) ─
+        # User transfers to designated account number and submits confirmation code.
+        # Order stays PENDING until admin verifies account and approves.
+        if payment_method in {'telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'}:
+            payment.transaction_reference = transaction_reference
+            payment.raw_response = f"Manual transfer submitted with reference: {transaction_reference or 'N/A'}"
+            payment.save()
+            return Response({
+                'message': f"Transfer reference '{transaction_reference or payment.tx_ref}' submitted. Manager will verify and confirm your payment.",
+                'payment': PaymentSerializer(payment).data,
+                'checkout_url': '',
+                'pending_approval': True,
+                'test_mode': False,
             }, status=status.HTTP_200_OK)
 
         # ── Chapa SDK call (official hosted checkout) ─────────────────────────
@@ -574,3 +600,119 @@ class PaymentHistoryView(viewsets.ReadOnlyModelViewSet):
         if self.request.user.is_manager_or_admin():
             return Payment.objects.all()
         return Payment.objects.filter(order__customer=self.request.user)
+
+
+class PaymentAccountViewSet(viewsets.ModelViewSet):
+    """
+    CRUD viewset for designated payment accounts (Telebirr, CBE, Awash, E-Birr).
+    GET is public so customers can view accounts during checkout.
+    POST, PUT, PATCH, DELETE are restricted to managers/admins.
+    """
+    serializer_class = PaymentAccountSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated(), IsManager()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user and user.is_authenticated and user.is_manager_or_admin():
+            return PaymentAccount.objects.all().order_by('method', '-is_active', 'account_name')
+        return PaymentAccount.objects.filter(is_active=True).order_by('method', 'account_name')
+
+
+class ApprovePaymentView(APIView):
+    """
+    Manager endpoint to approve cash payment (collected on delivery, onsite, or table)
+    or manual transfer (Telebirr, CBE, Awash, E-Birr after verifying bank/wallet account).
+    Marks payment as SUCCESS and advances order to PLACED so the chef can prepare it.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsManager]
+
+    def post(self, request, pk):
+        from django.utils import timezone
+
+        try:
+            if str(pk).isdigit():
+                payment = Payment.objects.select_related('order').get(pk=int(pk))
+            else:
+                payment = Payment.objects.select_related('order').get(tx_ref=str(pk))
+        except Payment.DoesNotExist:
+            return Response({'error': 'Payment transaction not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if payment.status == 'SUCCESS':
+            return Response({
+                'message': 'Payment is already approved and confirmed.',
+                'payment': PaymentSerializer(payment).data,
+                'order_status': payment.order.status,
+            }, status=status.HTTP_200_OK)
+
+        notes = request.data.get('notes', '').strip()
+        payment.approved_by = request.user
+        payment.approved_at = timezone.now()
+        if notes:
+            payment.approval_notes = notes
+
+        ref = payment.transaction_reference or f"APPROVED_{request.user.username}_{int(time.time())}"
+        payment.mark_as_success(
+            chapa_ref=ref,
+            raw_data=f"Approved by staff {request.user.username}. Notes: {notes or 'Verified'}",
+            gateway_status='approved'
+        )
+
+        return Response({
+            'message': f"Payment for Order #{payment.order.order_number} confirmed and approved. Sent to kitchen.",
+            'payment': PaymentSerializer(payment).data,
+            'order_status': payment.order.status,
+        }, status=status.HTTP_200_OK)
+
+
+class RejectPaymentView(APIView):
+    """
+    Manager endpoint to reject an invalid cash or transfer claim.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsManager]
+
+    def post(self, request, pk):
+        from django.utils import timezone
+
+        try:
+            if str(pk).isdigit():
+                payment = Payment.objects.select_related('order').get(pk=int(pk))
+            else:
+                payment = Payment.objects.select_related('order').get(tx_ref=str(pk))
+        except Payment.DoesNotExist:
+            return Response({'error': 'Payment transaction not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        reason = request.data.get('reason', 'Payment verification failed by manager.').strip()
+        cancel_order = request.data.get('cancel_order', False)
+
+        payment.approved_by = request.user
+        payment.approved_at = timezone.now()
+        payment.approval_notes = f"Rejected: {reason}"
+        payment.mark_as_failed(
+            reason=reason,
+            raw_data=f"Rejected by {request.user.username}: {reason}",
+            gateway_status='rejected'
+        )
+
+        if cancel_order:
+            order = payment.order
+            if order.status == 'PENDING_PAYMENT':
+                order.status = 'CANCELLED'
+                order.rejection_reason = reason
+                order.save()
+                OrderStatusHistory.objects.create(
+                    order=order,
+                    status='CANCELLED',
+                    changed_by=request.user,
+                    notes=f"Order cancelled due to payment rejection: {reason}"
+                )
+
+        return Response({
+            'message': f"Payment for Order #{payment.order.order_number} rejected.",
+            'payment': PaymentSerializer(payment).data,
+            'order_status': payment.order.status,
+        }, status=status.HTTP_200_OK)
+

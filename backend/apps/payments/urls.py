@@ -5,6 +5,9 @@ from .views import (
     VerifyPaymentView,
     ChapaWebhookView,
     PaymentHistoryView,
+    PaymentAccountViewSet,
+    ApprovePaymentView,
+    RejectPaymentView,
 )
 
 class OptionalSlashRouter(DefaultRouter):
@@ -14,6 +17,7 @@ class OptionalSlashRouter(DefaultRouter):
 
 router = OptionalSlashRouter()
 router.register(r'payments/history', PaymentHistoryView, basename='payment-history')
+router.register(r'payments/accounts', PaymentAccountViewSet, basename='payment-accounts')
 
 urlpatterns = [
     path('payments/initialize/', InitializePaymentView.as_view(), name='payment-initialize'),
@@ -22,5 +26,10 @@ urlpatterns = [
     path('payments/verify/<str:tx_ref>', VerifyPaymentView.as_view(), name='payment-verify-noslash'),
     path('payments/webhook/', ChapaWebhookView.as_view(), name='payment-webhook'),
     path('payments/webhook', ChapaWebhookView.as_view(), name='payment-webhook-noslash'),
+    path('payments/<str:pk>/approve/', ApprovePaymentView.as_view(), name='payment-approve'),
+    path('payments/<str:pk>/approve', ApprovePaymentView.as_view(), name='payment-approve-noslash'),
+    path('payments/<str:pk>/reject/', RejectPaymentView.as_view(), name='payment-reject'),
+    path('payments/<str:pk>/reject', RejectPaymentView.as_view(), name='payment-reject-noslash'),
     path('', include(router.urls)),
 ]
+
