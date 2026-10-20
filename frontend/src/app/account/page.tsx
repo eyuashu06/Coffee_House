@@ -119,6 +119,19 @@ const STATUS_LABELS: Record<string, string> = {
   EXPIRED: 'Expired — never paid',
 };
 
+const STATUS_BADGE: Record<string, string> = {
+  PENDING_PAYMENT: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-800 border',
+  PLACED: 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]',
+  ACCEPTED: 'bg-cyan-100 text-cyan-800 border-cyan-300 dark:bg-cyan-900/50 dark:text-cyan-300 dark:border-cyan-800 border',
+  PREPARING: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800 border',
+  READY: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-300 dark:border-green-800 border',
+  OUT_FOR_DELIVERY: 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-800 border',
+  COMPLETED: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800 border',
+  CANCELLED: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-900 border',
+  REJECTED: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-900 border',
+  EXPIRED: 'bg-stone-200 text-stone-800 border-stone-300 dark:bg-stone-800 dark:text-stone-400 dark:border-stone-700 border',
+};
+
 interface Address {
   id: number;
   street_address: string;
@@ -538,14 +551,12 @@ export default function AccountPage() {
   }
 
   if (!user) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/?welcome=1';
+    }
     return (
-      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col items-center justify-center font-body">
-        <span className="material-symbols-outlined text-5xl text-[var(--accent)] mb-4">lock</span>
-        <h2 className="font-display text-[26px] font-bold">{t('Sign In Required')}</h2>
-        <p className="text-[var(--muted)] mt-2 mb-6 text-[15px]">{t('Please sign in to view your orders and manage your profile.')}</p>
-        <Link href="/?welcome=1" className="h-10 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold flex items-center hover:brightness-110 transition-colors">
-          {t('Return to Home')}
-        </Link>
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -554,7 +565,7 @@ export default function AccountPage() {
   const pastOrders = orders.filter(o => PAST_STATUSES.includes(o.status));
 
   return (
-    <div className="bg-[var(--bg)] text-[var(--text)] font-body min-h-screen pb-24">
+    <div className="bg-[var(--bg)] text-[var(--text)] font-body min-h-screen pb-28 md:pb-16">
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-[var(--bg-deep)] border-b border-[var(--border)]/60">
         <div className="flex items-center justify-between px-3.5 sm:px-6 h-14">
@@ -596,89 +607,172 @@ export default function AccountPage() {
       )}
 
       {/* MAIN CONTENT */}
-      <main className="max-w-4xl mx-auto px-3.5 sm:px-4 mt-6 sm:mt-8">
-        <div className="flex items-center justify-between gap-4 mb-6 sm:mb-8">
-          <h1 className="font-display text-[28px] sm:text-[34px] md:text-[40px] leading-tight">{t('Your Account')}</h1>
+      <main className="max-w-4xl mx-auto px-3.5 sm:px-4 mt-5 sm:mt-8">
+        <div className="flex items-center justify-between gap-4 mb-4 sm:mb-6">
+          <h1 className="font-display text-[21px] sm:text-[26px] md:text-[30px] font-bold leading-tight">{t('Your Account')}</h1>
           {isConfirmingPayment && (
-            <span className="flex items-center gap-2 text-[13px] text-blue-200 bg-blue-950/50 border border-blue-500/30 rounded-full px-3 py-1.5 shrink-0">
+            <span className="flex items-center gap-1.5 text-[12px] text-blue-200 bg-blue-950/50 border border-blue-500/30 rounded-full px-2.5 py-1 shrink-0">
               <i className="ph ph-spinner-gap animate-spin"></i>
               {t('Confirming payment…')}
             </span>
           )}
         </div>
         
-        {/* TABS (Horizontal Swipeable Rail on Mobile) */}
-        <div className="flex gap-2 mb-6 sm:mb-8 border-b border-[var(--border)] pb-3 overflow-x-auto no-scrollbar scroll-smooth">
-          <button onClick={() => handleTabChange('orders')} className={`h-9.5 px-4 sm:px-5 rounded-full text-[14px] sm:text-[15.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'orders' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('My Orders')}</button>
-          <button onClick={() => handleTabChange('reservations')} className={`h-9.5 px-4 sm:px-5 rounded-full text-[14px] sm:text-[15.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'reservations' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Table Reservations')}</button>
-          <button onClick={() => handleTabChange('addresses')} className={`h-9.5 px-4 sm:px-5 rounded-full text-[14px] sm:text-[15.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'addresses' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Delivery Addresses')}</button>
-          <button onClick={() => handleTabChange('profile')} className={`h-9.5 px-4 sm:px-5 rounded-full text-[14px] sm:text-[15.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'profile' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Profile Settings')}</button>
+        {/* TABS (Desktop Rail - hidden on mobile where bottom navigation is used) */}
+        <div className="hidden md:flex gap-2 mb-6 sm:mb-8 border-b border-[var(--border)] pb-3 overflow-x-auto no-scrollbar scroll-smooth">
+          <button onClick={() => handleTabChange('orders')} className={`h-9 px-4 rounded-full text-[13.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'orders' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('My Orders')}</button>
+          <button onClick={() => handleTabChange('reservations')} className={`h-9 px-4 rounded-full text-[13.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'reservations' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Table Reservations')}</button>
+          <button onClick={() => handleTabChange('addresses')} className={`h-9 px-4 rounded-full text-[13.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'addresses' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Delivery Addresses')}</button>
+          <button onClick={() => handleTabChange('profile')} className={`h-9 px-4 rounded-full text-[13.5px] whitespace-nowrap transition-colors shrink-0 ${activeTab === 'profile' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-semibold' : 'bg-surface-2 text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]'}`}>{t('Profile Settings')}</button>
         </div>
 
         {/* TAB: ORDERS */}
         {activeTab === 'orders' && (
-          <div className="space-y-10 animate-fade-in">
+          <div className="space-y-6 sm:space-y-8 animate-fade-in">
             {isLoadingOrders ? (
-              <div className="py-12 flex justify-center text-[var(--muted)]">{t('Loading orders...')}</div>
+              <div className="py-12 flex justify-center text-[var(--muted)] text-[14px]">{t('Loading orders...')}</div>
             ) : orders.length === 0 ? (
-              <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-10 text-center">
-                <i className="ph ph-receipt text-4xl text-[var(--muted)] mb-4"></i>
-                <h3 className="font-display text-[22px] mb-2">{t('No orders yet')}</h3>
-                <p className="text-[var(--muted)] text-[15.5px] mb-6">{t("Looks like you haven't tasted our buna yet.")}</p>
-                <Link href="/#menu" className="h-10 px-6 rounded-full inline-flex items-center bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold hover:brightness-110 transition-colors">{t('Browse Menu')}</Link>
+              <div className="bg-surface-2 border border-[var(--border)] rounded-2xl p-6 sm:p-10 text-center">
+                <i className="ph ph-receipt text-3xl sm:text-4xl text-[var(--muted)] mb-3"></i>
+                <h3 className="font-display text-[18px] sm:text-[20px] font-bold mb-1.5">{t('No orders yet')}</h3>
+                <p className="text-[var(--muted)] text-[14px] mb-5">{t("Looks like you haven't tasted our buna yet.")}</p>
+                <Link href="/#menu" className="h-9.5 px-5 rounded-xl inline-flex items-center justify-center gap-1.5 bg-[var(--accent)] text-[var(--accent-contrast)] text-[13px] font-bold hover:brightness-110 active:scale-[0.98] transition-all shadow-sm">
+                  <i className="ph ph-coffee text-[16px]"></i>
+                  <span>{t('Browse Menu')}</span>
+                </Link>
               </div>
             ) : (
               <>
                 {/* Active Orders Section */}
                 {pendingOrders.length > 0 && (
                   <div>
-                    <h3 className="font-display text-[24px] mb-4 flex items-center gap-2"><i className="ph ph-hourglass text-[var(--accent)]"></i> {t('Active Orders')}</h3>
-                    <div className="space-y-4">
+                    <h3 className="font-display text-[17px] sm:text-[20px] font-bold mb-3 flex items-center gap-2"><i className="ph ph-hourglass text-[var(--accent)] text-[18px]"></i> {t('Active Orders')}</h3>
+                    <div className="space-y-3.5 sm:space-y-4">
                       {pendingOrders.map(order => (
                         <div
                           key={order.id}
                           id={`item-${order.order_number}`}
-                          className={`bg-surface-2 rounded-[18px] p-5 transition-all duration-500 ${
+                          className={`bg-surface-2 rounded-2xl p-3 sm:p-4.5 transition-all duration-500 ${
                             highlightCode === order.order_number
                               ? 'border-2 border-[var(--accent)] ring-4 ring-[var(--accent)]/30 shadow-2xl'
                               : 'border border-[var(--accent)]'
                           }`}
                         >
+                          {/* ORDER CARD HEADER */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 pb-2.5 mb-2.5 border-b border-[var(--border)]/60">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono text-[13px] sm:text-[14.5px] font-bold tracking-tight text-[var(--text)]">
+                                  #{order.order_number}
+                                </span>
+                                <span className="text-[10.5px] sm:text-[11px] px-1.5 py-0.5 rounded-md bg-surface border border-[var(--border)] text-[var(--muted)] font-medium">
+                                  {t(order.order_type, order.order_type)} {order.table_number ? `(${t('Table')} ${order.table_number})` : ''}
+                                </span>
+                              </div>
+                              <span className="inline-flex items-center gap-1 text-[11px] sm:text-[11.5px] text-[var(--muted)] mt-0.5">
+                                <i className="ph ph-clock text-[12px]"></i>
+                                {new Date(order.created_at).toLocaleString(locale, {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] sm:text-[10.5px] font-bold uppercase tracking-wider ${STATUS_BADGE[order.status] || 'bg-surface text-[var(--muted)] border border-[var(--border)]'}`}>
+                                {t(STATUS_LABELS[order.status] || order.status)}
+                              </span>
+                            </div>
+                          </div>
+
                           {/* A payment being confirmed right now is not the same as a payment that was
                               never made. Telling someone "NOT PAID YET" while the
                               gateway is still answering them is what made a real
                               paid order look unpaid. */}
                           {isPaymentSettling(order) ? (
-                            <div className="mt-4 rounded-xl border border-blue-500/40 bg-blue-50 text-blue-900 dark:bg-blue-950/40 dark:text-blue-200 p-3 text-xs space-y-2">
-                              <p className="flex items-start gap-2 text-blue-800 dark:text-blue-200 font-semibold">
-                                <i className="ph ph-spinner-gap animate-spin text-lg mt-0.5"></i>
+                            <div className="mt-3 rounded-xl border border-blue-500/40 bg-blue-50 text-blue-900 dark:bg-blue-950/40 dark:text-blue-200 p-2.5 sm:p-3 text-[11px] sm:text-[11.5px] space-y-1">
+                              <p className="flex items-start gap-1.5 text-blue-800 dark:text-blue-200 font-semibold">
+                                <i className="ph ph-spinner-gap animate-spin text-[15px] mt-0.5"></i>
                                 <span>
                                   {t('Confirming your payment')}
                                 </span>
                               </p>
-                              <p className="text-[var(--muted)]">
+                              <p className="text-[var(--muted)] text-[10.5px] sm:text-[11px]">
                                 {t('We are checking with the payment provider. This page updates by itself — you do not need to pay again.')}
                               </p>
                             </div>
                           ) : order.status === 'PENDING_PAYMENT' ? (
-                            <div className="mt-4 rounded-xl border border-red-500/40 bg-red-50 text-red-900 dark:bg-red-950/50 dark:text-red-200 p-3 text-xs space-y-2">
-                              <p className="flex items-start gap-2 text-red-800 dark:text-red-200 font-semibold">
-                                <i className="ph ph-warning-octagon text-lg mt-0.5"></i>
-                                <span>
-                                  {t('NOT PAID YET — you have not paid for this order, so the kitchen has not received it and no receipt can be issued.')}
-                                </span>
-                              </p>
-                              {isPaymentFailed(order) && order.latest_payment?.failure_reason && (
-                                <p className="text-red-700 dark:text-red-300/90">
-                                  {t('Last attempt:')} {order.latest_payment.failure_reason}
-                                </p>
+                            <div className="mt-3 space-y-2">
+                              {order.latest_payment?.payment_method === 'cash' ? (
+                                <div className="rounded-xl border border-amber-500/40 bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200 p-2.5 sm:p-3 text-[11px] sm:text-[11.5px] space-y-1">
+                                  <p className="flex items-start gap-1.5 font-bold text-amber-800 dark:text-amber-300 text-[11.5px] sm:text-[12px]">
+                                    <i className="ph ph-hand-coins text-[16px] shrink-0 mt-0.5"></i>
+                                    <span>
+                                      {t(
+                                        'Cash Payment Submitted — Waiting for Staff Approval upon delivery/pickup/table.',
+                                        'የጥሬ ገንዘብ ትዕዛዝ ተመዝግቧል — በደረሰዎት ወቅት ወይም በጠረጴዛዎ ላይ ክፍያውን ሲፈጽሙ ይረጋገጣል።'
+                                      )}
+                                    </span>
+                                  </p>
+                                  <p className="text-[10.5px] sm:text-[11px] text-[var(--muted)] leading-relaxed">
+                                    {order.order_type === 'DELIVERY'
+                                      ? t('Please have cash ready when our courier arrives with your delivery.')
+                                      : order.order_type === 'DINE_IN'
+                                        ? `${t('Pay cash to your server at Table')} ${order.table_number || ''}.`
+                                        : t('Pay cash at the counter when picking up your order.')}
+                                  </p>
+                                  <p className="text-[var(--text)] font-semibold text-[11.5px]">
+                                    {t('Amount to pay:')}{' '}
+                                    <strong className="text-[var(--accent)] font-mono text-[12.5px]">
+                                      {Number(order.total_amount_etb).toFixed(2)} {birr}
+                                    </strong>
+                                  </p>
+                                </div>
+                              ) : (order.latest_payment?.transaction_reference || ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(order.latest_payment?.payment_method || '')) ? (
+                                <div className="rounded-xl border border-blue-500/40 bg-blue-50 text-blue-900 dark:bg-blue-950/50 dark:text-blue-200 p-2.5 sm:p-3 text-[11px] sm:text-[11.5px] space-y-1">
+                                  <p className="flex items-start gap-1.5 font-bold text-blue-800 dark:text-blue-300 text-[11.5px] sm:text-[12px]">
+                                    <i className="ph ph-receipt text-[16px] shrink-0 mt-0.5"></i>
+                                    <span>
+                                      {t(
+                                        'Transfer Submitted — Manager Verifying Payment',
+                                        'የማስተላለፍ መረጃ ተልኳል — አስተዳዳሪው ክፍያዎን እያረጋገጡ ነው'
+                                      )}
+                                    </span>
+                                  </p>
+                                  <div className="p-1.5 rounded bg-surface border border-[var(--border)] font-mono text-[10.5px] space-y-0.5">
+                                    <div>{t('Method:')} <span className="font-sans font-bold capitalize">{order.latest_payment?.payment_method}</span></div>
+                                    <div>{t('Reference:')} <strong className="text-[var(--accent)] select-all">{order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref}</strong></div>
+                                    <div>{t('Amount:')} <strong>{Number(order.total_amount_etb).toFixed(2)} {birr}</strong></div>
+                                  </div>
+                                  <p className="text-[10.5px] text-[var(--muted)]">
+                                    {t(
+                                      'Once the manager verifies the transfer in the account, the kitchen will immediately begin preparing your order.',
+                                      'ክፍያው እንደተረጋገጠ ወጥ ቤቱ ትዕዛዝዎን ማዘጋጀት ይጀምራል።'
+                                    )}
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="rounded-xl border border-red-500/40 bg-red-50 text-red-900 dark:bg-red-950/50 dark:text-red-200 p-2.5 sm:p-3 text-[11px] sm:text-[11.5px] space-y-1">
+                                  <p className="flex items-start gap-1.5 text-red-800 dark:text-red-200 font-semibold text-[11.5px] sm:text-[12px]">
+                                    <i className="ph ph-warning-octagon text-[16px] mt-0.5"></i>
+                                    <span>
+                                      {t('NOT PAID YET — choose a payment method below to complete your order so the kitchen can prepare it.')}
+                                    </span>
+                                  </p>
+                                  {isPaymentFailed(order) && order.latest_payment?.failure_reason && (
+                                    <p className="text-red-700 dark:text-red-300/90 text-[10.5px]">
+                                      {t('Last attempt:')} {order.latest_payment.failure_reason}
+                                    </p>
+                                  )}
+                                  <p className="text-[var(--muted)] text-[11px]">
+                                    {t('Amount due:')}{' '}
+                                    <strong className="text-[var(--accent)] font-mono text-[12.5px]">
+                                      {Number(order.total_amount_etb).toFixed(2)} {birr}
+                                    </strong>
+                                  </p>
+                                </div>
                               )}
-                              <p className="text-[var(--muted)]">
-                                {t('Amount due:')}{' '}
-                                <strong className="text-[var(--accent)]">
-                                  {Number(order.total_amount_etb).toFixed(2)} {birr}
-                                </strong>
-                              </p>
                             </div>
                           ) : (
                             <OrderTracker
@@ -688,22 +782,42 @@ export default function AccountPage() {
                               placedAt={order.placed_at || order.created_at}
                             />
                           )}
-                          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-4">
+                          <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 border-t border-[var(--border)] pt-3">
                             <div>
-                              <p className="text-[13px] text-[var(--muted)] uppercase tracking-wider">{order.order_number}</p>
-                              <p className="text-[16px] font-semibold mt-0.5">{Number(order.total_amount_etb).toFixed(2)} {birr} • {order.items.length} {order.items.length === 1 ? t('item', 'item') : t('items', 'items')}</p>
+                              <p className="text-[13.5px] sm:text-[15px] font-bold text-[var(--text)]">
+                                {Number(order.total_amount_etb).toFixed(2)} {birr}
+                                <span className="text-[11.5px] font-normal text-[var(--muted)] ml-1.5">
+                                  • {order.items.length} {order.items.length === 1 ? t('item', 'item') : t('items', 'items')}
+                                </span>
+                              </p>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
                               {order.status === 'PENDING_PAYMENT' && (
-                                <button onClick={() => setPayOrder(order)} className="h-9 px-4 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[14px] font-bold hover:brightness-110 transition-colors">
-                                  {t('Pay')} {Number(order.total_amount_etb).toFixed(2)} {birr}
+                                <button
+                                  type="button"
+                                  onClick={() => setPayOrder(order)}
+                                  className="flex-1 sm:flex-initial h-9 sm:h-9.5 px-3.5 rounded-lg sm:rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] text-[12px] sm:text-[13px] font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                                >
+                                  <i className="ph ph-credit-card text-[15px]"></i>
+                                  <span>{t('Pay')} {Number(order.total_amount_etb).toFixed(2)} {birr}</span>
                                 </button>
                               )}
                               {isOrderPaid(order) ? (
-                                <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">{t('View Receipt')}</button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedReceiptOrder(order)}
+                                  className="flex-1 sm:flex-initial h-9 sm:h-9.5 px-3 rounded-lg sm:rounded-xl border border-[var(--border)] bg-surface text-[var(--text)] text-[12px] sm:text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                  <i className="ph ph-receipt text-[15px]"></i>
+                                  <span>{t('View Receipt')}</span>
+                                </button>
                               ) : (
-                                <span className="h-9 px-4 rounded-full border border-[var(--border)]/60 text-[var(--muted)] text-[13px] flex items-center cursor-not-allowed" title={t('Receipts are issued after payment')}>
-                                  {t('Receipt after payment')}
+                                <span
+                                  className="flex-1 sm:flex-initial h-9 sm:h-9.5 px-2.5 rounded-lg sm:rounded-xl border border-[var(--border)]/60 bg-surface/40 text-[var(--muted)] text-[11px] sm:text-[12px] flex items-center justify-center gap-1 cursor-not-allowed select-none"
+                                  title={t('Receipts are issued after payment')}
+                                >
+                                  <i className="ph ph-receipt text-[14px] opacity-60"></i>
+                                  <span>{t('Receipt after payment')}</span>
                                 </span>
                               )}
                             </div>
@@ -717,68 +831,96 @@ export default function AccountPage() {
                 {/* Past Orders Section */}
                 {pastOrders.length > 0 && (
                   <div>
-                    <h3 className="font-display text-[24px] mb-4 flex items-center gap-2"><i className="ph ph-clock-counter-clockwise text-[var(--muted)]"></i> {t('Order History')}</h3>
-                    <div className="space-y-4">
+                    <h3 className="font-display text-[17px] sm:text-[20px] font-bold mb-3 flex items-center gap-2"><i className="ph ph-clock-counter-clockwise text-[var(--muted)] text-[18px]"></i> {t('Order History')}</h3>
+                    <div className="space-y-3.5 sm:space-y-4">
                       {pastOrders.map(order => (
                         <div
                           key={order.id}
                           id={`item-${order.order_number}`}
-                          className={`bg-surface-2 rounded-[18px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-500 ${
+                          className={`bg-surface-2 rounded-2xl p-3 sm:p-4.5 flex flex-col justify-between gap-2.5 sm:gap-3.5 transition-all duration-500 ${
                             highlightCode === order.order_number
                               ? 'border-2 border-[var(--accent)] ring-4 ring-[var(--accent)]/30 shadow-2xl'
                               : 'border border-[var(--border)] hover:border-[#9e8d8e]'
                           }`}
                         >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <span className="font-semibold text-[16px]">{order.order_number}</span>
-                              <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
-                                order.status === 'COMPLETED' ? 'bg-green-100 text-green-800 border border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-900' :
-                                order.status === 'CANCELLED' || order.status === 'REJECTED' ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-900' :
-                                'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-900'
-                              }`}>{t(STATUS_LABELS[order.status] || order.status)}</span>
+                          {/* ORDER CARD HEADER */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 pb-2.5 border-b border-[var(--border)]/60">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono text-[13px] sm:text-[14.5px] font-bold text-[var(--text)]">
+                                  #{order.order_number}
+                                </span>
+                                <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-surface border border-[var(--border)] text-[var(--muted)] font-medium">
+                                  {t(order.order_type, order.order_type)}
+                                </span>
+                              </div>
+                              <span className="inline-flex items-center gap-1 text-[11px] sm:text-[11.5px] text-[var(--muted)] mt-0.5">
+                                <i className="ph ph-clock text-[12px]"></i>
+                                {new Date(order.created_at).toLocaleString(locale, {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                              </span>
                             </div>
-                            <p className="text-[14.5px] text-[var(--muted)] mb-1">
-                              {new Date(order.created_at).toLocaleString(locale, {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: 'numeric',
-                                minute: '2-digit',
-                              })} • {order.items.length} {t('items')}
+                            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] sm:text-[10.5px] font-bold uppercase tracking-wider ${STATUS_BADGE[order.status] || 'bg-surface text-[var(--muted)] border border-[var(--border)]'}`}>
+                                {t(STATUS_LABELS[order.status] || order.status)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-0.5">
+                            <p className="text-[12.5px] text-[var(--muted)]">
+                              {order.items.length} {order.items.length === 1 ? t('item', 'item') : t('items', 'items')}
                             </p>
                             {order.status === 'EXPIRED' ? (
-                              <p className="text-[13px] text-amber-700 dark:text-yellow-300/90 mb-1">
+                              <p className="text-[11.5px] text-amber-700 dark:text-yellow-300/90">
                                 {t('This order expired before we received payment. Place it again below and we will make it fresh.')}
                               </p>
                             ) : (order.status === 'REJECTED' || order.status === 'CANCELLED') && order.rejection_reason ? (
-                              <p className="text-[13px] text-red-700 dark:text-red-300/80 mb-1">{order.rejection_reason}</p>
+                              <p className="text-[11.5px] text-red-700 dark:text-red-300/80">{order.rejection_reason}</p>
                             ) : null}
-                            <p className="text-[16px] font-bold text-[var(--text)]">{Number(order.total_amount_etb).toFixed(2)} {birr}</p>
+                            <p className="text-[13.5px] sm:text-[15px] font-bold text-[var(--text)] pt-0.5">{Number(order.total_amount_etb).toFixed(2)} {birr}</p>
                           </div>
-                          <div className="flex flex-wrap items-center gap-2">
+
+                          <div className="flex items-center gap-2 pt-2.5 border-t border-[var(--border)]/40 w-full sm:w-auto sm:self-end">
                             <button
+                              type="button"
                               onClick={() => handleReorder(order.id)}
                               disabled={reorderingId === order.id}
-                              className="h-9 px-4 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[14px] font-bold hover:brightness-110 transition-colors flex items-center gap-1.5 disabled:opacity-50 w-full sm:w-auto justify-center"
+                              className="flex-1 sm:flex-initial h-9 sm:h-9.5 px-3.5 rounded-lg sm:rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] text-[12px] sm:text-[13px] font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-sm cursor-pointer"
                             >
                               {reorderingId === order.id ? (
                                 <>
-                                  <i className="ph ph-spinner-gap animate-spin"></i>
-                                  {t('Reordering…')}
+                                  <i className="ph ph-spinner-gap animate-spin text-[14px]"></i>
+                                  <span>{t('Reordering…')}</span>
                                 </>
                               ) : (
                                 <>
-                                  <i className="ph ph-arrows-counter-clockwise"></i>
-                                  {t('Reorder')}
+                                  <i className="ph ph-arrows-counter-clockwise text-[14px]"></i>
+                                  <span>{t('Reorder')}</span>
                                 </>
                               )}
                             </button>
                             {isOrderPaid(order) ? (
-                              <button onClick={() => setSelectedReceiptOrder(order)} className="h-9 px-4 rounded-full border border-[var(--border)] text-[var(--muted)] text-[14px] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors w-full sm:w-auto">{t('View Receipt')}</button>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedReceiptOrder(order)}
+                                className="flex-1 sm:flex-initial h-9 sm:h-9.5 px-3 rounded-lg sm:rounded-xl border border-[var(--border)] bg-surface text-[var(--text)] text-[12px] sm:text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <i className="ph ph-receipt text-[14px]"></i>
+                                <span>{t('View Receipt')}</span>
+                              </button>
                             ) : (
-                              <span className="h-9 px-4 rounded-full border border-[var(--border)]/60 text-[var(--muted)] text-[13px] flex items-center cursor-not-allowed w-full sm:w-auto justify-center" title={t('Receipts are issued after payment')}>
-                                {t('Receipt after payment')}
+                              <span
+                                className="flex-1 sm:flex-initial h-9 sm:h-9.5 px-2.5 rounded-lg sm:rounded-xl border border-[var(--border)]/60 bg-surface/40 text-[var(--muted)] text-[11px] sm:text-[12px] flex items-center justify-center gap-1 cursor-not-allowed select-none"
+                                title={t('Receipts are issued after payment')}
+                              >
+                                <i className="ph ph-receipt text-[14px] opacity-60"></i>
+                                <span>{t('Receipt after payment')}</span>
                               </span>
                             )}
                           </div>
@@ -794,51 +936,60 @@ export default function AccountPage() {
 
         {/* TAB: RESERVATIONS */}
         {activeTab === 'reservations' && (
-          <div className="space-y-10 animate-fade-in">
+          <div className="space-y-6 sm:space-y-8 animate-fade-in">
             {isLoadingReservations ? (
-              <div className="py-12 flex justify-center text-[var(--muted)]">{t('Loading reservations...')}</div>
+              <div className="py-12 flex justify-center text-[var(--muted)] text-[14px]">{t('Loading reservations...')}</div>
             ) : reservations.length === 0 ? (
-              <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-10 text-center">
-                <i className="ph ph-calendar text-4xl text-[var(--muted)] mb-4"></i>
-                <h3 className="font-display text-[22px] mb-2">{t('No reservations yet')}</h3>
-                <p className="text-[var(--muted)] text-[15.5px] mb-6">{t("You haven't booked any tables with us.")}</p>
-                <Link href="/#book" className="h-10 px-6 rounded-full inline-flex items-center bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold hover:brightness-110 transition-colors">{t('Book a Table')}</Link>
+              <div className="bg-surface-2 border border-[var(--border)] rounded-2xl p-6 sm:p-10 text-center">
+                <i className="ph ph-calendar text-3xl sm:text-4xl text-[var(--muted)] mb-3"></i>
+                <h3 className="font-display text-[18px] sm:text-[20px] font-bold mb-1.5">{t('No reservations yet')}</h3>
+                <p className="text-[var(--muted)] text-[13.5px] sm:text-[14px] mb-5">{t("You haven't booked any tables with us.")}</p>
+                <Link href="/#book" className="h-9.5 px-5 rounded-xl inline-flex items-center justify-center gap-1.5 bg-[var(--accent)] text-[var(--accent-contrast)] text-[13px] font-bold hover:brightness-110 active:scale-[0.98] transition-all shadow-sm">
+                  <i className="ph ph-calendar-plus text-[16px]"></i>
+                  <span>{t('Book a Table')}</span>
+                </Link>
               </div>
             ) : (
-              <div className="space-y-4">
-                {reservations.map(res => (
-                  <div
-                    key={res.id}
-                    id={`item-${res.order_code || res.id}`}
-                    className={`bg-surface-2 rounded-[18px] p-5 flex flex-wrap gap-4 items-center justify-between transition-all duration-500 ${
-                      highlightCode && (highlightCode === res.order_code || highlightCode === String(res.id))
-                        ? 'border-2 border-[var(--accent)] ring-4 ring-[var(--accent)]/30 shadow-2xl'
-                        : 'border border-[var(--border)]'
-                    }`}
-                  >
-                    <div>
-                      <p className="text-[12px] font-mono text-[var(--muted)] mb-1 tracking-wide">{res.order_code || `#${res.id}`}</p>
-                      <p className="text-[14px] text-[var(--muted)] mb-1">{t('Reservation for')} {res.name}</p>
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <p className="text-[16px] font-semibold">{new Date(res.date_time).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                        <span className="text-[12px] px-2.5 py-0.5 rounded-full bg-[var(--gold)]/15 text-[var(--gold)] font-medium">
-                          🇪🇹 {formatEthiopianTime(res.date_time, language)}
+              <div>
+                <h3 className="font-display text-[17px] sm:text-[20px] font-bold mb-3 flex items-center gap-2">
+                  <i className="ph ph-calendar-check text-[var(--accent)] text-[18px]"></i>
+                  {t('Table Reservations')}
+                </h3>
+                <div className="space-y-3 sm:space-y-3.5">
+                  {reservations.map(res => (
+                    <div
+                      key={res.id}
+                      id={`item-${res.order_code || res.id}`}
+                      className={`bg-surface-2 rounded-2xl p-3 sm:p-4 flex flex-wrap gap-3 items-center justify-between transition-all duration-500 ${
+                        highlightCode && (highlightCode === res.order_code || highlightCode === String(res.id))
+                          ? 'border-2 border-[var(--accent)] ring-4 ring-[var(--accent)]/30 shadow-2xl'
+                          : 'border border-[var(--border)]'
+                      }`}
+                    >
+                      <div>
+                        <p className="text-[11.5px] sm:text-[12px] font-mono text-[var(--muted)] mb-0.5 tracking-wide">{res.order_code || `#${res.id}`}</p>
+                        <p className="text-[13px] sm:text-[13.5px] text-[var(--muted)] mb-1">{t('Reservation for')} <span className="font-semibold text-[var(--text)]">{res.name}</span></p>
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <p className="text-[13.5px] sm:text-[14.5px] font-semibold">{new Date(res.date_time).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--gold)]/15 text-[var(--gold)] font-medium">
+                            🇪🇹 {formatEthiopianTime(res.date_time, language)}
+                          </span>
+                        </div>
+                        <p className="text-[12px] sm:text-[12.5px] text-[var(--muted)]">{res.party_size} {t('People')}{res.contact_phone ? ` • ${res.contact_phone}` : ''}</p>
+                      </div>
+                      <div>
+                        <span className={`px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-full text-[10.5px] sm:text-[11px] font-bold tracking-wide uppercase ${
+                          res.status === 'CONFIRMED' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' :
+                          res.status === 'CANCELLED' ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-900' :
+                          res.status === 'PENDING' ? 'bg-blue-100 text-blue-800 border border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-900' :
+                          'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-900'
+                        }`}>
+                          {t(res.status)}
                         </span>
                       </div>
-                      <p className="text-[14px] text-[var(--muted)] mt-1">{res.party_size} {t('People')}{res.contact_phone ? ` • ${res.contact_phone}` : ''}</p>
                     </div>
-                    <div>
-                      <span className={`px-3 py-1 rounded-full text-[12px] font-semibold tracking-wide uppercase ${
-                        res.status === 'CONFIRMED' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]' :
-                        res.status === 'CANCELLED' ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-900' :
-                        res.status === 'PENDING' ? 'bg-blue-100 text-blue-800 border border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-900' :
-                        'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-900'
-                      }`}>
-                        {t(res.status)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -846,49 +997,58 @@ export default function AccountPage() {
 
         {/* TAB: ADDRESSES */}
         {activeTab === 'addresses' && (
-          <div className="space-y-8 animate-fade-in">
-            <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-6">
-              <h3 className="font-display text-[24px] mb-5">{t('Add New Address')}</h3>
-              {addrMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${addrMsg.includes('success') ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'}`}>{addrMsg}</div>}
-              <form onSubmit={handleAddAddress} className="space-y-4">
+          <div className="space-y-6 sm:space-y-8 animate-fade-in">
+            <div className="bg-surface-2 border border-[var(--border)] rounded-2xl p-4 sm:p-5">
+              <h3 className="font-display text-[17px] sm:text-[20px] font-bold mb-3 sm:mb-4 flex items-center gap-2">
+                <i className="ph ph-plus-circle text-[var(--accent)] text-[18px]"></i>
+                {t('Add New Address')}
+              </h3>
+              {addrMsg && <div className={`mb-3 p-2.5 sm:p-3 rounded-xl text-[12.5px] sm:text-[13px] ${addrMsg.includes('success') ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'}`}>{addrMsg}</div>}
+              <form onSubmit={handleAddAddress} className="space-y-3.5">
                 <div>
-                  <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Street Address')}</label>
-                  <input type="text" required value={streetAddress} onChange={e => setStreetAddress(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" placeholder="Bole Road, House 123" />
+                  <label className="block text-[11.5px] sm:text-[12px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-medium">{t('Street Address')}</label>
+                  <input type="text" required value={streetAddress} onChange={e => setStreetAddress(e.target.value)} className="w-full h-9.5 sm:h-10 bg-surface border border-[var(--border)] rounded-xl px-3.5 text-[13px] sm:text-[13.5px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" placeholder="Bole Road, House 123" />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('City')}</label>
-                    <input type="text" value="Addis Ababa" disabled className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--muted)] cursor-not-allowed opacity-70" />
+                    <label className="block text-[11.5px] sm:text-[12px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-medium">{t('City')}</label>
+                    <input type="text" value="Addis Ababa" disabled className="w-full h-9.5 sm:h-10 bg-surface border border-[var(--border)] rounded-xl px-3.5 text-[13px] sm:text-[13.5px] text-[var(--muted)] cursor-not-allowed opacity-70" />
                   </div>
                   <div>
-                    <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Subcity / Zone')}</label>
-                    <input type="text" value={subcityOrZone} onChange={e => setSubcityOrZone(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" placeholder="Bole, Arada, etc." />
+                    <label className="block text-[11.5px] sm:text-[12px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-medium">{t('Subcity / Zone')}</label>
+                    <input type="text" value={subcityOrZone} onChange={e => setSubcityOrZone(e.target.value)} className="w-full h-9.5 sm:h-10 bg-surface border border-[var(--border)] rounded-xl px-3.5 text-[13px] sm:text-[13.5px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" placeholder="Bole, Arada, etc." />
                   </div>
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer mt-2 w-max">
+                <label className="flex items-center gap-2 cursor-pointer mt-1.5 w-max">
                   <input type="checkbox" checked={isDefaultAddr} onChange={e => setIsDefaultAddr(e.target.checked)} className="rounded border-[var(--border)] bg-surface text-[var(--accent)] focus:ring-[var(--accent)]" />
-                  <span className="text-[14.5px] text-[var(--muted)]">{t('Set as default delivery address')}</span>
+                  <span className="text-[13px] sm:text-[13.5px] text-[var(--muted)]">{t('Set as default delivery address')}</span>
                 </label>
-                <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold hover:brightness-110 transition-colors">{t('Save Address')}</button>
+                <button type="submit" className="mt-3 w-full sm:w-auto h-9 sm:h-9.5 px-4.5 rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] text-[12.5px] sm:text-[13px] font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+                  <i className="ph ph-floppy-disk text-[16px]"></i>
+                  <span>{t('Save Address')}</span>
+                </button>
               </form>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="font-display text-[24px] mb-4">{t('Saved Addresses')}</h3>
+            <div className="space-y-3.5">
+              <h3 className="font-display text-[17px] sm:text-[20px] font-bold mb-3 flex items-center gap-2">
+                <i className="ph ph-map-pin text-[var(--accent)] text-[18px]"></i>
+                {t('Saved Addresses')}
+              </h3>
               {addresses.length === 0 ? (
-                <p className="text-[var(--muted)] text-[15px]">{t('No saved addresses yet.')}</p>
+                <p className="text-[var(--muted)] text-[13px] sm:text-[13.5px]">{t('No saved addresses yet.')}</p>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {addresses.map(addr => (
-                    <div key={addr.id} className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-5 relative group">
+                    <div key={addr.id} className="bg-surface-2 border border-[var(--border)] rounded-2xl p-3.5 sm:p-4 relative group">
                       {addr.is_default && (
-                        <span className="absolute top-4 right-4 text-[10px] uppercase font-bold tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-0.5 rounded">{t('Default')}</span>
+                        <span className="absolute top-3.5 right-3.5 text-[9.5px] sm:text-[10px] uppercase font-bold tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-0.5 rounded-md">{t('Default')}</span>
                       )}
-                      <div className="flex items-start gap-3 mt-1">
-                        <i className="ph ph-map-pin text-[20px] text-[var(--muted)] mt-0.5"></i>
+                      <div className="flex items-start gap-2.5 mt-0.5">
+                        <i className="ph ph-map-pin text-[18px] text-[var(--muted)] mt-0.5 shrink-0"></i>
                         <div>
-                          <p className="text-[var(--text)] font-semibold text-[15.5px] mb-1">{addr.street_address}</p>
-                          <p className="text-[var(--muted)] text-[14px]">{addr.subcity_or_zone ? `${addr.subcity_or_zone}, ` : ''}{addr.city}</p>
+                          <p className="text-[var(--text)] font-semibold text-[13.5px] sm:text-[14.5px] mb-0.5">{addr.street_address}</p>
+                          <p className="text-[var(--muted)] text-[12.5px] sm:text-[13px]">{addr.subcity_or_zone ? `${addr.subcity_or_zone}, ` : ''}{addr.city}</p>
                         </div>
                       </div>
                     </div>
@@ -902,43 +1062,114 @@ export default function AccountPage() {
         {/* TAB: PROFILE */}
         {activeTab === 'profile' && (
           <div className="animate-fade-in max-w-2xl">
-            <div className="bg-surface-2 border border-[var(--border)] rounded-[18px] p-6">
-              <h3 className="font-display text-[24px] mb-5">{t('Personal Details')}</h3>
-              {profileMsg && <div className={`mb-4 p-3 rounded-[12px] text-[14px] ${profileMsg.includes('success') ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'}`}>{profileMsg}</div>}
+            <div className="bg-surface-2 border border-[var(--border)] rounded-2xl p-4 sm:p-5">
+              <h3 className="font-display text-[17px] sm:text-[20px] font-bold mb-3 sm:mb-4 flex items-center gap-2">
+                <i className="ph ph-user text-[var(--accent)] text-[18px]"></i>
+                {t('Personal Details')}
+              </h3>
+              {profileMsg && <div className={`mb-3 p-2.5 sm:p-3 rounded-xl text-[12.5px] sm:text-[13px] ${profileMsg.includes('success') ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'}`}>{profileMsg}</div>}
               
-              <div className="mb-6">
-                <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Username / Email')}</label>
-                <div className="h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 flex items-center text-[var(--muted)] opacity-70">
+              <div className="mb-4">
+                <label className="block text-[11.5px] sm:text-[12px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-medium">{t('Username / Email')}</label>
+                <div className="h-9.5 sm:h-10 bg-surface border border-[var(--border)] rounded-xl px-3.5 flex items-center text-[13px] sm:text-[13.5px] text-[var(--muted)] opacity-70">
                   {user.email || user.username}
                 </div>
-                <p className="text-[var(--muted)] text-xs mt-1">{t('Username/email cannot be changed here.')}</p>
+                <p className="text-[var(--muted)] text-[11px] sm:text-[11.5px] mt-1">{t('Username/email cannot be changed here.')}</p>
               </div>
 
-              <form onSubmit={handleUpdateProfile} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleUpdateProfile} className="space-y-3.5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('First Name')}</label>
-                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" />
+                    <label className="block text-[11.5px] sm:text-[12px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-medium">{t('First Name')}</label>
+                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-9.5 sm:h-10 bg-surface border border-[var(--border)] rounded-xl px-3.5 text-[13px] sm:text-[13.5px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" />
                   </div>
                   <div>
-                    <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Last Name')}</label>
-                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-[12px] px-4 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" />
+                    <label className="block text-[11.5px] sm:text-[12px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-medium">{t('Last Name')}</label>
+                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-9.5 sm:h-10 bg-surface border border-[var(--border)] rounded-xl px-3.5 text-[13px] sm:text-[13.5px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[13px] text-[var(--muted)] uppercase tracking-wider mb-2">{t('Phone Number')}</label>
+                  <label className="block text-[11.5px] sm:text-[12px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-medium">{t('Phone Number')}</label>
                   <EthiopianPhoneInput
                     value={phone}
                     onChange={val => setPhone(val)}
-                    className="h-11"
+                    className="h-9.5 sm:h-10"
                   />
                 </div>
-                <button type="submit" className="mt-4 h-11 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold hover:brightness-110 transition-colors">{t('Update Profile')}</button>
+                <button type="submit" className="mt-3 w-full sm:w-auto h-9 sm:h-9.5 px-4.5 rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] text-[12.5px] sm:text-[13px] font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+                  <i className="ph ph-check-circle text-[16px]"></i>
+                  <span>{t('Update Profile')}</span>
+                </button>
               </form>
             </div>
           </div>
         )}
       </main>
+
+      {/* MOBILE STICKY BOTTOM NAVIGATION BAR */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface-2/95 backdrop-blur-md border-t border-[var(--border)] px-1 py-1.5 flex items-center justify-around shadow-2xl safe-area-inset-bottom">
+        <button
+          type="button"
+          onClick={() => handleTabChange('orders')}
+          className={`relative flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-xl text-[10.5px] font-semibold transition-all cursor-pointer ${
+            activeTab === 'orders'
+              ? 'text-[var(--accent)] bg-[var(--accent-soft)] font-bold'
+              : 'text-[var(--muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <i className="ph ph-receipt text-[20px] mb-0.5"></i>
+          <span className="truncate max-w-[72px]">{t('My Orders')}</span>
+          {pendingOrders.length > 0 && (
+            <span className="absolute top-1 right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[9px] font-bold flex items-center justify-center shadow-sm">
+              {pendingOrders.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('reservations')}
+          className={`relative flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-xl text-[10.5px] font-semibold transition-all cursor-pointer ${
+            activeTab === 'reservations'
+              ? 'text-[var(--accent)] bg-[var(--accent-soft)] font-bold'
+              : 'text-[var(--muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <i className="ph ph-calendar-check text-[20px] mb-0.5"></i>
+          <span className="truncate max-w-[75px]">{t('Table Reservations')}</span>
+          {reservations.filter(r => r.status === 'CONFIRMED' || r.status === 'PENDING').length > 0 && (
+            <span className="absolute top-1 right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[9px] font-bold flex items-center justify-center shadow-sm">
+              {reservations.filter(r => r.status === 'CONFIRMED' || r.status === 'PENDING').length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('addresses')}
+          className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-xl text-[10.5px] font-semibold transition-all cursor-pointer ${
+            activeTab === 'addresses'
+              ? 'text-[var(--accent)] bg-[var(--accent-soft)] font-bold'
+              : 'text-[var(--muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <i className="ph ph-map-pin text-[20px] mb-0.5"></i>
+          <span className="truncate max-w-[72px]">{t('Delivery Addresses')}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('profile')}
+          className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-xl text-[10.5px] font-semibold transition-all cursor-pointer ${
+            activeTab === 'profile'
+              ? 'text-[var(--accent)] bg-[var(--accent-soft)] font-bold'
+              : 'text-[var(--muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <i className="ph ph-user-gear text-[20px] mb-0.5"></i>
+          <span className="truncate max-w-[72px]">{t('Profile Settings')}</span>
+        </button>
+      </nav>
 
       {/* RECEIPT MODAL */}
       {selectedReceiptOrder && (
