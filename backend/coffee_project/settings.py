@@ -138,6 +138,15 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+try:
+    import whitenoise  # noqa: F401
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index('django.middleware.security.SecurityMiddleware') + 1,
+        'whitenoise.middleware.WhiteNoiseMiddleware',
+    )
+except ImportError:
+    pass
+
 ROOT_URLCONF = 'coffee_project.urls'
 
 TEMPLATES = [
@@ -220,6 +229,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -270,7 +280,18 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:3001',
-    os.environ.get('FRONTEND_URL', 'http://localhost:3000'),
+]
+_frontend_url = os.environ.get('FRONTEND_URL', '').strip()
+if _frontend_url and _frontend_url not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS.append(_frontend_url)
+
+_extra_cors = [o.strip() for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()]
+for _origin in _extra_cors:
+    if _origin not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(_origin)
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_EXPOSE_HEADERS = ['Content-Type', 'Set-Cookie']
@@ -279,8 +300,15 @@ CORS_EXPOSE_HEADERS = ['Content-Type', 'Set-Cookie']
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    os.environ.get('FRONTEND_URL', 'http://localhost:3000'),
+    'https://*.vercel.app',
 ]
+if _frontend_url and _frontend_url not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(_frontend_url)
+
+_extra_csrf = [o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
+for _origin in _extra_csrf:
+    if _origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_origin)
 # In development, allow cookies to be sent through the Next.js rewrite proxy
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_HTTPONLY = True
