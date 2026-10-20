@@ -113,7 +113,17 @@ export default function Header({ cartCount, onOpenCart, onOpenSommelier }: Heade
                     </Link>
 
                     <button
-                      onClick={() => { setIsUserMenuOpen(false); logout(); }}
+                      onClick={async () => {
+                        setIsUserMenuOpen(false);
+                        try {
+                          await logout();
+                        } catch (e) {
+                          console.error('Logout error:', e);
+                        }
+                        if (typeof window !== 'undefined') {
+                          window.location.href = '/?welcome=1';
+                        }
+                      }}
                       className="w-full px-4 py-2 text-left text-xs text-red-400 hover:bg-[#20201f] flex items-center gap-2 border-t border-[var(--border)] mt-1"
                     >
                       <span className="material-symbols-outlined text-base">logout</span>

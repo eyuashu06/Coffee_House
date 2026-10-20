@@ -155,6 +155,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setSessionExpired(false);
       setUser(null);
+      if (typeof window !== 'undefined') {
+        window.location.href = '/?welcome=1';
+      }
     }
   };
 

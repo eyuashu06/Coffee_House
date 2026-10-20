@@ -139,6 +139,7 @@ export default function Home() {
     const [authPromptMessage, setAuthPromptMessage] = useState<string | null>(null);
     const [postLoginRedirect, setPostLoginRedirect] = useState<string | null>(null);
     const [activeCat, setActiveCat] = useState('all');
+    const [menuSearch, setMenuSearch] = useState('');
     const [bookingData, setBookingData] = useState({ name: '', date_time: '', party_size: 2, contact_phone: '' });
     const [bookingStatus, setBookingStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
     const [bookingError, setBookingError] = useState<string | null>(null);
@@ -658,9 +659,22 @@ export default function Home() {
         }
     };
 
-    const filteredItems = activeCat === 'all'
-        ? items
-        : items.filter(item => item.category_slug === activeCat);
+    const birr = language === 'am' ? 'ብር' : 'Br';
+
+    const filteredItems = items.filter((item) => {
+        const matchesCategory = activeCat === 'all' || item.category_slug === activeCat;
+        const q = menuSearch.toLowerCase().trim();
+        if (!q) return matchesCategory;
+        const translatedName = tItem(item.name)?.toLowerCase() || '';
+        const translatedDesc = tItemDescription(item.description)?.toLowerCase() || '';
+        const rawName = (item.name || '').toLowerCase();
+        const rawDesc = (item.description || '').toLowerCase();
+        const catName = (item.category_name || '').toLowerCase();
+        const matchesSearch = rawName.includes(q) || translatedName.includes(q) ||
+            rawDesc.includes(q) || translatedDesc.includes(q) ||
+            catName.includes(q);
+        return matchesCategory && matchesSearch;
+    });
 
     const categories = Array.from(new Set(items.map(item => item.category_slug)))
         .filter(Boolean)
@@ -843,7 +857,20 @@ export default function Home() {
                                                 </Link>
                                             )}
                                         </div>
-                                        <button onClick={() => { setIsMobileMenuOpen(false); logout(); }} className="w-full h-10 rounded-xl border border-red-500/30 text-red-500 hover:bg-red-500/10 text-xs font-bold flex items-center justify-center gap-2 transition-colors">
+                                        <button
+                                            onClick={async () => {
+                                                setIsMobileMenuOpen(false);
+                                                try {
+                                                    await logout();
+                                                } catch (e) {
+                                                    console.error('Logout error:', e);
+                                                }
+                                                if (typeof window !== 'undefined') {
+                                                    window.location.href = '/?welcome=1';
+                                                }
+                                            }}
+                                            className="w-full h-10 rounded-xl border border-red-500/30 text-red-500 hover:bg-red-500/10 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                                        >
                                             <i className="ph ph-sign-out text-[15px]"></i>
                                             <span>{t('Sign Out')}</span>
                                         </button>
@@ -1005,72 +1032,197 @@ export default function Home() {
                                 </p>
                             </Reveal>
 
-                            <div className="mt-8 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto no-scrollbar">
-                                <div className="flex flex-nowrap sm:flex-wrap items-center gap-2.5 w-max sm:w-auto">
-                                    <button onClick={() => setActiveCat('all')} className={`chip h-10 px-5 rounded-full text-[15px] transition-colors ${activeCat === 'all' ? 'chip-active' : ''}`}>{t('All')}</button>
-                                    {categories.map((cat, idx) => cat && (
-                                        <button key={cat.slug || idx} onClick={() => setActiveCat(cat.slug)} className={`chip h-10 px-5 rounded-full text-[15px] transition-colors ${activeCat === cat.slug ? 'chip-active' : ''}`}>{tCategory(cat.name)}</button>
-                                    ))}
+                            {/* Interactive Search & Category Filter Controls */}
+                            <div className="mt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                {/* Search input */}
+                                <div className="relative w-full sm:max-w-xs">
+                                    <i className="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-[17px] text-[var(--muted)]"></i>
+                                    <input
+                                        type="text"
+                                        value={menuSearch}
+                                        onChange={(e) => setMenuSearch(e.target.value)}
+                                        placeholder={t('Search coffee, burgers, pizza...')}
+                                        className="w-full h-10 pl-9 pr-9 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[14px] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors shadow-sm"
+                                    />
+                                    {menuSearch && (
+                                        <button
+                                            onClick={() => setMenuSearch('')}
+                                            aria-label={t('Clear search')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--text)] transition-colors"
+                                        >
+                                            <i className="ph ph-x-circle text-[16px]"></i>
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Category chips */}
+                                <div className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto no-scrollbar">
+                                    <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 w-max sm:w-auto">
+                                        <button onClick={() => setActiveCat('all')} className={`chip h-9 px-4 rounded-full text-[13.5px] sm:text-[14px] transition-colors ${activeCat === 'all' ? 'chip-active' : ''}`}>{t('All')}</button>
+                                        {categories.map((cat, idx) => cat && (
+                                            <button key={cat.slug || idx} onClick={() => setActiveCat(cat.slug)} className={`chip h-9 px-4 rounded-full text-[13.5px] sm:text-[14px] transition-colors ${activeCat === cat.slug ? 'chip-active' : ''}`}>{tCategory(cat.name)}</button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-8">
-                                {filteredItems.length === 0 ? (
-                                    <div className="text-center text-[var(--muted)] py-12 col-span-full">
-                                        <p className="text-[20px] font-display">{t('No menu items found.')}</p>
-                                        <p className="mt-2 text-[15px]">{t('Please ensure your Django backend is running on port 8000 so the menu can be loaded!')}</p>
-                                    </div>
-                                ) : (
-                                    filteredItems.map((item) => {
-                                        const itemImg = (item as any).image_display || item.image_url || 'https://images.pexels.com/photos/37756986/pexels-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80';
-                                        return (
-                                            <div
-                                                key={item.id}
-                                                className="dish-card p-3.5 sm:p-5 flex flex-row sm:flex-col items-center sm:items-stretch gap-3.5 sm:gap-0 rounded-[20px] transition-all hover:border-[var(--accent)]/50"
-                                            >
-                                                {/* Thumbnail: compact square on mobile (< sm), elegant well on tablet/desktop (sm+) */}
-                                                <div className="dish-well w-20 h-20 sm:w-full sm:aspect-square rounded-[14px] sm:rounded-full overflow-hidden border border-[var(--border)] shrink-0">
-                                                    <img
-                                                        src={itemImg}
-                                                        alt={tItem(item.name)}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                </div>
-
-                                                {/* Details */}
-                                                <div className="flex-1 min-w-0 flex flex-col justify-between sm:mt-5">
-                                                    <div>
-                                                        <div className="flex flex-wrap items-baseline justify-between gap-1">
-                                                            <h3 className="font-display text-[16px] sm:text-[22px] leading-snug sm:leading-tight text-[var(--text)]">
-                                                                {tItem(item.name)}{' '}
-                                                                {item.is_signature && (
-                                                                    <span className="ml-1 align-middle text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold font-body text-[var(--accent)]">
-                                                                        ★ {t('Signature')}
-                                                                    </span>
-                                                                )}
-                                                            </h3>
-                                                            <span className="italic font-body text-[14px] sm:text-[15px] text-[var(--gold)] whitespace-nowrap font-semibold">
-                                                                {parseFloat(item.price)} {language === 'am' ? 'ብር' : 'Br'}
-                                                            </span>
-                                                        </div>
-                                                        <p className="mt-1 text-[13px] sm:text-[14.5px] leading-snug text-[var(--muted)] line-clamp-2 sm:line-clamp-none flex-1">
-                                                            {tItemDescription(item.description)}
-                                                        </p>
+                            {filteredItems.length === 0 ? (
+                                <div className="text-center text-[var(--muted)] py-14 col-span-full">
+                                    <i className="ph ph-magnifying-glass text-[36px] text-[var(--muted)]/60 mb-2"></i>
+                                    <p className="text-[20px] font-display text-[var(--text)]">{t('No menu items found.')}</p>
+                                    <p className="mt-2 text-[14.5px]">
+                                        {menuSearch ? t('Try clearing your search query or choosing another category.') : t('Please ensure your Django backend is running on port 8000 so the menu can be loaded!')}
+                                    </p>
+                                    {menuSearch && (
+                                        <button
+                                            onClick={() => { setMenuSearch(''); setActiveCat('all'); }}
+                                            className="mt-4 px-4 py-2 rounded-full border border-[var(--border)] text-[13.5px] text-[var(--accent)] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] transition-colors"
+                                        >
+                                            {t('Reset Filters & Show All Orders').replace('Orders', 'Items')}
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <>
+                                    {/* ================= MOBILE SETUP (< sm) ================= */}
+                                    <div className="mt-8 sm:hidden flex flex-col gap-3 pb-8">
+                                        {filteredItems.map((item) => {
+                                            const itemImg = (item as any).image_display || item.image_url || 'https://images.pexels.com/photos/37756986/pexels-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80';
+                                            return (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => handleOpenItemModal(item)}
+                                                    className="dish-card p-3 rounded-[18px] bg-[var(--surface)] border border-[var(--border)] active:scale-[0.99] transition-transform flex flex-row items-center gap-3 cursor-pointer hover:border-[var(--accent)]/60"
+                                                >
+                                                    {/* Mobile Thumbnail - 96px, crystal clear, unclipped, rounded corners */}
+                                                    <div className="w-24 h-24 rounded-[14px] overflow-hidden border border-[var(--border)] shrink-0 relative bg-[var(--surface-2,var(--surface))] shadow-sm">
+                                                        <img
+                                                            src={itemImg}
+                                                            alt={tItem(item.name)}
+                                                            loading="lazy"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                        {item.is_signature && (
+                                                            <div className="absolute top-1.5 left-1.5 bg-amber-500 text-white rounded-full p-1 shadow-sm">
+                                                                <i className="ph ph-star-fill text-[9.5px]"></i>
+                                                            </div>
+                                                        )}
                                                     </div>
 
+                                                    {/* Mobile Content Details */}
+                                                    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                                                        <div>
+                                                            {item.category_name && (
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
+                                                                    {tCategory(item.category_name)}
+                                                                </span>
+                                                            )}
+                                                            <div className="flex items-start justify-between gap-1.5 mt-0.5">
+                                                                <h4 className="font-display text-[15.5px] leading-snug text-[var(--text)] font-semibold line-clamp-1">
+                                                                    {tItem(item.name)}
+                                                                </h4>
+                                                                <span className="font-mono text-[14px] font-bold text-[var(--gold)] whitespace-nowrap shrink-0">
+                                                                    {parseFloat(item.price)} {birr}
+                                                                </span>
+                                                            </div>
+                                                            <p className="mt-1 text-[12px] leading-snug text-[var(--muted)] line-clamp-2">
+                                                                {tItemDescription(item.description)}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="mt-2.5 flex items-center justify-between">
+                                                            <span className="text-[10.5px] text-[var(--accent)] font-medium">
+                                                                {t('Tap to customize')}
+                                                            </span>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleOpenItemModal(item);
+                                                                }}
+                                                                className="h-8 px-3 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[12px] font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow-sm"
+                                                            >
+                                                                <i className="ph ph-shopping-bag text-[12px]"></i>
+                                                                <span>{t('Add')}</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* ================= WEBSITE DISPLAY (sm+) ================= */}
+                                    {/* Restores the original interactive website placement with prominent, visible food & drink images */}
+                                    <div className="mt-10 hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-8">
+                                        {filteredItems.map((item) => {
+                                            const itemImg = (item as any).image_display || item.image_url || 'https://images.pexels.com/photos/37756986/pexels-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80';
+                                            return (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => handleOpenItemModal(item)}
+                                                    className="dish-card p-4 lg:p-5 flex flex-col justify-between rounded-[22px] bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] hover:shadow-xl transition-all duration-300 group cursor-pointer"
+                                                >
+                                                    <div>
+                                                        {/* Heroic Food & Drink Image - Wide aspect ratio, fully visible, clear and unclipped */}
+                                                        <div className="w-full aspect-[4/3] rounded-[16px] overflow-hidden relative border border-[var(--border)] bg-[var(--surface-2,var(--surface))] group-hover:border-[var(--accent)]/50 transition-colors shadow-sm">
+                                                            <img
+                                                                src={itemImg}
+                                                                alt={tItem(item.name)}
+                                                                loading="lazy"
+                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                                                            />
+                                                            {/* Signature Badge */}
+                                                            {item.is_signature && (
+                                                                <div className="absolute top-3 left-3">
+                                                                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-black/70 text-amber-300 backdrop-blur-md border border-amber-400/30 flex items-center gap-1 shadow-sm">
+                                                                        <i className="ph ph-star-fill text-[11px] text-amber-400"></i>
+                                                                        <span>{t('Signature')}</span>
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            {/* Category Badge */}
+                                                            {item.category_name && (
+                                                                <div className="absolute top-3 right-3">
+                                                                    <span className="px-2.5 py-1 rounded-full text-[10.5px] font-semibold uppercase tracking-wider bg-black/60 text-white/90 backdrop-blur-md border border-white/10 shadow-sm">
+                                                                        {tCategory(item.category_name)}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Details (First Website Interactive Placement) */}
+                                                        <div className="mt-4">
+                                                            <div className="flex items-start justify-between gap-2">
+                                                                <h3 className="font-display text-[20px] lg:text-[22px] leading-snug text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                                                                    {tItem(item.name)}
+                                                                </h3>
+                                                                <span className="font-mono text-[16px] lg:text-[17px] text-[var(--gold)] font-bold whitespace-nowrap shrink-0">
+                                                                    {parseFloat(item.price)} {birr}
+                                                                </span>
+                                                            </div>
+                                                            <p className="mt-2 text-[14px] leading-relaxed text-[var(--muted)] line-clamp-3">
+                                                                {tItemDescription(item.description)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Interactive Add to Cart button */}
                                                     <button
-                                                        onClick={() => handleOpenItemModal(item)}
-                                                        className="mt-2.5 sm:mt-4 h-8 sm:h-10 px-4 sm:px-6 w-full rounded-full border border-[var(--border)] text-[12.5px] sm:text-[14.5px] font-medium hover:border-[var(--accent)] hover:text-[var(--accent)] hover:bg-[var(--accent-soft)] transition-colors flex items-center justify-center gap-1.5"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenItemModal(item);
+                                                        }}
+                                                        className="mt-5 w-full h-11 rounded-full border border-[var(--border)] text-[14px] font-semibold text-[var(--text)] group-hover:border-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-contrast)] transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
                                                     >
-                                                        <i className="ph ph-shopping-bag text-[14px] sm:text-[16px]"></i>
+                                                        <i className="ph ph-shopping-bag text-[16px]"></i>
                                                         <span>{t('Add to Cart')}</span>
                                                     </button>
                                                 </div>
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </section>
 
