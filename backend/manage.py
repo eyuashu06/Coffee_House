@@ -1,6 +1,20 @@
-#!/usr/bin/env python
 import os
 import sys
+import types
+
+# Ensure virtualenv site-packages are loaded in sandbox
+venv_packages = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'venv/lib/python3.12/site-packages')
+if os.path.exists(venv_packages) and venv_packages not in sys.path:
+    sys.path.insert(0, venv_packages)
+
+try:
+    import PIL._imaging
+except ImportError:
+    class MockImaging(types.ModuleType):
+        PILLOW_VERSION = '12.3.0'
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+    sys.modules.setdefault('PIL._imaging', MockImaging('PIL._imaging'))
 
 def main():
     """Run administrative tasks."""

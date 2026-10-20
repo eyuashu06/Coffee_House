@@ -15,33 +15,42 @@ class Command(BaseCommand):
         # ─────────────────────────────────────────────
         # 1. User Accounts
         # ─────────────────────────────────────────────
-        admin, _ = User.objects.get_or_create(username='admin', defaults={
+        admin, admin_created = User.objects.get_or_create(username='admin', defaults={
             'email': 'admin@gmail.com', 'role': 'ADMIN',
             'is_staff': True, 'is_superuser': True,
             'phone': '+251911000001', 'first_name': 'System', 'last_name': 'Admin'
         })
-        admin.set_password('password')
-        admin.role = 'ADMIN'; admin.is_staff = True; admin.is_superuser = True
-        admin.save()
-        self.stdout.write(self.style.SUCCESS('✔ Admin: admin@gmail.com / password'))
+        if admin_created:
+            admin.set_password('password')
+            admin.role = 'ADMIN'; admin.is_staff = True; admin.is_superuser = True
+            admin.save()
+            self.stdout.write(self.style.SUCCESS('✔ Admin created: admin@gmail.com / password'))
+        else:
+            self.stdout.write(self.style.NOTICE('ℹ Admin account already exists (password preserved)'))
 
-        manager, _ = User.objects.get_or_create(username='manager', defaults={
+        manager, mgr_created = User.objects.get_or_create(username='manager', defaults={
             'email': 'manager@gmail.com', 'role': 'MANAGER',
             'is_staff': True, 'phone': '+251911000002',
             'first_name': 'Hotel', 'last_name': 'Manager'
         })
-        manager.set_password('password')
-        manager.role = 'MANAGER'; manager.is_staff = True
-        manager.save()
-        self.stdout.write(self.style.SUCCESS('✔ Manager: manager@gmail.com / password'))
+        if mgr_created:
+            manager.set_password('password')
+            manager.role = 'MANAGER'; manager.is_staff = True
+            manager.save()
+            self.stdout.write(self.style.SUCCESS('✔ Manager created: manager@gmail.com / password'))
+        else:
+            self.stdout.write(self.style.NOTICE('ℹ Manager account already exists (password preserved)'))
 
-        customer, _ = User.objects.get_or_create(username='customer', defaults={
+        customer, cust_created = User.objects.get_or_create(username='customer', defaults={
             'email': 'customer@gmail.com', 'role': 'CUSTOMER',
             'phone': '+251911000003', 'first_name': 'Abebe', 'last_name': 'Bikila'
         })
-        customer.set_password('password')
-        customer.save()
-        self.stdout.write(self.style.SUCCESS('✔ Customer: customer@gmail.com / password'))
+        if cust_created:
+            customer.set_password('password')
+            customer.save()
+            self.stdout.write(self.style.SUCCESS('✔ Customer created: customer@gmail.com / password'))
+        else:
+            self.stdout.write(self.style.NOTICE('ℹ Customer account already exists (password preserved)'))
 
         # ─────────────────────────────────────────────
         # 2. Restaurant Settings
