@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { apiFetch } from '../lib/api';
 import EthiopianPhoneInput from './EthiopianPhoneInput';
@@ -14,27 +14,34 @@ interface PaymentModalProps {
   onPaymentComplete: (status: string, txRef: string, message: string) => void;
 }
 
-/** The identifiers Chapa accepts, plus cash on delivery. */
+/** The identifiers Chapa and cafe accounts accept, plus cash on delivery. */
 type PaymentMethodId =
-  | 'card'
   | 'telebirr'
   | 'cbebirr'
-  | 'mpesa'
   | 'awashbirr'
   | 'ebirr'
-  | 'cash';
+  | 'cash'
+  | 'card'
+  | 'mpesa';
 
-// Declared once and typed, so the selector below cannot drift from the state it feeds.
-// It was an inline literal, which widened `m.id` to string and needed an `as any` at
-// the setState call to compile.
-const PAYMENT_METHODS: { id: PaymentMethodId; name: string; icon: string }[] = [
-  { id: 'card', name: 'Chapa Hosted Redirect', icon: 'open_in_new' },
-  { id: 'telebirr', name: 'Telebirr', icon: 'smartphone' },
-  { id: 'cbebirr', name: 'CBE Birr', icon: 'account_balance' },
-  { id: 'mpesa', name: 'M-Pesa', icon: 'send_to_mobile' },
-  { id: 'awashbirr', name: 'Awash Birr', icon: 'payments' },
-  { id: 'ebirr', name: 'E-Birr', icon: 'credit_score' },
-  { id: 'cash', name: 'Cash on Delivery', icon: 'local_atm' },
+interface PaymentAccount {
+  id: number;
+  method: string;
+  method_display: string;
+  account_name: string;
+  account_number: string;
+  bank_name?: string;
+  instructions?: string;
+  is_active: boolean;
+}
+
+const PAYMENT_METHODS: { id: PaymentMethodId; name: string; icon: string; category: string }[] = [
+  { id: 'telebirr', name: 'Telebirr', icon: 'smartphone', category: 'digital' },
+  { id: 'cbebirr', name: 'CBE Birr / CBE', icon: 'account_balance', category: 'digital' },
+  { id: 'awashbirr', name: 'Awash Bank / Birr', icon: 'payments', category: 'digital' },
+  { id: 'ebirr', name: 'E-Birr', icon: 'credit_score', category: 'digital' },
+  { id: 'cash', name: 'Cash (Delivery/Onsite/Table)', icon: 'local_atm', category: 'cash' },
+  { id: 'card', name: 'Chapa Online (Card/Bank)', icon: 'open_in_new', category: 'online' },
 ];
 
 export default function PaymentModal({
@@ -46,17 +53,46 @@ export default function PaymentModal({
   onPaymentComplete,
 }: PaymentModalProps) {
   const { t, language } = useLanguage();
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('card');
-  const [phone, setPhone] = useState('+251900000000');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('telebirr');
+  const [phone, setPhone] = useState('+251911223344');
+  const [transactionRef, setTransactionRef] = useState('');
+  const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showTestPresets, setShowTestPresets] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const birr = language === 'am' ? 'ብር' : 'ETB';
 
+  useEffect(() => {
+    if (isOpen) {
+      setError(null);
+      setTransactionRef('');
+      // Load payment accounts managed by admin
+      apiFetch('/api/v1/payments/accounts/')
+        .then((res) => res.json())
+        .then((data) => {
+          const list = Array.isArray(data) ? data : data.results || [];
+          setAccounts(list);
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const currentAccount = accounts.find((a) => a.method === paymentMethod);
 
   const handleTestPreset = (testPhone: string) => {
     setPhone(testPhone);
     setError(null);
+  };
+
+  const handleCopyAccount = (number: string) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(number);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handlePay = async (e: React.FormEvent) => {
@@ -64,10 +100,15 @@ export default function PaymentModal({
     setIsSubmitting(true);
     setError(null);
 
+    // Validation: if manual digital method, transaction reference is required
+    const isManualDigital = ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(paymentMethod);
+    if (isManualDigital && !transactionRef.trim() && !phone.includes('900000000')) {
+      setError(t('Please enter your transaction reference or confirmation code after transferring funds.'));
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      // apiFetch, not raw fetch: an expired access cookie is refreshed and the
-      // request replayed. Without it a long-idle customer gets
-      // "Authentication credentials were not provided" instead of a payment page.
       const res = await apiFetch('/api/v1/payments/initialize/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,6 +116,7 @@ export default function PaymentModal({
           order_id: orderId,
           payment_method: paymentMethod,
           phone_number: phone,
+          transaction_reference: transactionRef.trim(),
         }),
       });
 
@@ -94,22 +136,31 @@ export default function PaymentModal({
           `${t('Payment of')} ${birr} ${totalAmountEtb} ${t('via')} ${t(paymentMethod.toUpperCase())} — ${t('successful!')}`
         );
       } else if (payment.status === 'FAILED') {
-        setError(`${t('Payment Failed:')} ${payment.failure_reason || t('INSUFFICIENT_FUNDS or processing error.')}`);
+        setError(`${t('Payment Failed:')} ${payment.failure_reason || t('Processing error.')}`);
       } else if (payment.status === 'ABANDONED') {
         setError(`${t('Payment Cancelled:')} ${payment.failure_reason || t('USER_CANCELLED.')}`);
       } else {
-        // PENDING status or fallback mode
+        // PENDING status
         if (checkoutUrl && checkoutUrl.startsWith('http')) {
-          // For fallback mode, give user a moment to read the message then redirect
           if (mode === 'fallback') {
             setError('⚠️ ' + (data.message || t('Payment gateway is temporarily unavailable. Redirecting to your orders...')));
             setTimeout(() => { window.location.href = checkoutUrl; }, 2500);
           } else {
-            // Real Chapa checkout — redirect immediately
+            // Real Chapa hosted checkout
             window.location.href = checkoutUrl;
           }
+        } else if (paymentMethod === 'cash') {
+          onPaymentComplete(
+            'PENDING',
+            payment.tx_ref,
+            t('Cash order placed! Staff will confirm payment upon delivery, pickup, or at your table.')
+          );
         } else {
-          onPaymentComplete('PENDING', payment.tx_ref, t('Payment initialized. Please complete payment via Chapa gateway.'));
+          onPaymentComplete(
+            'PENDING',
+            payment.tx_ref,
+            t('Transfer reference submitted! Manager will verify the account and approve your order.')
+          );
         }
       }
     } catch (err: any) {
@@ -121,14 +172,16 @@ export default function PaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-fade-in">
-      <div className="relative w-[95%] sm:w-full max-w-lg my-auto bg-surface-2 border border-[var(--border)] rounded-2xl shadow-2xl p-5 sm:p-7 text-[var(--text)] max-h-[92vh] overflow-y-auto">
+      <div className="relative w-[95%] sm:w-full max-w-lg my-auto bg-surface-2 border border-[var(--border)] rounded-2xl shadow-2xl p-5 sm:p-6 text-[var(--text)] max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-[var(--border)]">
           <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-[var(--accent)] text-2xl">account_balance_wallet</span>
+            <div className="w-10 h-10 rounded-full bg-[var(--accent-soft)] flex items-center justify-center text-[var(--accent)]">
+              <span className="material-symbols-outlined text-2xl">account_balance_wallet</span>
+            </div>
             <div>
-              <h3 className="font-display text-lg sm:text-xl font-bold text-[var(--accent)]">{t('Chapa Payment Gateway')}</h3>
-              <p className="text-[11px] text-[var(--muted)]">Order #{orderNumber} • ETB {totalAmountEtb}</p>
+              <h3 className="font-display text-lg sm:text-xl font-bold text-[var(--accent)]">{t('Choose Payment Method')}</h3>
+              <p className="text-[12px] text-[var(--muted)]">Order #{orderNumber} • <strong className="text-[var(--text)]">{birr} {totalAmountEtb}</strong></p>
             </div>
           </div>
           <button
@@ -137,15 +190,6 @@ export default function PaymentModal({
           >
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
-        </div>
-
-        {/* Chapa Banner */}
-        <div className="mt-3.5 p-3 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-base">verified_user</span>
-            <span className="font-semibold">{t('Chapa ETB Payment Active')}</span>
-          </div>
-          <span className="px-2 py-0.5 rounded bg-[var(--accent)] text-[var(--accent-contrast)] text-[10px] font-bold uppercase">{t('Official')}</span>
         </div>
 
         {/* Error Alert */}
@@ -174,99 +218,156 @@ export default function PaymentModal({
                   key={m.id}
                   type="button"
                   onClick={() => setPaymentMethod(m.id)}
-                  className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all ${
+                  className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all cursor-pointer ${
                     paymentMethod === m.id
-                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm'
-                      : ' bg-surface-2 border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
+                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm ring-1 ring-[var(--accent)]/40 font-bold'
+                      : 'bg-surface border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20 hover:text-[var(--text)]'
                   }`}
                 >
                   <span className="material-symbols-outlined text-xl">{m.icon}</span>
-                  <span className="text-xs font-bold truncate">{t(m.name)}</span>
+                  <span className="text-xs truncate">{t(m.name)}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Test Phone Presets for Mobile Money */}
-          {paymentMethod !== 'cash' && paymentMethod !== 'card' && (
-            <div>
-              <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">
-                {t('Chapa Mobile Test Phone Scenarios')}
-              </label>
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <button
-                  type="button"
-                  onClick={() => handleTestPreset('+251900000000')}
-                  className={`p-2 rounded-lg border text-xs text-left transition-all ${
-                    phone.includes('900000000')
-                      ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300'
-                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
-                  }`}
-                >
-                  <p className="font-bold">🟢 900 000 000</p>
-                  <p className="text-[10px] text-emerald-400/80">{t('Success Scenario')}</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleTestPreset('+251911111111')}
-                  className={`p-2 rounded-lg border text-xs text-left transition-all ${
-                    phone.includes('911111111')
-                      ? 'bg-red-950/60 border-red-500 text-red-300'
-                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
-                  }`}
-                >
-                  <p className="font-bold">🔴 911 111 111</p>
-                  <p className="text-[10px] text-red-400/80">{t('Insufficient Funds')}</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleTestPreset('+251922222222')}
-                  className={`p-2 rounded-lg border text-xs text-left transition-all ${
-                    phone.includes('922222222')
-                      ? 'bg-amber-950/60 border-amber-500 text-amber-300'
-                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
-                  }`}
-                >
-                  <p className="font-bold">🟡 922 222 222</p>
-                  <p className="text-[10px] text-amber-400/80">{t('User Cancellation')}</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleTestPreset('+251933333333')}
-                  className={`p-2 rounded-lg border text-xs text-left transition-all ${
-                    phone.includes('933333333')
-                      ? 'bg-blue-950/60 border-blue-500 text-blue-300'
-                      : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:bg-[var(--border)]/20'
-                  }`}
-                >
-                  <p className="font-bold">⏱️ 933 333 333</p>
-                  <p className="text-[10px] text-blue-400/80">{t('Timeout / Pending')}</p>
-                </button>
+          {/* Account Details for Manual Digital Payments (Telebirr, CBE, Awash, E-Birr) */}
+          {['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(paymentMethod) && (
+            <div className="p-3.5 rounded-xl bg-surface border border-[var(--border)] space-y-3 animate-fade-in">
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]/60">
+                <span className="text-xs font-bold text-[var(--accent)] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-base">savings</span>
+                  {currentAccount?.bank_name || t(paymentMethod.toUpperCase())}
+                </span>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  {t('Direct Transfer')}
+                </span>
               </div>
 
-              {/* Ethiopian Phone Input */}
-              <label className="block text-xs font-semibold text-[var(--muted)] mb-1">
-                {t('Phone Number')}
-              </label>
-              <EthiopianPhoneInput
-                value={phone}
-                onChange={setPhone}
-                required
-              />
+              {currentAccount ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] text-[var(--muted)]">{t('Account / Business Name')}</p>
+                      <p className="text-sm font-bold text-[var(--text)]">{currentAccount.account_name}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-2 border border-[var(--border)]">
+                    <div>
+                      <p className="text-[10px] text-[var(--muted)] uppercase tracking-wider">{t('Account / Mobile Number')}</p>
+                      <p className="font-mono text-base font-bold text-[var(--accent)] tracking-wider">{currentAccount.account_number}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyAccount(currentAccount.account_number)}
+                      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[var(--accent)] text-[var(--accent-contrast)] hover:opacity-90 active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-sm">{copied ? 'check' : 'content_copy'}</span>
+                      {copied ? t('Copied!') : t('Copy')}
+                    </button>
+                  </div>
+
+                  {currentAccount.instructions && (
+                    <p className="text-[11px] text-[var(--muted)] italic leading-relaxed">
+                      💡 {currentAccount.instructions}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--muted)]">
+                  {t('Transfer')} <strong className="text-[var(--accent)]">{birr} {totalAmountEtb}</strong> {t('via your')} {t(paymentMethod)} {t('app, then enter your transaction reference below.')}
+                </p>
+              )}
+
+              {/* Transaction Reference Input */}
+              <div className="pt-2 border-t border-[var(--border)]/60">
+                <label className="block text-xs font-semibold text-[var(--text)] mb-1">
+                  {t('Transaction Reference / Confirmation Code')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={transactionRef}
+                  onChange={(e) => setTransactionRef(e.target.value)}
+                  placeholder={t('e.g. Telebirr Txn ID, CBE Ref, or SMS confirmation code')}
+                  className="w-full h-10 px-3 rounded-xl bg-surface-2 border border-[var(--border)] text-sm text-[var(--text)] focus:border-[var(--accent)] focus:outline-none transition-colors"
+                />
+                <p className="text-[10.5px] text-[var(--muted)] mt-1">
+                  {t('Manager will verify this transaction code in the cafe account before the chef prepares your order.')}
+                </p>
+              </div>
+
+              {/* Sender Phone Input */}
+              <div>
+                <label className="block text-xs font-semibold text-[var(--muted)] mb-1">
+                  {t('Sender Phone Number')}
+                </label>
+                <EthiopianPhoneInput
+                  value={phone}
+                  onChange={setPhone}
+                  required
+                />
+              </div>
+
+              {/* Quick toggle for developer test numbers */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowTestPresets(!showTestPresets)}
+                  className="text-[11px] text-[var(--muted)] hover:text-[var(--accent)] flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-xs">{showTestPresets ? 'expand_less' : 'expand_more'}</span>
+                  {showTestPresets ? t('Hide test presets') : t('Developer test phone presets')}
+                </button>
+                {showTestPresets && (
+                  <div className="grid grid-cols-2 gap-2 mt-2 p-2 rounded-lg bg-surface-2 border border-[var(--border)]">
+                    <button
+                      type="button"
+                      onClick={() => handleTestPreset('+251900000000')}
+                      className="p-1.5 rounded text-left text-[11px] text-emerald-500 hover:bg-emerald-500/10"
+                    >
+                      🟢 900 000 000 (Mock Auto-Pass)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleTestPreset('+251911111111')}
+                      className="p-1.5 rounded text-left text-[11px] text-red-500 hover:bg-red-500/10"
+                    >
+                      🔴 911 111 111 (Mock Fail)
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          {paymentMethod === 'card' && (
-            <div className="p-3.5 rounded-xl bg-surface-2/70 border border-tertiary/20 text-xs space-y-1.5">
-              <p className="font-bold text-[var(--accent)] flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-base">open_in_new</span>
-                {t('Redirect to Chapa Hosted Checkout')}
+          {/* Cash Payment Information */}
+          {paymentMethod === 'cash' && (
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-2 animate-fade-in">
+              <div className="flex items-center gap-2 font-bold text-sm text-amber-700 dark:text-amber-300">
+                <span className="material-symbols-outlined text-xl">payments</span>
+                <span>{t('Cash on Delivery / Onsite / Table Service')}</span>
+              </div>
+              <p className="text-[12px] text-[var(--muted)] leading-relaxed">
+                {t('No advance digital payment needed right now. Please have cash ready when your order is delivered, when picking up at the counter, or at your reserved table.')}
               </p>
-              <p className="text-[var(--muted)] text-[11px] leading-relaxed">
-                {t("Clicking the button below will open Chapa's official hosted checkout page where you can pay using Telebirr, CBE Birr, Debit/Credit Card, or Bank Transfer.")}
+              <div className="p-2 rounded bg-surface border border-[var(--border)] text-[11px] text-[var(--text)] flex items-center gap-1.5 font-medium">
+                <span className="material-symbols-outlined text-sm text-[var(--accent)]">info</span>
+                {t('Cafe staff will verify and approve your payment upon receipt before final completion.')}
+              </div>
+            </div>
+          )}
+
+          {/* Chapa Hosted Checkout Information */}
+          {paymentMethod === 'card' && (
+            <div className="p-4 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent)] text-xs space-y-2 animate-fade-in">
+              <div className="flex items-center gap-2 font-bold text-sm text-[var(--accent)]">
+                <span className="material-symbols-outlined text-xl">open_in_new</span>
+                <span>{t('Chapa Official Hosted Payment')}</span>
+              </div>
+              <p className="text-[12px] text-[var(--muted)] leading-relaxed">
+                {t("Clicking the button below redirects you to Chapa's secure checkout page where you can pay using Debit/Credit cards or bank cards with automated online confirmation.")}
               </p>
             </div>
           )}
@@ -275,16 +376,18 @@ export default function PaymentModal({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3.5 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             {isSubmitting ? (
               <span className="inline-block w-4 h-4 border-2 border-[var(--accent-contrast)] border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
                 <span>
-                  {paymentMethod === 'card'
-                    ? `${t('Proceed to Chapa Payment')} (${birr} ${totalAmountEtb})`
-                    : `${t('Pay')} ${birr} ${totalAmountEtb} ${t('via')} ${t(paymentMethod.toUpperCase())}`}
+                  {paymentMethod === 'cash'
+                    ? `${t('Place Cash Order')} (${birr} ${totalAmountEtb})`
+                    : paymentMethod === 'card'
+                      ? `${t('Proceed to Chapa Payment')} (${birr} ${totalAmountEtb})`
+                      : `${t('Submit Transfer for Approval')} (${birr} ${totalAmountEtb})`}
                 </span>
                 <span className="material-symbols-outlined text-base">east</span>
               </>
