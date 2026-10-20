@@ -176,6 +176,8 @@ export const translations: Record<string, string> = {
     'ሜኑው እንዲጫን የኋላ ሲስተም (Django) እየሠራ መሆኑን ያረጋግጡ!',
   'Add to Cart': 'ወደ ቅርጫት ጨምር',
   'Add to Order': 'ወደ ትዕዛዝ ጨምር',
+  'Tap to customize': 'ዝርዝር ለማየት ይጫኑ',
+  'Add': 'ጨምር',
 
   // ── Story ─────────────────────────────────────────────────────────────
   'Roasted in the room,': 'በእዛው የሚቆላ፣',
@@ -374,6 +376,25 @@ export const translations: Record<string, string> = {
   "Clicking the button below will open Chapa's official hosted checkout page where you can pay using Telebirr, CBE Birr, Debit/Credit Card, or Bank Transfer.":
     'ከዚህ በታች ያለውን አዝራር ሲጫኑ የቻፓ ኦፊሴላዊ የክፍያ ገጽ ይከፈታል፤ በቴሌብር፣ በCBE ብር፣ በዴቢት/ክሬዲት ካርድ ወይም በባንክ ማስተላለፍ ይችላሉ።',
   'Chapa ETB Payment Active': 'የቻፓ በብር ክፍያ አገልጋይ',
+  'Payment Accounts (Customer Transfer Numbers)': 'የክፍያ ሂሳቦችና ስልክ ቁጥሮች',
+  'Add Payment Account': 'አዲስ የክፍያ ሂሳብ ጨምር',
+  'Edit Payment Account': 'የክፍያ ሂሳብ አርትዕ',
+  'Payment Method / Provider': 'የክፍያ ዘዴ / አቅራቢ',
+  'Account / Business Name': 'የሂሳብ ባለቤት / የንግድ ስም',
+  'Account Number or Mobile Number': 'የሂሳብ ቁጥር ወይም ስልክ ቁጥር',
+  'Account / Mobile Number': 'የሂሳብ / ሞባይል ቁጥር',
+  'Bank / Wallet Label (Optional)': 'የባንክ ወይም ዋሌት ስም (አማራጭ)',
+  'Payment Instructions for Customer': 'ለደንበኛው የሚተላለፍ የክፍያ መመሪያ',
+  'Approve Cash Received': 'ጥሬ ገንዘብ መቀበልን አረጋግጥ',
+  'Approve Payment (Funds Verified)': 'ክፍያውን አፅድቅ (ገንዘቡ ገብቷል)',
+  'Cash Payment Approval Required': 'የጥሬ ገንዘብ ክፍያ ማረጋገጫ ያስፈልጋል',
+  'Check Account': 'ሂሳብዎን ይፈትሹ',
+  'Transaction Confirmation Code / Ref #': 'የክፍያ ማረጋገጫ ቁጥር / ኮድ',
+  'Submit Transfer for Approval': 'ክፍያውን ለማረጋገጫ አስገባ',
+  'Place Cash Order': 'ትዕዛዝ በጥሬ ገንዘብ መዝግብ',
+  'Direct Transfer': 'ቀጥታ ማስተላለፍ',
+  'Copy': 'ቅዳ',
+  'Copied!': 'ተቀድቷል!',
 
   // ── Orders & Receipt & Tracking ───────────────────────────────────────
   'Order Status Timeline': 'የትዕዛዝ ሁኔታ ሂደቶች',
