@@ -110,7 +110,7 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'order_number', 'customer', 'created_at', 'placed_at')
 
     def get_latest_payment(self, order):
-        """Latest payment attempt, so the customer can see/finish an unfinished payment."""
+        """Latest payment attempt, so the customer and staff can track approval/payment."""
         payment = order.payments.order_by('-created_at').first()
         if not payment:
             return None
@@ -119,7 +119,12 @@ class OrderSerializer(serializers.ModelSerializer):
             'tx_ref': payment.tx_ref,
             'status': payment.status,
             'payment_method': payment.payment_method,
+            'transaction_reference': payment.transaction_reference,
             'failure_reason': payment.failure_reason,
+            'approved_at': payment.approved_at,
+            'approved_by': payment.approved_by.username if payment.approved_by else None,
+            'approval_notes': payment.approval_notes,
+            'phone_number': payment.phone_number,
             'checkout_url': payment.checkout_url,
             'created_at': payment.created_at,
             'verified_at': payment.verified_at,
