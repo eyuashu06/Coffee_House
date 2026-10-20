@@ -532,6 +532,12 @@ export default function AccountPage() {
     }
   };
 
+  useEffect(() => {
+    if (!loading && !user && !sessionExpired) {
+      window.location.href = '/?welcome=1';
+    }
+  }, [loading, user, sessionExpired]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
@@ -556,9 +562,6 @@ export default function AccountPage() {
   }
 
   if (!user) {
-    if (typeof window !== 'undefined') {
-      window.location.href = '/?welcome=1';
-    }
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />

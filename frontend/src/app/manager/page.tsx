@@ -1141,6 +1141,12 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
     }
   };
 
+  useEffect(() => {
+    if (!loading && !user && !sessionExpired) {
+      window.location.href = '/?welcome=1';
+    }
+  }, [loading, user, sessionExpired]);
+
   if (loading || (isLoading && user)) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
@@ -1167,17 +1173,15 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
     );
   }
 
-  if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) {
-    if (!user) {
-      if (typeof window !== 'undefined') {
-        window.location.href = '/?welcome=1';
-      }
-      return (
-        <div className="min-h-screen bg-surface flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-        </div>
-      );
-    }
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (user.role !== 'MANAGER' && user.role !== 'ADMIN') {
     return (
       <div className="min-h-screen bg-surface text-[var(--text)] flex flex-col items-center justify-center font-body">
         <span className="material-symbols-outlined text-5xl text-red-500 mb-4">gavel</span>
