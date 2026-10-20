@@ -646,3 +646,139 @@ class WebhookSignatureTests(TestCase):
         customer_notifications = Notification.objects.filter(
             user=self.user, title__contains='ORD-HOOK-001')
         self.assertLessEqual(customer_notifications.count(), 1)
+
+
+class ManualPaymentAndApprovalTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.manager = User.objects.create_user(
+            username='testmanager',
+            email='manager@example.com',
+            password='Password123!',
+            role='MANAGER',
+            is_staff=True
+        )
+        self.customer = User.objects.create_user(
+            username='testcust',
+            email='cust@example.com',
+            password='Password123!',
+            role='CUSTOMER'
+        )
+        self.order = Order.objects.create(
+            customer=self.customer,
+            order_number='ORD-MANUAL-001',
+            order_type='DELIVERY',
+            contact_name='Test Cust',
+            contact_phone='+251911998877',
+            delivery_address='Bole, Addis Ababa',
+            subtotal_etb=Decimal('350.00'),
+            delivery_fee_etb=Decimal('50.00'),
+            total_amount_etb=Decimal('400.00'),
+            status='PENDING_PAYMENT'
+        )
+
+    def test_cash_payment_initializes_as_pending_not_placed(self):
+        """Cash on delivery/onsite/table must stay PENDING_PAYMENT until staff approves."""
+        self.client.force_authenticate(self.customer)
+        res = self.client.post('/api/v1/payments/initialize/', {
+            'order_id': self.order.id,
+            'payment_method': 'cash',
+        })
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'PENDING_PAYMENT')
+        payment = self.order.payments.first()
+        self.assertIsNotNone(payment)
+        self.assertEqual(payment.status, 'PENDING')
+        self.assertEqual(payment.payment_method, 'cash')
+
+    def test_manual_transfer_stores_transaction_reference_and_stays_pending(self):
+        """Telebirr/CBE/Awash/E-Birr manual transfer stores user's confirmation code."""
+        self.client.force_authenticate(self.customer)
+        res = self.client.post('/api/v1/payments/initialize/', {
+            'order_id': self.order.id,
+            'payment_method': 'cbebirr',
+            'phone_number': '+251911998877',
+            'transaction_reference': 'CBE-FT-88990011',
+        })
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'PENDING_PAYMENT')
+        payment = self.order.payments.first()
+        self.assertEqual(payment.status, 'PENDING')
+        self.assertEqual(payment.transaction_reference, 'CBE-FT-88990011')
+
+    def test_manager_can_approve_payment_and_advance_order_to_placed(self):
+        """Manager verifies account and approves payment, order moves to PLACED for chef."""
+        payment = Payment.objects.create(
+            order=self.order,
+            tx_ref='TX-MANUAL-123',
+            payment_method='telebirr',
+            transaction_reference='TEL-TX-12345',
+            amount_etb=Decimal('400.00'),
+            status='PENDING'
+        )
+        self.client.force_authenticate(self.manager)
+        res = self.client.post(f'/api/v1/payments/{payment.id}/approve/', {
+            'notes': 'Verified in Telebirr merchant balance.'
+        })
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, 'SUCCESS')
+        self.assertEqual(payment.approved_by, self.manager)
+        self.assertIsNotNone(payment.approved_at)
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'PLACED')
+        self.assertIsNotNone(self.order.placed_at)
+
+    def test_non_manager_cannot_approve_payment(self):
+        """Customer or unauthorized user cannot approve payment."""
+        payment = Payment.objects.create(
+            order=self.order,
+            tx_ref='TX-UNAUTH-123',
+            payment_method='cash',
+            amount_etb=Decimal('400.00'),
+            status='PENDING'
+        )
+        self.client.force_authenticate(self.customer)
+        res = self.client.post(f'/api/v1/payments/{payment.id}/approve/', {})
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, 'PENDING')
+
+    def test_payment_accounts_crud_by_manager(self):
+        """Public can list accounts; manager can edit/add account numbers."""
+        from apps.payments.models import PaymentAccount
+        # Public list
+        self.client.force_authenticate(None)
+        res = self.client.get('/api/v1/payments/accounts/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        # Non-manager cannot create
+        self.client.force_authenticate(self.customer)
+        res = self.client.post('/api/v1/payments/accounts/', {
+            'method': 'telebirr',
+            'account_name': 'Hacker Account',
+            'account_number': '0999999999',
+        })
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Manager can create and update
+        self.client.force_authenticate(self.manager)
+        create_res = self.client.post('/api/v1/payments/accounts/', {
+            'method': 'telebirr',
+            'account_name': 'Buna Hub Telebirr Pay',
+            'account_number': '0911002233',
+            'instructions': 'Pay via Telebirr merchant 0911002233',
+            'is_active': True,
+        })
+        self.assertEqual(create_res.status_code, status.HTTP_201_CREATED)
+        acc_id = create_res.data['id']
+
+        patch_res = self.client.patch(f'/api/v1/payments/accounts/{acc_id}/', {
+            'account_number': '0911998877',
+        })
+        self.assertEqual(patch_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(patch_res.data['account_number'], '0911998877')
+
