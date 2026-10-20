@@ -79,6 +79,12 @@ ALLOWED_HOSTS = [
     for host in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,backend').split(',')
     if host.strip()
 ]
+_render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME', '').strip()
+if _render_host and _render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_render_host)
+if '.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('.onrender.com')
+
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -168,40 +174,61 @@ TEMPLATES = [
 WSGI_APPLICATION = 'coffee_project.wsgi.application'
 
 # ----------------------------------------------------
-# MySQL Database Configuration with Automatic Fallback
+# Database Configuration (DATABASE_URL / MySQL / SQLite)
 # ----------------------------------------------------
-MYSQL_HOST = os.environ.get('MYSQL_HOST', 'localhost')
-MYSQL_PORT = os.environ.get('MYSQL_PORT', '3306')
-MYSQL_NAME = os.environ.get('MYSQL_DATABASE', 'coffee_reserve_db')
-MYSQL_USER = os.environ.get('MYSQL_USER', 'root')
-MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', 'root')
-
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
 use_sqlite_forced = os.environ.get('USE_SQLITE', 'false').lower() == 'true'
-use_sqlite = use_sqlite_forced
 
-if not use_sqlite_forced:
-    try:
-        import pymysql
-        conn = pymysql.connect(
-            host=MYSQL_HOST,
-            user=MYSQL_USER,
-            password=MYSQL_PASSWORD,
-            port=int(MYSQL_PORT),
-            connect_timeout=2
-        )
-        conn.close()
-    except Exception:
-        use_sqlite = True
-
-if use_sqlite:
+if DATABASE_URL and not use_sqlite_forced:
+    from urllib.parse import urlparse, unquote
+    _parsed = urlparse(DATABASE_URL)
+    _is_postgres = _parsed.scheme in ('postgres', 'postgresql')
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'ENGINE': 'django.db.backends.postgresql' if _is_postgres else 'django.db.backends.mysql',
+            'NAME': _parsed.path.lstrip('/'),
+            'USER': unquote(_parsed.username or ''),
+            'PASSWORD': unquote(_parsed.password or ''),
+            'HOST': _parsed.hostname or '',
+            'PORT': str(_parsed.port or (5432 if _is_postgres else 3306)),
         }
     }
+    if not _is_postgres:
+        DATABASES['default']['OPTIONS'] = {
+            'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        }
 else:
-    DATABASES = {
+    MYSQL_HOST = os.environ.get('MYSQL_HOST', 'localhost')
+    MYSQL_PORT = os.environ.get('MYSQL_PORT', '3306')
+    MYSQL_NAME = os.environ.get('MYSQL_DATABASE', 'coffee_reserve_db')
+    MYSQL_USER = os.environ.get('MYSQL_USER', 'root')
+    MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', 'root')
+
+    use_sqlite = use_sqlite_forced
+    if not use_sqlite_forced:
+        try:
+            import pymysql
+            conn = pymysql.connect(
+                host=MYSQL_HOST,
+                user=MYSQL_USER,
+                password=MYSQL_PASSWORD,
+                port=int(MYSQL_PORT),
+                connect_timeout=2
+            )
+            conn.close()
+        except Exception:
+            use_sqlite = True
+
+    if use_sqlite:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
+    else:
+        DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
             'NAME': MYSQL_NAME,
@@ -292,6 +319,7 @@ for _origin in _extra_cors:
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.vercel\.app$",
+    r"^https://.*\.onrender\.com$",
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_EXPOSE_HEADERS = ['Content-Type', 'Set-Cookie']
@@ -301,6 +329,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'https://*.vercel.app',
+    'https://*.onrender.com',
 ]
 if _frontend_url and _frontend_url not in CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS.append(_frontend_url)
