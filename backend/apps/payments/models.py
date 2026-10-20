@@ -1,6 +1,39 @@
 from django.db import models
+from django.conf import settings
 from django.utils import timezone
 from apps.orders.models import Order, OrderStatusHistory
+
+
+class PaymentAccount(models.Model):
+    """
+    Designated accounts/numbers managed by admin for manual digital payments.
+    Customers transfer funds directly to these accounts (Telebirr, CBE, Awash, E-Birr),
+    submit their transaction reference code, and admin approves the payment.
+    """
+    METHOD_CHOICES = (
+        ('telebirr', 'Telebirr'),
+        ('cbebirr', 'CBE Birr / CBE Account'),
+        ('awashbirr', 'Awash Bank / Awash Birr'),
+        ('ebirr', 'E-Birr'),
+        ('mpesa', 'M-Pesa'),
+        ('other', 'Other Bank / Wallet'),
+    )
+
+    method = models.CharField(max_length=30, choices=METHOD_CHOICES, db_index=True)
+    account_name = models.CharField(max_length=150, help_text='Account holder or business name (e.g. Buna Hub Coffee)')
+    account_number = models.CharField(max_length=100, help_text='Account number or mobile phone number for transfer')
+    bank_name = models.CharField(max_length=100, blank=True, help_text='Bank or wallet provider name')
+    instructions = models.TextField(blank=True, help_text='Instructions displayed to customer during payment')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['method', '-is_active', 'account_name']
+
+    def __str__(self):
+        return f"{self.get_method_display()} - {self.account_name} ({self.account_number})"
+
 
 class Payment(models.Model):
     STATUS_CHOICES = (
@@ -16,13 +49,18 @@ class Payment(models.Model):
         ('mpesa', 'M-Pesa'),
         ('awashbirr', 'Awash Birr'),
         ('ebirr', 'E-Birr'),
-        ('card', 'Credit / Debit Card'),
-        ('cash', 'Cash on Delivery'),
+        ('card', 'Credit / Debit Card (Online Chapa)'),
+        ('cash', 'Cash (Delivery / Onsite / Table)'),
     )
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
     tx_ref = models.CharField(max_length=100, unique=True, db_index=True)
     chapa_reference = models.CharField(max_length=100, blank=True)
+    transaction_reference = models.CharField(
+        max_length=150,
+        blank=True,
+        help_text='Customer-submitted transaction ID / reference code for manual transfers'
+    )
     payment_method = models.CharField(max_length=30, choices=METHOD_CHOICES, default='telebirr')
     phone_number = models.CharField(max_length=25, blank=True, help_text='Phone number used for mobile payment')
     amount_etb = models.DecimalField(max_digits=10, decimal_places=2)
@@ -31,6 +69,15 @@ class Payment(models.Model):
     checkout_url = models.URLField(max_length=500, blank=True)
     raw_response = models.TextField(blank=True, help_text='JSON response dump from Chapa API')
     failure_reason = models.CharField(max_length=255, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='approved_payments'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approval_notes = models.TextField(blank=True)
     #: When the gateway last confirmed this transaction's outcome. Lets support
     #: tell "never checked" apart from "checked and still pending".
     verified_at = models.DateTimeField(null=True, blank=True)
