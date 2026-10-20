@@ -610,17 +610,17 @@ export default function ManagerDashboard() {
         await fetchPaymentAccounts();
       } else {
         const err = await res.json().catch(() => ({}));
-        alert(err.error || err.detail || t('Failed to save payment account.'));
+        setActionMsg(err.error || err.detail || t('Failed to save payment account.'));
       }
     } catch (err: any) {
-      alert(err.message || t('Error saving payment account.'));
+      setActionMsg(err.message || t('Error saving payment account.'));
     } finally {
       setIsSavingAccount(false);
     }
   };
 
   const handleDeleteAccount = async (accId: number) => {
-    if (!confirm(t('Are you sure you want to delete this payment account?'))) return;
+    if (typeof window !== 'undefined' && !window.confirm(t('Are you sure you want to delete this payment account?'))) return;
     try {
       const res = await apiFetch(`/api/v1/payments/accounts/${accId}/`, {
         method: 'DELETE',
@@ -1092,7 +1092,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
   };
 
   const handleRejectPayment = async (paymentId?: number, orderId?: number) => {
-    const reason = prompt(t('Enter rejection reason:'), t('Payment verification failed.'));
+    const reason = typeof window !== 'undefined'
+      ? window.prompt(t('Enter rejection reason:'), t('Payment verification failed.'))
+      : null;
     if (reason === null) return;
     const targetId = paymentId || orderId;
     setActionMsg(null);

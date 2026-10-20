@@ -756,10 +756,10 @@ export default function Home() {
                 {/* ======================= NAV ======================= */}
                 <header className="sticky top-0 z-50 glass-bar border-b border-[var(--border)]">
                     <div className="max-w-[1360px] mx-auto flex items-center justify-between gap-3 px-4 sm:px-6 h-16">
-                        <a href="/?welcome=1" className="flex items-center gap-2.5 min-w-0 group">
+                        <Link href="/?welcome=1" className="flex items-center gap-2.5 min-w-0 group">
                             <span className="w-9 h-9 shrink-0 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
                             <span className="font-display text-[20px] sm:text-[21px] tracking-wide">{cafeSettings.cafe_name || 'Buna Hub'}</span>
-                        </a>
+                        </Link>
                         <nav className="hidden md:flex items-center gap-8 text-[15px] font-medium text-[var(--muted)]">
                             {navLinks.map((link) => (
                                 <a key={link.href} className="hover:text-[var(--accent)] transition-colors" href={link.href}>{link.label}</a>
