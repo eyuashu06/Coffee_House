@@ -176,72 +176,91 @@ WSGI_APPLICATION = 'coffee_project.wsgi.application'
 # ----------------------------------------------------
 # Database Configuration (DATABASE_URL / MySQL / SQLite)
 # ----------------------------------------------------
+# Supports:
+# 1. USE_SQLITE=true to force SQLite for lightweight local dev/testing.
+# 2. DATABASE_URL with postgres/postgresql scheme (e.g., Render deployment).
+# 3. MySQL via DATABASE_URL or individual MYSQL_* environment variables.
+#    In local environments, if MySQL is unreachable or credentials fail (e.g.
+#    Access Denied 1045), it gracefully falls back to SQLite (`db.sqlite3`).
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
 use_sqlite_forced = os.environ.get('USE_SQLITE', 'false').lower() == 'true'
 
-if DATABASE_URL and not use_sqlite_forced:
-    from urllib.parse import urlparse, unquote
-    _parsed = urlparse(DATABASE_URL)
-    _is_postgres = _parsed.scheme in ('postgres', 'postgresql')
+if use_sqlite_forced:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql' if _is_postgres else 'django.db.backends.mysql',
-            'NAME': _parsed.path.lstrip('/'),
-            'USER': unquote(_parsed.username or ''),
-            'PASSWORD': unquote(_parsed.password or ''),
-            'HOST': _parsed.hostname or '',
-            'PORT': str(_parsed.port or (5432 if _is_postgres else 3306)),
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
-    if not _is_postgres:
-        DATABASES['default']['OPTIONS'] = {
-            'charset': 'utf8mb4',
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        }
 else:
-    MYSQL_HOST = os.environ.get('MYSQL_HOST', 'localhost')
-    MYSQL_PORT = os.environ.get('MYSQL_PORT', '3306')
-    MYSQL_NAME = os.environ.get('MYSQL_DATABASE', 'coffee_reserve_db')
-    MYSQL_USER = os.environ.get('MYSQL_USER', 'root')
-    MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', 'root')
+    _is_postgres = False
+    if DATABASE_URL:
+        from urllib.parse import urlparse, unquote
+        _parsed = urlparse(DATABASE_URL)
+        _is_postgres = _parsed.scheme in ('postgres', 'postgresql')
+        if _is_postgres:
+            DATABASES = {
+                'default': {
+                    'ENGINE': 'django.db.backends.postgresql',
+                    'NAME': _parsed.path.lstrip('/'),
+                    'USER': unquote(_parsed.username or ''),
+                    'PASSWORD': unquote(_parsed.password or ''),
+                    'HOST': _parsed.hostname or '',
+                    'PORT': str(_parsed.port or 5432),
+                }
+            }
+        else:
+            _db_name = _parsed.path.lstrip('/')
+            _db_user = unquote(_parsed.username or '')
+            _db_password = unquote(_parsed.password or '')
+            _db_host = _parsed.hostname or 'localhost'
+            _db_port = str(_parsed.port or 3306)
+    else:
+        _db_name = os.environ.get('MYSQL_DATABASE', 'coffee_reserve_db')
+        _db_user = os.environ.get('MYSQL_USER', 'root')
+        _db_password = os.environ.get('MYSQL_PASSWORD', 'root')
+        _db_host = os.environ.get('MYSQL_HOST', 'localhost')
+        _db_port = os.environ.get('MYSQL_PORT', '3306')
 
-    use_sqlite = use_sqlite_forced
-    if not use_sqlite_forced:
+    if not _is_postgres:
+        use_sqlite = False
         try:
             import pymysql
             conn = pymysql.connect(
-                host=MYSQL_HOST,
-                user=MYSQL_USER,
-                password=MYSQL_PASSWORD,
-                port=int(MYSQL_PORT),
+                host=_db_host,
+                user=_db_user,
+                password=_db_password,
+                port=int(_db_port),
                 connect_timeout=2
             )
             conn.close()
-        except Exception:
+        except Exception as _e:
+            import sys
+            print(f"[settings.py] Warning: Could not connect to MySQL at {_db_host}:{_db_port} ({_e}). Falling back to SQLite.", file=sys.stderr)
             use_sqlite = True
 
-    if use_sqlite:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
+        if use_sqlite:
+            DATABASES = {
+                'default': {
+                    'ENGINE': 'django.db.backends.sqlite3',
+                    'NAME': BASE_DIR / 'db.sqlite3',
+                }
             }
-        }
-    else:
-        DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': MYSQL_NAME,
-            'USER': MYSQL_USER,
-            'PASSWORD': MYSQL_PASSWORD,
-            'HOST': MYSQL_HOST,
-            'PORT': MYSQL_PORT,
-            'OPTIONS': {
-                'charset': 'utf8mb4',
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        else:
+            DATABASES = {
+                'default': {
+                    'ENGINE': 'django.db.backends.mysql',
+                    'NAME': _db_name,
+                    'USER': _db_user,
+                    'PASSWORD': _db_password,
+                    'HOST': _db_host,
+                    'PORT': _db_port,
+                    'OPTIONS': {
+                        'charset': 'utf8mb4',
+                        'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                    }
+                }
             }
-        }
-    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
