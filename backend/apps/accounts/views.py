@@ -9,6 +9,8 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 from .models import Address
 from .serializers import (
@@ -80,7 +82,9 @@ def clear_auth_cookies(response):
     response.delete_cookie('refresh_token', path='/')
     return response
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedThrottle]
     throttle_scope = 'auth_register'
@@ -98,6 +102,7 @@ class RegisterView(APIView):
             return set_auth_cookies(res, refresh, access)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
     """
     Sign-in, rate limited per address.
@@ -106,6 +111,7 @@ class LoginView(APIView):
     doubles as an account-existence oracle - which is precisely what an unlimited
     endpoint should not be. DRF answers 429 once the limit is hit.
     """
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedThrottle]
     throttle_scope = 'auth_login'
@@ -128,6 +134,7 @@ class LoginView(APIView):
             return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -144,7 +151,9 @@ class LogoutView(APIView):
         res = Response({'message': 'Logged out successfully.'}, status=status.HTTP_200_OK)
         return clear_auth_cookies(res)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class CookieTokenRefreshView(APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
@@ -174,6 +183,7 @@ class CookieTokenRefreshView(APIView):
             res = Response({'error': 'Invalid or expired refresh token.'}, status=status.HTTP_401_UNAUTHORIZED)
             return clear_auth_cookies(res)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class UserProfileView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -231,7 +241,9 @@ class AddressViewSet(viewsets.ModelViewSet):
             return Address.objects.all()
         return Address.objects.filter(user=self.request.user)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class PasswordResetRequestView(APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedThrottle]
     throttle_scope = 'auth_password_reset'
@@ -311,7 +323,9 @@ class PasswordResetRequestView(APIView):
             return Response(payload, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class PasswordResetConfirmView(APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedThrottle]
     throttle_scope = 'auth_password_reset'
