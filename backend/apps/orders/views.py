@@ -4,6 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db import models
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 from .models import Order, DeliveryZone, RestaurantSettings, OrderStatusHistory
 from .serializers import (
@@ -269,6 +271,7 @@ class DeliveryZoneViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RestaurantSettingsView(APIView):
     permission_classes = [permissions.AllowAny]
     #: Named so the OpenAPI schema describes the response instead of skipping the view
@@ -297,7 +300,16 @@ class RestaurantSettingsView(APIView):
             )
 
         settings_obj = RestaurantSettings.get_settings()
-        serializer = RestaurantSettingsSerializer(settings_obj, data=request.data, partial=True)
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        # When manager explicitly opens or closes the store:
+        # If manager sets is_open=True, disable auto_schedule so store stays open even past operating hours
+        if 'is_open' in data and 'auto_schedule' not in data:
+            if data['is_open'] is True:
+                data['auto_schedule'] = False
+            elif data['is_open'] is False:
+                data['auto_schedule'] = True
+
+        serializer = RestaurantSettingsSerializer(settings_obj, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
