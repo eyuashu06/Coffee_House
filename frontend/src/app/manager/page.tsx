@@ -1306,8 +1306,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             <span>{isOpen ? t('OPEN') : t('CLOSED')}</span>
           </button>
 
-          {/* Notifications & Profile Icon Pair */}
-          <div className="flex items-center gap-1 shrink-0">
+          {/* Theme, Notifications & Profile Icon Trio in orderly placement */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            <ThemeToggle className="h-8 w-8 shrink-0 cursor-pointer" />
             <NotificationsDropdown />
             <ProfileDropdown isManagerPage={true} />
           </div>
@@ -1726,8 +1727,11 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                               </div>
                               <div className="p-2.5 rounded-lg bg-surface border border-[var(--border)] font-mono text-[11.5px] space-y-1">
                                 <div className="flex justify-between items-center">
-                                  <span className="text-[var(--muted)] font-sans">{t('Transaction Ref:')}</span>
-                                  <strong className="text-[var(--accent)] text-[12.5px] select-all font-bold tracking-wider">
+                                  <span className="text-[var(--muted)] font-sans flex items-center gap-1">
+                                    <i className="ph ph-file-text text-[14px] text-[var(--accent)]"></i>
+                                    {order.latest_payment?.transaction_reference?.startsWith('Receipt:') ? t('Receipt Document:') : t('Transaction Ref:')}
+                                  </span>
+                                  <strong className="text-[var(--accent)] text-[12px] select-all font-bold tracking-wider truncate max-w-[210px]" title={order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref || 'N/A'}>
                                     {order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref || 'N/A'}
                                   </strong>
                                 </div>
