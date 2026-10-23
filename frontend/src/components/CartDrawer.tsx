@@ -189,7 +189,7 @@ export default function CartDrawer({
           const flat = Object.entries(errData)
             .map(([, value]) => (Array.isArray(value) ? value.join(' ') : String(value)))
             .join(' ');
-          errMsg = flat || errData.detail || errData.error || JSON.stringify(errData);
+          errMsg = flat || errData.detail || errData.error || t('Please review your order details and try again.');
         } catch {}
         setOrderError(`${t('Order failed:', 'ትዕዛዝው አልተሳካም፦')} ${errMsg}`);
       }
@@ -406,7 +406,7 @@ export default function CartDrawer({
                   {([
                     { value: 'DELIVERY', label: t('Delivery'), icon: 'delivery_dining' },
                     { value: 'PICKUP', label: t('Store Pickup'), icon: 'storefront' },
-                    { value: 'DINE_IN', label: t('Dine-In'), icon: 'table_restaurant' },
+                    { value: 'DINE_IN', label: t('Dine-In / Reserved Table'), icon: 'table_restaurant' },
                   ] as { value: OrderType; label: string; icon: string }[]).map((option) => (
                     <button
                       key={option.value}
@@ -462,14 +462,13 @@ export default function CartDrawer({
               {orderType === 'DINE_IN' && (
                 <div className="space-y-2">
                   <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold">
-                    {t('Table number')}
+                    {t('Table number or reservation code')}
                   </label>
                   <input
                     type="text"
-                    inputMode="numeric"
                     value={tableNumber}
                     onChange={(e) => setTableNumber(e.target.value)}
-                    placeholder={t('Which table are you at?')}
+                    placeholder={t('Table number or reservation code')}
                     className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
                   />
                 </div>
