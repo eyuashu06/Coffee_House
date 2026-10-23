@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { apiFetch } from '../lib/api';
 import EthiopianPhoneInput from './EthiopianPhoneInput';
+import { TextSize, getSavedTextSize, applyTextSize } from '../utils/textSize';
 
 interface ProfileDropdownProps {
   onOpenSignIn?: () => void;
@@ -36,6 +37,23 @@ export default function ProfileDropdown({
   const [phone, setPhone] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Display Text Size State
+  const [currentTextSize, setCurrentTextSize] = useState<TextSize>('normal');
+
+  useEffect(() => {
+    setCurrentTextSize(getSavedTextSize());
+    const handleSizeChange = (e: any) => {
+      if (e.detail?.size) setCurrentTextSize(e.detail.size);
+    };
+    window.addEventListener('text-size-change', handleSizeChange);
+    return () => window.removeEventListener('text-size-change', handleSizeChange);
+  }, []);
+
+  const handleSelectTextSize = (sz: TextSize) => {
+    setCurrentTextSize(sz);
+    applyTextSize(sz);
+  };
 
   // Populate form with current user data whenever user or modal state changes
   useEffect(() => {
@@ -285,6 +303,36 @@ export default function ProfileDropdown({
               </div>
             </div>
 
+            {/* Quick Display Text Size Selector */}
+            <div className="px-3 py-2 mx-1.5 mb-1.5 rounded-xl bg-surface/60 border border-[var(--border)]">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[12px] font-semibold text-[var(--muted)] flex items-center gap-1.5">
+                  <i className="ph ph-text-aa text-[15px] text-[var(--accent)]"></i>
+                  <span>{t('Text Size')}</span>
+                </span>
+                <span className="text-[11px] font-bold uppercase text-[var(--accent)]">
+                  {t(currentTextSize.charAt(0).toUpperCase() + currentTextSize.slice(1))}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1 p-0.5 rounded-lg bg-surface-2 border border-[var(--border)]">
+                {(['small', 'normal', 'medium', 'large'] as TextSize[]).map((sz) => (
+                  <button
+                    key={sz}
+                    type="button"
+                    onClick={() => handleSelectTextSize(sz)}
+                    className={`h-7 rounded-md text-[11px] font-bold transition-all flex items-center justify-center cursor-pointer ${
+                      currentTextSize === sz
+                        ? 'bg-[var(--accent)] text-[var(--accent-contrast)] shadow-sm'
+                        : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--accent-soft)]'
+                    }`}
+                    title={t(sz.charAt(0).toUpperCase() + sz.slice(1))}
+                  >
+                    {sz === 'small' ? 'S' : sz === 'normal' ? 'M' : sz === 'medium' ? 'L' : 'XL'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Quick Menu Links */}
             <div className="px-1.5 py-1 space-y-0.5">
               {/* Edit Profile Action */}
@@ -432,7 +480,7 @@ export default function ProfileDropdown({
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1">
+                  <label className="block text-[12.5px] sm:text-[13px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1.5">
                     {t('First Name')}
                   </label>
                   <input
@@ -441,11 +489,11 @@ export default function ProfileDropdown({
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="Abebe"
-                    className="w-full h-10 px-3 rounded-[12px] bg-surface border border-[var(--border)] text-[var(--text)] text-[14px] focus:border-[var(--accent)] focus:outline-none"
+                    className="w-full h-11 px-3.5 rounded-[14px] bg-surface border border-[var(--border)] text-[var(--text)] text-[15px] sm:text-[16px] focus:border-[var(--accent)] focus:outline-none transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1">
+                  <label className="block text-[12.5px] sm:text-[13px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1.5">
                     {t('Last Name')}
                   </label>
                   <input
@@ -453,29 +501,84 @@ export default function ProfileDropdown({
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Bikila"
-                    className="w-full h-10 px-3 rounded-[12px] bg-surface border border-[var(--border)] text-[var(--text)] text-[14px] focus:border-[var(--accent)] focus:outline-none"
+                    className="w-full h-11 px-3.5 rounded-[14px] bg-surface border border-[var(--border)] text-[var(--text)] text-[15px] sm:text-[16px] focus:border-[var(--accent)] focus:outline-none transition-colors"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1">
+                <label className="block text-[12.5px] sm:text-[13px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1.5">
                   {t('Phone Number')}
                 </label>
                 <EthiopianPhoneInput
                   value={phone}
                   onChange={(val) => setPhone(val)}
-                  className="h-10 text-[14px]"
+                  className="h-11 text-[15px] sm:text-[16px]"
                 />
               </div>
 
               <div>
-                <label className="block text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1">
+                <label className="block text-[12.5px] sm:text-[13px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1.5">
                   {t('Role')}
                 </label>
-                <div className="h-10 px-3 rounded-[12px] bg-surface/60 border border-[var(--border)] text-[var(--muted)] text-[13px] flex items-center justify-between font-mono">
+                <div className="h-11 px-3.5 rounded-[14px] bg-surface/60 border border-[var(--border)] text-[var(--text)] text-[14px] flex items-center justify-between font-mono">
                   <span>{roleLabel}</span>
-                  <i className="ph ph-lock text-sm opacity-60"></i>
+                  <i className="ph ph-lock text-base opacity-60"></i>
+                </div>
+              </div>
+
+              {/* Display Text Size Selector for both customer and admin/manager */}
+              <div className="pt-1">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[12.5px] sm:text-[13px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
+                    <i className="ph ph-text-aa text-[16px] text-[var(--accent)]"></i>
+                    <span>{t('Display Text Size')}</span>
+                  </label>
+                  <span className="text-[11.5px] font-bold text-[var(--accent)] uppercase">
+                    {t(currentTextSize.charAt(0).toUpperCase() + currentTextSize.slice(1))}
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: 'small', label: t('Small'), sample: 'A' },
+                    { id: 'normal', label: t('Normal'), sample: 'Aa' },
+                    { id: 'medium', label: t('Medium'), sample: 'Aa' },
+                    { id: 'large', label: t('Large'), sample: 'Aa' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => handleSelectTextSize(opt.id as TextSize)}
+                      className={`py-2 px-1 rounded-xl border text-center transition-all flex flex-col items-center justify-center cursor-pointer ${
+                        currentTextSize === opt.id
+                          ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] ring-1 ring-[var(--accent)]'
+                          : 'bg-surface border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--text)]'
+                      }`}
+                    >
+                      <span
+                        className={`font-bold leading-none ${
+                          opt.id === 'small'
+                            ? 'text-[12px]'
+                            : opt.id === 'normal'
+                            ? 'text-[14px]'
+                            : opt.id === 'medium'
+                            ? 'text-[16px]'
+                            : 'text-[18px]'
+                        }`}
+                      >
+                        {opt.sample}
+                      </span>
+                      <span className="text-[11px] font-medium mt-1 truncate max-w-full">
+                        {opt.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 p-2 rounded-xl bg-surface/50 border border-[var(--border)]/70 text-[var(--muted)] text-[12px] italic">
+                  <span className="font-semibold not-italic text-[var(--accent)] text-[10.5px] uppercase tracking-wider block mb-0.5">
+                    {t('Preview Text')}:
+                  </span>
+                  {t('Buna Hub Ethiopian artisanal coffee experience')}
                 </div>
               </div>
 
@@ -483,7 +586,7 @@ export default function ProfileDropdown({
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="flex-1 h-11 rounded-[12px] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] font-semibold text-[13.5px] transition-colors cursor-pointer"
+                  className="flex-1 h-11 rounded-[12px] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] font-semibold text-[14px] transition-colors cursor-pointer"
                 >
                   {t('Cancel')}
                 </button>
