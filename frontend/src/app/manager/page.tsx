@@ -957,15 +957,19 @@ export default function ManagerDashboard() {
 
   const toggleStoreStatus = async () => {
     try {
+      const nextOpen = !isOpen;
       const res = await apiFetch('/api/v1/restaurant-settings/', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_open: !isOpen }),
+        body: JSON.stringify({ is_open: nextOpen, auto_schedule: nextOpen ? false : true }),
       });
       if (res.ok) {
-        setIsOpen(!isOpen);
-        setActionMsg(`${t('Cafe is now')} ${!isOpen ? t('OPEN') : t('CLOSED')}`);
+        const data = await res.json();
+        setIsOpen(typeof data.is_open === 'boolean' ? data.is_open : nextOpen);
+        setActionMsg(`${t('Cafe is now')} ${nextOpen ? t('OPEN') : t('CLOSED')}`);
         setTimeout(() => setActionMsg(null), 3000);
+      } else {
+        setActionMsg(t('Failed to update store status.'));
       }
     } catch (e) {
       setActionMsg(t('Failed to update store status.'));
@@ -1143,7 +1147,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
 
   useEffect(() => {
     if (!loading && !user && !sessionExpired) {
-      window.location.href = '/?welcome=1';
+      window.location.href = '/?auth=login&redirect=/manager';
     }
   }, [loading, user, sessionExpired]);
 
@@ -1175,8 +1179,18 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-surface flex flex-col items-center justify-center gap-4 text-center p-6 font-body text-[var(--text)]">
+        <span className="material-symbols-outlined text-5xl text-[var(--accent)] animate-pulse">lock</span>
+        <h2 className="font-display text-[24px] font-bold">{t('Manager Portal')}</h2>
+        <p className="text-[var(--muted)] text-[15px] max-w-sm">
+          {t('Sign in with your manager or admin credentials to access this dashboard.')}
+        </p>
+        <Link
+          href="/?auth=login&redirect=/manager"
+          className="h-10 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold flex items-center justify-center hover:brightness-110 transition-colors shadow-sm"
+        >
+          {t('Sign In to Manager Portal')}
+        </Link>
       </div>
     );
   }
