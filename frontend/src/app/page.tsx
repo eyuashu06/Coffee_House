@@ -1112,19 +1112,19 @@ export default function Home() {
                                     </div>
 
                                     {/* ================= WEBSITE DISPLAY (sm+) ================= */}
-                                    {/* Restores the original interactive website placement with prominent, visible food & drink images */}
-                                    <div className="mt-10 hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-8">
+                                    {/* Refined medium-sized cards for balanced, beautiful food & drink display */}
+                                    <div className="mt-8 hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-4.5 pb-8">
                                         {filteredItems.map((item) => {
                                             const itemImg = (item as any).image_display || item.image_url || 'https://images.pexels.com/photos/37756986/pexels-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80';
                                             return (
                                                 <div
                                                     key={item.id}
                                                     onClick={() => handleOpenItemModal(item)}
-                                                    className="dish-card p-4 lg:p-5 flex flex-col justify-between rounded-[22px] bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] hover:shadow-xl transition-all duration-300 group cursor-pointer"
+                                                    className="dish-card p-3.5 sm:p-4 flex flex-col justify-between rounded-[20px] bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] hover:shadow-lg transition-all duration-300 group cursor-pointer"
                                                 >
                                                     <div>
-                                                        {/* Heroic Food & Drink Image - Wide aspect ratio, fully visible, clear and unclipped */}
-                                                        <div className="w-full aspect-[4/3] rounded-[16px] overflow-hidden relative border border-[var(--border)] bg-[var(--surface-2,var(--surface))] group-hover:border-[var(--accent)]/50 transition-colors shadow-sm">
+                                                        {/* Food & Drink Image - Sleek 16:10 medium aspect ratio, crisp and unclipped */}
+                                                        <div className="w-full aspect-[16/10] rounded-[14px] overflow-hidden relative border border-[var(--border)] bg-[var(--surface-2,var(--surface))] group-hover:border-[var(--accent)]/50 transition-colors shadow-sm">
                                                             <img
                                                                 src={itemImg}
                                                                 alt={tItem(item.name)}
@@ -1133,34 +1133,34 @@ export default function Home() {
                                                             />
                                                             {/* Signature Badge */}
                                                             {item.is_signature && (
-                                                                <div className="absolute top-3 left-3">
-                                                                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-black/70 text-amber-300 backdrop-blur-md border border-amber-400/30 flex items-center gap-1 shadow-sm">
-                                                                        <i className="ph ph-star-fill text-[11px] text-amber-400"></i>
+                                                                <div className="absolute top-2.5 left-2.5">
+                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-black/70 text-amber-300 backdrop-blur-md border border-amber-400/30 flex items-center gap-1 shadow-sm">
+                                                                        <i className="ph ph-star-fill text-[10px] text-amber-400"></i>
                                                                         <span>{t('Signature')}</span>
                                                                     </span>
                                                                 </div>
                                                             )}
                                                             {/* Category Badge */}
                                                             {item.category_name && (
-                                                                <div className="absolute top-3 right-3">
-                                                                    <span className="px-2.5 py-1 rounded-full text-[10.5px] font-semibold uppercase tracking-wider bg-black/60 text-white/90 backdrop-blur-md border border-white/10 shadow-sm">
+                                                                <div className="absolute top-2.5 right-2.5">
+                                                                    <span className="px-2 py-0.5 rounded-full text-[9.5px] font-semibold uppercase tracking-wider bg-black/60 text-white/90 backdrop-blur-md border border-white/10 shadow-sm">
                                                                         {tCategory(item.category_name)}
                                                                     </span>
                                                                 </div>
                                                             )}
                                                         </div>
 
-                                                        {/* Details (First Website Interactive Placement) */}
-                                                        <div className="mt-4">
-                                                            <div className="flex items-start justify-between gap-2">
-                                                                <h3 className="font-display text-[20px] lg:text-[22px] leading-snug text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                                                        {/* Details */}
+                                                        <div className="mt-3">
+                                                            <div className="flex items-start justify-between gap-1.5">
+                                                                <h3 className="font-display text-[16.5px] sm:text-[17.5px] leading-snug text-[var(--text)] group-hover:text-[var(--accent)] transition-colors line-clamp-1">
                                                                     {tItem(item.name)}
                                                                 </h3>
-                                                                <span className="font-mono text-[16px] lg:text-[17px] text-[var(--gold)] font-bold whitespace-nowrap shrink-0">
+                                                                <span className="font-mono text-[14.5px] sm:text-[15.5px] text-[var(--gold)] font-bold whitespace-nowrap shrink-0">
                                                                     {parseFloat(item.price)} {birr}
                                                                 </span>
                                                             </div>
-                                                            <p className="mt-2 text-[14px] leading-relaxed text-[var(--muted)] line-clamp-3">
+                                                            <p className="mt-1 text-[12.5px] leading-snug text-[var(--muted)] line-clamp-2">
                                                                 {tItemDescription(item.description)}
                                                             </p>
                                                         </div>
@@ -1172,9 +1172,9 @@ export default function Home() {
                                                             e.stopPropagation();
                                                             handleOpenItemModal(item);
                                                         }}
-                                                        className="mt-5 w-full h-11 rounded-full border border-[var(--border)] text-[14px] font-semibold text-[var(--text)] group-hover:border-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-contrast)] transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
+                                                        className="mt-3.5 w-full h-9 rounded-full border border-[var(--border)] text-[12.5px] sm:text-[13px] font-semibold text-[var(--text)] group-hover:border-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-contrast)] transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm"
                                                     >
-                                                        <i className="ph ph-shopping-bag text-[16px]"></i>
+                                                        <i className="ph ph-shopping-bag text-[14px]"></i>
                                                         <span>{t('Add to Cart')}</span>
                                                     </button>
                                                 </div>
