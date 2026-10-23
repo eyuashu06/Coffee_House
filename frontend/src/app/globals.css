@@ -44,6 +44,24 @@
   color-scheme: dark;
 }
 
+/* ── Display Text Size Scaling ───────────────────────────────────────── */
+html[data-text-size="small"] {
+  font-size: 14.5px;
+}
+
+html[data-text-size="normal"],
+html:not([data-text-size]) {
+  font-size: 16px;
+}
+
+html[data-text-size="medium"] {
+  font-size: 17.5px;
+}
+
+html[data-text-size="large"] {
+  font-size: 19px;
+}
+
 @layer base {
   html,
   body {

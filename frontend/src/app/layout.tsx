@@ -50,7 +50,7 @@ export default function RootLayout({
             cream flash (and a light-mode user never sees espresso). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='light'){document.documentElement.classList.remove('dark');}else{document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}try{if(typeof window!=='undefined'&&(location.hostname==='localhost'||location.hostname==='127.0.0.1')){if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){for(var r of regs){r.unregister();}});}if('caches' in window){caches.keys().then(function(keys){for(var k of keys){caches.delete(k);}});}}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='light'){document.documentElement.classList.remove('dark');}else{document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}try{var sz=localStorage.getItem('preferred_text_size');if(sz){document.documentElement.setAttribute('data-text-size',sz);}}catch(e){}try{if(typeof window!=='undefined'&&(location.hostname==='localhost'||location.hostname==='127.0.0.1')){if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){for(var r of regs){r.unregister();}});}if('caches' in window){caches.keys().then(function(keys){for(var k of keys){caches.delete(k);}});}}}catch(e){}})();`,
           }}
         />
         {/* display=block is what Material Symbols asks for on an icon font: with the
