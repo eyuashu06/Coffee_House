@@ -727,13 +727,13 @@ export default function Home() {
                         </nav>
                         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                             <LanguageToggle className="hidden sm:flex h-9 px-2 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13px] sm:text-[13.5px] items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" />
-                            <ThemeToggle className="hidden sm:flex shrink-0" />
                             <button onClick={() => setIsCartOpen(true)} className="h-9 px-2.5 sm:px-4 rounded-full border border-[var(--border)] text-[13.5px] sm:text-[14px] flex items-center gap-1 sm:gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0">
                                 <i className="ph ph-shopping-bag-open text-[16px]"></i>
                                 <span className="hidden sm:inline">{t('Cart')}</span>
                                 {language === 'am' ? '' : `(${totalCartCount})`}
                             </button>
                             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                                <ThemeToggle className="flex h-9 w-9 shrink-0 cursor-pointer" />
                                 {user && <NotificationsDropdown />}
                                 <ProfileDropdown
                                     onOpenSignIn={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
