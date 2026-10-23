@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { apiFetch } from '../lib/api';
 import EthiopianPhoneInput from './EthiopianPhoneInput';
@@ -56,6 +56,9 @@ export default function PaymentModal({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('telebirr');
   const [phone, setPhone] = useState('+251911223344');
   const [transactionRef, setTransactionRef] = useState('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -67,6 +70,8 @@ export default function PaymentModal({
     if (isOpen) {
       setError(null);
       setTransactionRef('');
+      setReceiptFile(null);
+      setReceiptPreview(null);
       // Load payment accounts managed by admin
       apiFetch('/api/v1/payments/accounts/')
         .then((res) => res.json())
@@ -95,15 +100,50 @@ export default function PaymentModal({
     }
   };
 
+  const processReceiptFile = (file: File) => {
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isImage && !isPdf) {
+      setError(t('Only image files (PNG, JPG, WEBP) or PDF documents are accepted.'));
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError(t('File size must be under 10MB.'));
+      return;
+    }
+    setError(null);
+    setReceiptFile(file);
+    if (isImage) {
+      setReceiptPreview(URL.createObjectURL(file));
+    } else {
+      setReceiptPreview('pdf');
+    }
+    const sizeKb = (file.size / 1024).toFixed(0);
+    const cleanName = file.name.replace(/[^a-zA-Z0-9._\-]/g, '_');
+    setTransactionRef(`Receipt: ${cleanName} (${sizeKb}KB)`.slice(0, 140));
+  };
+
+  const handleReceiptFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processReceiptFile(file);
+  };
+
+  const handleRemoveReceipt = () => {
+    setReceiptFile(null);
+    setReceiptPreview(null);
+    setTransactionRef('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
 
-    // Validation: if manual digital method, transaction reference is required
+    // Validation: if manual digital method, an image or PDF file receipt is strictly required
     const isManualDigital = ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(paymentMethod);
-    if (isManualDigital && !transactionRef.trim() && !phone.includes('900000000')) {
-      setError(t('Please enter your transaction reference or confirmation code after transferring funds.'));
+    if (isManualDigital && !receiptFile && !phone.includes('900000000')) {
+      setError(t('Please upload your payment receipt (image or PDF file) before submitting.'));
       setIsSubmitting(false);
       return;
     }
@@ -276,25 +316,98 @@ export default function PaymentModal({
                 </div>
               ) : (
                 <p className="text-xs text-[var(--muted)]">
-                  {t('Transfer')} <strong className="text-[var(--accent)]">{birr} {totalAmountEtb}</strong> {t('via your')} {t(paymentMethod)} {t('app, then enter your transaction reference below.')}
+                  {t('Transfer')} <strong className="text-[var(--accent)]">{birr} {totalAmountEtb}</strong> {t('via your')} {t(paymentMethod)} {t('app, then upload your transaction receipt slip below.')}
                 </p>
               )}
 
-              {/* Transaction Reference Input */}
+              {/* Transaction Receipt File Upload (Images or PDF Only) */}
               <div className="pt-2 border-t border-[var(--border)]/60">
-                <label className="block text-xs font-semibold text-[var(--text)] mb-1">
-                  {t('Transaction Reference / Confirmation Code')} <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold text-[var(--text)] mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <i className="ph ph-receipt text-[15px] text-[var(--accent)]"></i>
+                    <span>{t('Upload Payment Receipt (Image or PDF only)')}</span>
+                    <span className="text-red-500">*</span>
+                  </span>
+                  <span className="text-[10.5px] text-[var(--muted)] font-normal">
+                    {t('Files only, no numbers')}
+                  </span>
                 </label>
+
                 <input
-                  type="text"
-                  required
-                  value={transactionRef}
-                  onChange={(e) => setTransactionRef(e.target.value)}
-                  placeholder={t('e.g. Telebirr Txn ID, CBE Ref, or SMS confirmation code')}
-                  className="w-full h-10 px-3 rounded-xl bg-surface-2 border border-[var(--border)] text-sm text-[var(--text)] focus:border-[var(--accent)] focus:outline-none transition-colors"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+                  className="hidden"
+                  onChange={handleReceiptFileChange}
                 />
-                <p className="text-[10.5px] text-[var(--muted)] mt-1">
-                  {t('Manager will verify this transaction code in the cafe account before the chef prepares your order.')}
+
+                {!receiptFile ? (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) processReceiptFile(file);
+                    }}
+                    className="border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] rounded-2xl p-4 text-center cursor-pointer transition-all bg-surface/50 hover:bg-[var(--accent-soft)]/20 group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform shadow-sm">
+                      <i className="ph ph-file-arrow-up text-xl"></i>
+                    </div>
+                    <p className="text-[13px] font-bold text-[var(--text)]">
+                      {t('Upload Receipt (Image or PDF)')}
+                    </p>
+                    <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                      {t('Screenshot of Telebirr, CBE Birr, Awash, or bank deposit slip')}
+                    </p>
+                    <div className="mt-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface border border-[var(--border)] text-[10.5px] font-semibold text-[var(--muted)]">
+                      <i className="ph ph-image text-[13px] text-[var(--accent)]"></i>
+                      <span>PNG, JPG, WEBP, PDF</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)]/25 flex items-center justify-between gap-3 animate-fade-in">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {receiptPreview === 'pdf' ? (
+                        <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 flex items-center justify-center shrink-0">
+                          <i className="ph ph-file-pdf text-2xl"></i>
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-[var(--border)] shrink-0 bg-surface shadow-sm">
+                          <img src={receiptPreview || ''} alt="Receipt preview" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-[12.5px] font-bold text-[var(--text)] truncate">{receiptFile.name}</p>
+                        <p className="text-[10.5px] text-[var(--muted)] font-mono">
+                          {(receiptFile.size / 1024).toFixed(1)} KB · {receiptPreview === 'pdf' ? t('PDF Document') : t('Receipt Image')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-[var(--border)] bg-surface text-[var(--text)] hover:border-[var(--accent)] transition-colors cursor-pointer"
+                      >
+                        {t('Change')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemoveReceipt}
+                        className="w-7 h-7 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-colors cursor-pointer"
+                        title={t('Remove File')}
+                      >
+                        <i className="ph ph-trash text-sm"></i>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-[10.5px] text-[var(--muted)] mt-1.5 leading-relaxed">
+                  {t('Manager will verify your receipt document in the cafe account before the chef prepares your order.')}
                 </p>
               </div>
 
