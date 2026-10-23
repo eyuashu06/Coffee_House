@@ -329,14 +329,8 @@ export default function Home() {
         }
     }, []);
 
-    useEffect(() => {
-        // Staff never get dumped on the customer welcome page - they go to the dashboard.
-        // (?welcome=1 means they clicked "Return to home" on purpose, so let them stay.)
-        const wantsWelcomePage = new URLSearchParams(window.location.search).has('welcome');
-        if (!authLoading && user && !wantsWelcomePage && (user.role === 'ADMIN' || user.role === 'MANAGER')) {
-            router.replace('/manager');
-        }
-    }, [user, authLoading, router]);
+    // Staff can browse the customer storefront freely, and access the manager
+    // dashboard anytime from the profile dropdown or via /manager.
 
     // On sign-in the guest's local cart is merged into the account cart, so nothing
     // that was in the basket disappears. Runs on every transition into "signed in".
@@ -688,64 +682,30 @@ export default function Home() {
 
     const heroSlides: Slide[] = [
         {
-            src: 'https://images.pexels.com/photos/6742970/pexels-photo-6742970.jpeg?auto=compress&cs=tinysrgb&w=1400&q=80',
-            alt: 'Woman preparing coffee over charcoal in the traditional way — photo by Lan Yao on Pexels',
+            src: '/images/ethiopian_ceremony.jpg',
+            alt: 'Traditional Ethiopian buna ceremony with clay jebena, sini cups, and frankincense smoke',
+            caption: t('The traditional buna ceremony, poured from a clay jebena.'),
+        },
+        {
+            src: '/images/ethiopian_roasting.jpg',
+            alt: 'Ethiopian woman roasting fresh coffee beans in a traditional pan over hot coals',
             caption: t('The morning roast, done where everyone can smell it.'),
         },
         {
-            src: 'https://images.pexels.com/photos/38519871/pexels-photo-38519871.jpeg?auto=compress&cs=tinysrgb&w=1400&q=80',
-            alt: 'Young woman in traditional dress pouring buna — photo by LekePOV on Pexels',
-            caption: t('The high pour, Friday ceremony'),
+            src: '/images/ethiopian_cafe.jpg',
+            alt: 'Warm and inviting Ethiopian cafe gathering in Addis Ababa',
+            caption: t('A warm gathering over fresh coffee in Addis Ababa.'),
         },
         {
             src: 'https://images.pexels.com/photos/9452515/pexels-photo-9452515.jpeg?auto=compress&cs=tinysrgb&w=1400&q=80',
-            alt: 'Steaming clay jebena pot — photo by Yosef Futsum on Pexels',
-            caption: t('Jebena resting on the coals'),
-        },
-        {
-            src: 'https://images.pexels.com/photos/29692583/pexels-photo-29692583.jpeg?auto=compress&cs=tinysrgb&w=1400&q=80',
-            alt: 'Inviting cafe interior with pendant lights — photo by Valeria Boltneva on Pexels',
-            caption: t('Lamps on, rain outside'),
-        },
-    ];
-
-    const gallerySlides: Slide[] = [
-        {
-            src: 'https://images.pexels.com/photos/38519871/pexels-photo-38519871.jpeg?auto=compress&cs=tinysrgb&w=1600&q=80',
-            alt: 'Young woman in traditional dress pouring buna — photo by LekePOV on Pexels',
-            caption: t('The high pour, Friday ceremony'),
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1582298538104-fe2e74c27f59?auto=format&w=1600&q=80&fit=crop',
-            alt: 'Friends laughing together in a cafe — photo by Toa Heftiba on Unsplash',
-            caption: t('Third-round laughter'),
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1574781475422-a8b327766703?auto=format&w=1600&q=80&fit=crop',
-            alt: 'Guests sitting by the cafe window — photo by Spencer Davis on Unsplash',
-            caption: t('Slow Tuesday at the window'),
-        },
-        {
-            src: 'https://images.pexels.com/photos/3794811/pexels-photo-3794811.jpeg?auto=compress&cs=tinysrgb&w=1600&q=80',
-            alt: 'Freshly roasted coffee beans in the pan, seen from above — photo by K on Pexels',
-            caption: t("Tuesday's Guji lot, cooling"),
-        },
-        {
-            src: 'https://images.pexels.com/photos/38519890/pexels-photo-38519890.jpeg?auto=compress&cs=tinysrgb&w=1600&q=80',
-            alt: 'Woman performing the coffee ceremony in traditional dress — photo by LekePOV on Pexels',
-            caption: t('Aster at the mesob'),
-        },
-        {
-            src: 'https://images.pexels.com/photos/29692583/pexels-photo-29692583.jpeg?auto=compress&cs=tinysrgb&w=1600&q=80',
-            alt: 'Inviting cafe interior with pendant lights — photo by Valeria Boltneva on Pexels',
-            caption: t('Lamps on, rain outside'),
+            alt: 'Steaming clay jebena pot resting on hot embers — photo by Yosef Futsum on Pexels',
+            caption: t('Jebena resting on glowing coals.'),
         },
     ];
 
     const navLinks = [
         { href: '#story', label: t('Story') },
         { href: '#menu', label: t('Menu') },
-        { href: '#gallery', label: t('Gallery') },
         { href: '#visit', label: t('Visit us') },
     ];
 
@@ -755,10 +715,10 @@ export default function Home() {
 
                 {/* ======================= NAV ======================= */}
                 <header className="sticky top-0 z-50 glass-bar border-b border-[var(--border)]">
-                    <div className="max-w-[1360px] mx-auto flex items-center justify-between gap-3 px-4 sm:px-6 h-16">
+                    <div className="max-w-[1360px] mx-auto flex items-center justify-between gap-2 sm:gap-3 px-3.5 sm:px-6 h-16">
                         <Link href="/?welcome=1" className="flex items-center gap-2.5 min-w-0 group">
                             <span className="w-9 h-9 shrink-0 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
-                            <span className="font-display text-[20px] sm:text-[21px] tracking-wide">{cafeSettings.cafe_name || 'Buna Hub'}</span>
+                            <span className="font-display text-[18px] sm:text-[21px] tracking-wide truncate max-w-[130px] xs:max-w-[180px] sm:max-w-none">{cafeSettings.cafe_name || 'Buna Hub'}</span>
                         </Link>
                         <nav className="hidden md:flex items-center gap-8 text-[15px] font-medium text-[var(--muted)]">
                             {navLinks.map((link) => (
@@ -890,7 +850,7 @@ export default function Home() {
                 <section className="px-4 sm:px-6 pt-6 sm:pt-10">
                     <div className="max-w-[1360px] mx-auto grid lg:grid-cols-2 gap-6 lg:gap-12 items-center">
                         <div className="order-2 lg:order-1">
-                            <div className="inline-flex items-center gap-2 text-[13.5px] text-[var(--muted)]" suppressHydrationWarning>
+                            <div className="inline-flex items-center gap-2 text-[13.5px] text-[var(--muted)] flex-wrap" suppressHydrationWarning>
                                 <span className={`w-2 h-2 rounded-full shrink-0 ${isOpenNow ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
                                 <span>{isOpenNow ? t('Open today') : (language === 'am' ? 'በአሁኑ ሰዓት ዝግ ነው' : 'Closed right now')}</span>
                                 <span>·</span>
@@ -900,19 +860,19 @@ export default function Home() {
                                         : (primaryLocation?.opening_hours || cafeSettings.opening_hours || '1:00 – 3:00')}
                                 </span>
                                 <span>·</span>
-                                <span>{primaryLocation ? `${primaryLocation.name}, ${primaryLocation.city}` : `Piassa, ${t('Addis Ababa')}`}</span>
+                                <span className="truncate max-w-[200px]">{primaryLocation ? `${primaryLocation.name}, ${primaryLocation.city}` : `Piassa, ${t('Addis Ababa')}`}</span>
                             </div>
-                            <h1 className="mt-4 font-display text-[42px] sm:text-[58px] lg:text-[68px] leading-[1.03] tracking-tight">
+                            <h1 className="mt-4 font-display text-[36px] xs:text-[42px] sm:text-[58px] lg:text-[68px] leading-[1.05] tracking-tight">
                                 {(cafeSettings.cafe_name || 'Buna Hub').split(' ').map((word, i) => (
                                     <span key={`${word}-${i}`} className="word-in mr-3 last:mr-0" style={{ animationDelay: `${0.15 + i * 0.18}s` }}>{word}</span>
                                 ))}
                             </h1>
-                            <p className="mt-4 text-[17px] sm:text-[19px] leading-relaxed text-[var(--muted)] max-w-[46ch]">
-                                {cafeSettings.description || t('Three rounds from one jebena — coffee poured the slow way, in the city that invented it.')}
+                            <p className="mt-4 text-[15px] sm:text-[17px] lg:text-[19px] leading-relaxed text-[var(--muted)] max-w-[46ch]">
+                                {cafeSettings.description || t('Artisanal Ethiopian single origins, handcrafted roasts, and traditional buna ceremony in the heart of Addis Ababa.')}
                             </p>
                             <div className="mt-7 flex flex-wrap items-center gap-3">
-                                <a href="#menu" className="h-12 px-7 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[16px] font-semibold flex items-center gap-2 hover:brightness-110 transition-all shadow-[var(--shadow)]">{t('View the Menu')} <i className="ph ph-arrow-down text-[15px]"></i></a>
-                                <Link href="/account" className="h-12 px-7 rounded-full border border-[var(--border)] text-[16px] flex items-center hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">{t('Order Buna')}</Link>
+                                <a href="#menu" className="h-12 px-7 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[15px] sm:text-[16px] font-semibold flex items-center gap-2 hover:brightness-110 transition-all shadow-[var(--shadow)]">{t('View the Menu')} <i className="ph ph-arrow-down text-[15px]"></i></a>
+                                <Link href="/account" className="h-12 px-7 rounded-full border border-[var(--border)] text-[15px] sm:text-[16px] flex items-center hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">{t('Order Buna')}</Link>
                             </div>
                             <Link href="/account" className="mt-5 inline-flex items-center gap-1.5 text-[14.5px] text-[var(--muted)] hover:text-[var(--accent)] transition-colors">{t('Track your order')} <i className="ph ph-arrow-right text-[13px]"></i></Link>
                         </div>
@@ -930,23 +890,23 @@ export default function Home() {
                     <div className="max-w-[1360px] mx-auto grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 mt-8">
                         <Link href="/account" className="h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
                             <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-coffee-bean"></i></span>
-                            <span><span className="block text-[15px] font-semibold leading-tight">{t('Order')}</span><span className="block text-[12.5px] text-[var(--muted)]">{t('pickup & delivery')}</span></span>
+                            <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Order')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('pickup & delivery')}</span></span>
                         </Link>
                         <a href="#visit" className="h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
                             <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-calendar-check"></i></span>
-                            <span><span className="block text-[15px] font-semibold leading-tight">{t('Book')}</span><span className="block text-[12.5px] text-[var(--muted)]">{t('save a stool')}</span></span>
+                            <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Book')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('save a stool')}</span></span>
                         </a>
                         <a href="#menu" className="h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
                             <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-book-open"></i></span>
-                            <span><span className="block text-[15px] font-semibold leading-tight">{t('Menu')}</span><span className="block text-[12.5px] text-[var(--muted)]">{t('buna, teas & bites')}</span></span>
+                            <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Menu')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('buna, teas & bites')}</span></span>
                         </a>
                         <a href="#story" className="h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
                             <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-scroll"></i></span>
-                            <span><span className="block text-[15px] font-semibold leading-tight">{t('Story')}</span><span className="block text-[12.5px] text-[var(--muted)]">{t("from Kaldi's hills")}</span></span>
+                            <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Story')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t("from Kaldi's hills")}</span></span>
                         </a>
-                        <Link href="/account" className="h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
+                        <Link href="/account" className="col-span-2 sm:col-span-1 lg:col-span-1 h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
                             <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-map-pin"></i></span>
-                            <span><span className="block text-[15px] font-semibold leading-tight">{t('Track')}</span><span className="block text-[12.5px] text-[var(--muted)]">{t('order status')}</span></span>
+                            <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Track')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('order status')}</span></span>
                         </Link>
                     </div>
                 </section>
@@ -958,7 +918,7 @@ export default function Home() {
                             <Reveal className="max-w-2xl">
                                 <Kicker>{t('Our Story')}</Kicker>
                                 <h2 className="mt-3 font-display text-[34px] sm:text-[44px] leading-[1.08]">
-                                    {t('Roasted in the room,')}<br />{t('poured three times.')}
+                                    {t('Roasted over glowing coals,')}<br />{t('brewed in the clay jebena.')}
                                 </h2>
                             </Reveal>
 
@@ -1028,7 +988,7 @@ export default function Home() {
                                 <Kicker>{t('Menu')}</Kicker>
                                 <h2 className="mt-3 font-display text-[34px] sm:text-[44px] leading-tight">{t('Laid out like dishes on the table')}</h2>
                                 <p className="mt-3 text-[16.5px] text-[var(--muted)] max-w-[62ch]">
-                                    {t('Everything is roasted, brewed or baked in-house. Prices in birr, taxes included — the ceremony is always on the house when you stay for all three rounds.')}
+                                    {t('Handcrafted coffees, teas, and fresh kitchen specialties. Prices in birr, taxes included — our traditional ceremony is always poured fresh.')}
                                 </p>
                             </Reveal>
 
@@ -1226,29 +1186,6 @@ export default function Home() {
                         </div>
                     </section>
 
-                    {/* ======================= GALLERY (slideshow) ======================= */}
-                    <section id="gallery" className="scroll-mt-20 px-4 sm:px-6 py-16 sm:py-20">
-                        <div className="max-w-[1360px] mx-auto grid lg:grid-cols-2 gap-8 lg:gap-14 items-center">
-                            <Reveal className="max-w-xl">
-                                <Kicker>{t('Gallery')}</Kicker>
-                                <h2 className="mt-3 font-display text-[32px] sm:text-[42px] leading-tight">{t('The room, the smoke, the regulars')}</h2>
-                                <p className="mt-4 text-[16.5px] leading-[1.75] text-[var(--muted)] max-w-[60ch]">
-                                    {t('Shot over one slow week — mornings at the roast pan, evenings under the lamps.')}
-                                </p>
-                                <p className="mt-5 text-[13.5px] italic text-[var(--muted)] flex items-center gap-1.5">
-                                    <i className="ph ph-arrows-left-right text-[14px]"></i>
-                                    {t('Swipe or tap to see more')}
-                                </p>
-                            </Reveal>
-                            <Reveal delay={120}>
-                                <Slideshow
-                                    slides={gallerySlides}
-                                    intervalMs={4200}
-                                    className="aspect-[4/3] sm:aspect-[16/10] lg:aspect-auto lg:h-[480px]"
-                                />
-                            </Reveal>
-                        </div>
-                    </section>
 
                     {/* ======================= VISIT & BOOKING ======================= */}
                     <section id="visit" className="scroll-mt-20 px-4 sm:px-6 py-16 sm:py-20 relative">
@@ -1260,8 +1197,8 @@ export default function Home() {
                             </Reveal>
 
                             <Reveal>
-                                <div className="grid lg:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_380px] rounded-[18px] overflow-hidden border border-[var(--border)] shadow-[var(--shadow)]">
-                                    <aside className="bg-[var(--surface-2)] px-6 sm:px-7 py-9 border-b lg:border-b-0 lg:border-r border-[var(--border)]">
+                                <div className="grid lg:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_340px] rounded-[18px] overflow-hidden border border-[var(--border)] shadow-[var(--shadow)]">
+                                    <aside className="bg-[var(--surface-2)] px-5 sm:px-7 py-8 border-b lg:border-b-0 lg:border-r border-[var(--border)]">
                                         <div className={`flex items-center gap-2 text-[14px] ${isOpenNow ? 'text-[var(--gold)]' : 'text-red-400'}`} suppressHydrationWarning>
                                             <span className={`w-2 h-2 rounded-full shrink-0 ${isOpenNow ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
                                             <span>{isOpenNow ? t('Open now') : (language === 'am' ? 'በአሁኑ ሰዓት ዝግ ነው' : 'Closed now')}</span>
@@ -1391,10 +1328,10 @@ export default function Home() {
                                         </form>
                                     </div>
 
-                                    <div className="relative h-56 sm:h-72 lg:h-auto lg:min-h-[440px]">
+                                    <div className="hidden xl:block relative min-h-[440px]">
                                         <img
-                                            src="https://images.pexels.com/photos/2079448/pexels-photo-2079448.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80"
-                                            alt="Warm and inviting cafe terrace in the evening — photo by Emre Can Acer on Pexels"
+                                            src="/images/ethiopian_cafe.jpg"
+                                            alt="Warm and inviting traditional Ethiopian coffee house gathering in Addis Ababa"
                                             decoding="async"
                                             loading="lazy"
                                             className="absolute inset-0 w-full h-full object-cover"
