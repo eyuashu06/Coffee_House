@@ -983,5 +983,46 @@ export const itemDescriptionTranslations: Record<string, string> = {
   // Cafe & Fallbacks
   'Single-origin micro-lots, signature espresso infusions, and AI RAG Coffee Sommelier recommendations.':
     'ልዩ የተመረጡ ቡናዎች፣ የኤስፕሬሶ መጠጦች እና የአይ-ኤ አጋዥ የቡና ምክሮች።',
+
+  // ── Order Fulfillment & Types ──────────────────────────────────────────
+  'DELIVERY': 'ማድረሻ',
+  'Delivery': 'ማድረሻ',
+  'PICKUP': 'በመደብር መረከብ',
+  'Store Pickup': 'በመደብር መረከብ',
+  'DINE_IN': 'እዚሁ መመገብ / በተያዘ ጠረጴዛ',
+  'Dine-In': 'እዚሁ መመገብ',
+  'Dine-In / Reserved Table': 'እዚሁ መመገብ / በተያዘ ጠረጴዛ',
+  'by reserved table': 'በተያዘ ጠረጴዛ',
+  'By Reserved Table': 'በተያዘ ጠረጴዛ',
+  'reserved table': 'በተያዘ ጠረጴዛ',
+  'Table Service': 'የጠረጴዛ አገልግሎት',
+  'How would you like it?': 'ትዕዛዝዎን እንዴት መቀበል ይፈልጋሉ?',
+  'Table number': 'የጠረጴዛ ቁጥር',
+  'Table number or reservation code': 'የጠረጴዛ ቁጥር ወይም የማስያዣ ኮድ',
+  'Which table are you at?': 'የትኛው ጠረጴዛ ላይ ኖት? (ወይም የማስያዣ ኮድ)',
+  'Cash on Delivery / Onsite / Table Service': 'ጥሬ ገንዘብ (ማድረሻ / በመደብር / በተያዘ ጠረጴዛ)',
+  'No advance digital payment needed right now. Please have cash ready when your order is delivered, when picking up at the counter, or at your reserved table.':
+    'አሁን ምንም ቅድመ ክፍያ አያስፈልግም። ትዕዛዝዎ ሲደርስዎት፣ ከመደብሩ ሲረከቡ ወይም በተያዘው ጠረጴዛዎ ላይ ጥሬ ገንዘብ ያዘጋጁ።',
+  'Cash order placed! Staff will confirm payment upon delivery, pickup, or at your table.':
+    'የጥሬ ገንዘብ ትዕዛዝ ተመዝግቧል! ትዕዛዝዎ ሲደርስዎት፣ ከመደብሩ ሲረከቡ ወይም በተያዘው ጠረጴዛዎ ላይ ሠራተኞቻችን ክፍያዎን ያረጋግጣሉ።',
+
+  // ── Payment Receipt Upload (Images or PDF only) ───────────────────────
+  'Upload Payment Receipt (Image or PDF only)': 'የክፍያ ደረሰኝ ይጫኑ (ምስል ወይም ፒዲኤፍ ብቻ)',
+  'Upload Receipt (Image or PDF)': 'የክፍያ ደረሰኝ ይጫኑ (ምስል ወይም ፒዲኤፍ)',
+  'Screenshot of Telebirr, CBE Birr, Awash, or bank deposit slip': 'የቴሌብር፣ ሲቢኢ ብር፣ አዋሽ ወይም የባንክ ገቢ ደረሰኝ ፎቶ/ፒዲኤፍ',
+  'Files only, no numbers': 'ፋይሎች ብቻ፣ ቁጥር መተየብ አያስፈልግም',
+  'Receipt Image': 'የደረሰኝ ምስል',
+  'PDF Document': 'ፒዲኤፍ ሰነድ',
+  'Remove File': 'ፋይሉን አስወግድ',
+  'Change': 'ቀይር',
+  'Please upload your payment receipt (image or PDF file) before submitting.':
+    'እባክዎ ከማስገባትዎ በፊት የክፍያ ደረሰኝ (ምስል ወይም ፒዲኤፍ ፋይል) ይጫኑ።',
+  'Only image files (PNG, JPG, WEBP) or PDF documents are accepted.':
+    'የምስል ፋይሎች (PNG, JPG, WEBP) ወይም ፒዲኤፍ ሰነዶች ብቻ ተቀባይነት አላቸው።',
+  'File size must be under 10MB.': 'የፋይል መጠን ከ10MB በታች መሆን አለበት።',
+  'Manager will verify your receipt document in the cafe account before the chef prepares your order.':
+    'ሼፉ ትዕዛዝዎን ማዘጋጀት ከመጀመሩ በፊት አስተዳዳሪው የደረሰኝ ሰነድዎን በካፌው ሂሳብ ያረጋግጣሉ።',
+  'Close': 'ዝጋ',
 };
+
 
