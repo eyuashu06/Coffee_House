@@ -283,6 +283,9 @@ export default function ManagerDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<Order | null>(null);
+  const [rejectOrder, setRejectOrder] = useState<Order | null>(null);
+  const [rejectReason, setRejectReason] = useState<string>('Payment verification failed.');
+  const [isRejectingPayment, setIsRejectingPayment] = useState<boolean>(false);
 
   // Menu Management State
   const [menuSearch, setMenuSearch] = useState('');
@@ -1095,22 +1098,37 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
     }
   };
 
-  const handleRejectPayment = async (paymentId?: number, orderId?: number) => {
-    const reason = typeof window !== 'undefined'
-      ? window.prompt(t('Enter rejection reason:'), t('Payment verification failed.'))
-      : null;
-    if (reason === null) return;
-    const targetId = paymentId || orderId;
+  const openRejectPaymentModal = (order: Order) => {
+    setRejectOrder(order);
+    setRejectReason(t('Payment verification failed.'));
+  };
+
+  const handleRejectPayment = (paymentId?: number, orderId?: number) => {
+    const targetOrder = orders.find(o => o.id === orderId || o.latest_payment?.id === paymentId);
+    if (targetOrder) {
+      openRejectPaymentModal(targetOrder);
+    } else if (orderId) {
+      setRejectOrder({ id: orderId } as Order);
+      setRejectReason(t('Payment verification failed.'));
+    }
+  };
+
+  const handleConfirmRejectPayment = async () => {
+    if (!rejectOrder) return;
+    const targetId = rejectOrder.latest_payment?.id || rejectOrder.id;
+    const reasonToSend = rejectReason.trim() || t('Payment verification failed.');
+    setIsRejectingPayment(true);
     setActionMsg(null);
     try {
       const res = await apiFetch(`/api/v1/payments/${targetId}/reject/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: reason || 'Rejected by manager', cancel_order: true }),
+        body: JSON.stringify({ reason: reasonToSend, cancel_order: true }),
       });
       if (res.ok) {
         setActionMsg(`❌ ${t('Payment rejected.')}`);
         setTimeout(() => setActionMsg(null), 3000);
+        setRejectOrder(null);
         await fetchOrders();
         fetchAnalytics();
       } else {
@@ -1119,6 +1137,8 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
       }
     } catch (e: any) {
       setActionMsg(e.message || t('Error rejecting payment.'));
+    } finally {
+      setIsRejectingPayment(false);
     }
   };
 
@@ -1707,7 +1727,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleRejectPayment(order.latest_payment?.id, order.id)}
+                                  onClick={() => openRejectPaymentModal(order)}
                                   className="h-9 px-3 rounded-[10px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[12px] transition-colors cursor-pointer"
                                 >
                                   {t('Reject', 'አትቀበል')}
@@ -1765,7 +1785,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleRejectPayment(order.latest_payment?.id, order.id)}
+                                  onClick={() => openRejectPaymentModal(order)}
                                   className="h-9 px-3 rounded-[10px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[12px] transition-colors cursor-pointer"
                                 >
                                   {t('Reject', 'አትቀበል')}
@@ -3387,6 +3407,160 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
           onClose={() => setSelectedReceiptOrder(null)}
           order={selectedReceiptOrder}
         />
+      )}
+
+      {/* PAYMENT REJECTION MODAL */}
+      {rejectOrder && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in"
+          onClick={() => {
+            if (!isRejectingPayment) setRejectOrder(null);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="bg-surface-2 border border-red-500/30 rounded-[22px] max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 text-[var(--text)] relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-[var(--border)]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-500/15 border border-red-500/30 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                  <i className="ph ph-x-circle text-2xl font-bold"></i>
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-[18px] text-[var(--text)]">
+                    {t('Reject Payment')}
+                  </h3>
+                  <p className="text-[12px] text-[var(--muted)]">
+                    {t('Order')} #{rejectOrder.id} • <span className="font-semibold text-[var(--text)]">{rejectOrder.total_amount_etb} {birr}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isRejectingPayment}
+                onClick={() => setRejectOrder(null)}
+                className="w-8 h-8 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] hover:bg-surface-3 transition-colors cursor-pointer"
+                title={t('Close')}
+              >
+                <i className="ph ph-x text-base"></i>
+              </button>
+            </div>
+
+            {/* Order & Payment Summary Card */}
+            <div className="p-3 rounded-xl bg-surface border border-[var(--border)] text-xs space-y-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-[var(--muted)]">{t('Customer:')}</span>
+                <span className="font-semibold text-[var(--text)]">{rejectOrder.contact_name || t('Guest')}</span>
+              </div>
+              {rejectOrder.contact_phone && (
+                <div className="flex justify-between items-center">
+                  <span className="text-[var(--muted)]">{t('Phone:')}</span>
+                  <span className="font-mono text-[var(--text)]">{rejectOrder.contact_phone}</span>
+                </div>
+              )}
+              {rejectOrder.latest_payment?.payment_method && (
+                <div className="flex justify-between items-center">
+                  <span className="text-[var(--muted)]">{t('Payment Method:')}</span>
+                  <span className="font-semibold uppercase text-[var(--accent)]">
+                    {t(PAYMENT_LABELS[rejectOrder.latest_payment.payment_method] || rejectOrder.latest_payment.payment_method)}
+                  </span>
+                </div>
+              )}
+              {(rejectOrder.latest_payment?.transaction_reference || rejectOrder.latest_payment?.tx_ref) && (
+                <div className="flex justify-between items-center pt-1 border-t border-[var(--border)]">
+                  <span className="text-[var(--muted)]">{t('Submitted Reference:')}</span>
+                  <span className="font-mono text-[11px] font-bold text-[var(--accent)] truncate max-w-[200px]" title={rejectOrder.latest_payment.transaction_reference || rejectOrder.latest_payment.tx_ref}>
+                    {rejectOrder.latest_payment.transaction_reference || rejectOrder.latest_payment.tx_ref}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Reason Chips */}
+            <div className="space-y-1.5">
+              <label className="block text-[11.5px] font-bold text-[var(--muted)] uppercase tracking-wider">
+                {t('Select quick reason:')}
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: t('Payment verification failed.'), text: t('Payment verification failed.') },
+                  { label: t('Funds not received in account'), text: t('Funds not received in cafe account.') },
+                  { label: t('Invalid transaction reference'), text: t('Invalid or unreadable transaction reference / receipt slip.') },
+                  { label: t('Incorrect transfer amount'), text: t('Transfer amount does not match order total.') },
+                  { label: t('Order cancelled by customer'), text: t('Customer requested order cancellation.') },
+                ].map((item, idx) => {
+                  const isSelected = rejectReason === item.text;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setRejectReason(item.text)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer border ${
+                        isSelected
+                          ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/50 shadow-sm'
+                          : 'bg-surface border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-red-500/30'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Rejection Reason Textarea */}
+            <div className="space-y-1.5">
+              <label className="block text-[12px] font-bold text-[var(--text)]">
+                {t('Enter rejection reason:')}{' '}
+                <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                rows={3}
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder={t('Enter rejection reason:')}
+                className="w-full px-3.5 py-2.5 rounded-[12px] bg-surface border border-[var(--border)] text-[var(--text)] text-[13px] focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/30 resize-none transition-colors"
+              />
+              <p className="text-[11px] text-[var(--muted)] flex items-center gap-1.5">
+                <i className="ph ph-info text-[13px] text-red-500/80"></i>
+                <span>{t('This reason will be recorded and shown to the customer.')}</span>
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isRejectingPayment}
+                onClick={() => setRejectOrder(null)}
+                className="flex-1 h-10 rounded-[12px] border border-[var(--border)] hover:bg-surface-3 text-[var(--text)] font-semibold text-[13px] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {t('Cancel')}
+              </button>
+              <button
+                type="button"
+                disabled={isRejectingPayment || !rejectReason.trim()}
+                onClick={handleConfirmRejectPayment}
+                className="flex-1 h-10 rounded-[12px] bg-red-600 hover:bg-red-700 text-white font-bold text-[13px] flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+              >
+                {isRejectingPayment ? (
+                  <>
+                    <i className="ph ph-spinner animate-spin text-base"></i>
+                    <span>{t('Rejecting...')}</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="ph ph-x-circle text-base"></i>
+                    <span>{t('Confirm Rejection')}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* MOBILE STICKY BOTTOM NAVIGATION BAR */}
