@@ -1020,9 +1020,27 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Only image files (PNG, JPG, WEBP) or PDF documents are accepted.':
     'የምስል ፋይሎች (PNG, JPG, WEBP) ወይም ፒዲኤፍ ሰነዶች ብቻ ተቀባይነት አላቸው።',
   'File size must be under 10MB.': 'የፋይል መጠን ከ10MB በታች መሆን አለበት።',
-  'Manager will verify your receipt document in the cafe account before the chef prepares your order.':
-    'ሼፉ ትዕዛዝዎን ማዘጋጀት ከመጀመሩ በፊት አስተዳዳሪው የደረሰኝ ሰነድዎን በካፌው ሂሳብ ያረጋግጣሉ።',
   'Close': 'ዝጋ',
+
+  // ── Payment Rejection Modal ───────────────────────────────────────────
+  'Reject Payment': 'ክፍያውን አትቀበል',
+  'Enter rejection reason:': 'ውድቅ የተደረገበትን ምክንያት ያስገቡ፦',
+  'Payment verification failed.': 'የክፍያ ማረጋገጫ አልተሳካም።',
+  'Funds not received in account': 'ገንዘቡ በሂሳብ ውስጥ አልገባም',
+  'Funds not received in cafe account.': 'ገንዘቡ በካፌው ሂሳብ ውስጥ አልገባም።',
+  'Invalid transaction reference': 'ትክክለኛ ያልሆነ የግብይት ማረጋገጫ',
+  'Invalid or unreadable transaction reference / receipt slip.': 'ትክክለኛ ያልሆነ ወይም የማይነበብ የደረሰኝ ማስረጃ።',
+  'Incorrect transfer amount': 'ትክክለኛ ያልሆነ የገንዘብ መጠን',
+  'Transfer amount does not match order total.': 'የተላለፈው የገንዘብ መጠን ከትዕዛዙ ጠቅላላ ዋጋ ጋር አይዛመድም።',
+  'Order cancelled by customer': 'ደንበኛው ትዕዛዙን ሰርዟል',
+  'Customer requested order cancellation.': 'ደንበኛው ትዕዛዙ እንዲሰረዝ ጠይቋል።',
+  'Confirm Rejection': 'ውድቅ ማድረግን አረጋግጥ',
+  'Rejecting...': 'ውድቅ በማድረግ ላይ...',
+  'This reason will be recorded and shown to the customer.': 'ይህ ምክንያት ተመዝግቦ ለደንበኛው ይገለጻል።',
+  'Select quick reason:': 'ፈጣን ምክንያት ይምረጡ፦',
+  'Submitted Reference:': 'የተላከው ማረጋገጫ፦',
+  'Payment Method:': 'የክፍያ ዘዴ፦',
+  'Payment rejected.': 'ክፍያው ውድቅ ተደርጓል።',
 };
 
 
