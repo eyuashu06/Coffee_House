@@ -1345,8 +1345,8 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             </button>
 
             <LanguageToggle className="h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors whitespace-nowrap cursor-pointer shrink-0" />
-            <ThemeToggle className="h-9 w-9 shrink-0 cursor-pointer" />
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <ThemeToggle className="h-9 w-9 shrink-0 cursor-pointer" />
               <NotificationsDropdown />
               <ProfileDropdown isManagerPage={true} />
             </div>
