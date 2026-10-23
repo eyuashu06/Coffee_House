@@ -14,6 +14,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { apiFetch } from '../../lib/api';
 import EthiopianPhoneInput from '../../components/EthiopianPhoneInput';
 import { formatEthiopianTime } from '../../utils/ethiopianTime';
+import { TextSize, getSavedTextSize, applyTextSize } from '../../utils/textSize';
 
 interface OrderItem {
   id: number;
@@ -194,6 +195,23 @@ export default function AccountPage() {
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
+
+  // Display Text Size State
+  const [currentTextSize, setCurrentTextSize] = useState<TextSize>('normal');
+
+  useEffect(() => {
+    setCurrentTextSize(getSavedTextSize());
+    const handleSizeChange = (e: any) => {
+      if (e.detail?.size) setCurrentTextSize(e.detail.size);
+    };
+    window.addEventListener('text-size-change', handleSizeChange);
+    return () => window.removeEventListener('text-size-change', handleSizeChange);
+  }, []);
+
+  const handleSelectTextSize = (sz: TextSize) => {
+    setCurrentTextSize(sz);
+    applyTextSize(sz);
+  };
 
   const fetchOrders = useCallback(async (silent = false) => {
     if (!silent) setIsLoadingOrders(true);
@@ -588,12 +606,12 @@ export default function AccountPage() {
           </div>
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <LanguageToggle className="hidden sm:flex h-9 px-2 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13px] sm:text-[13.5px] items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" />
-            <ThemeToggle className="hidden sm:flex h-9 w-9 shrink-0" />
             <Link href="/?welcome=1" className="h-9 px-3.5 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] hidden sm:flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" aria-label="Back to Home">
               <i className="ph ph-storefront text-[16px]"></i>
               <span>{t('Store')}</span>
             </Link>
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <ThemeToggle className="flex h-9 w-9 shrink-0 cursor-pointer" />
               <NotificationsDropdown />
               <ProfileDropdown />
             </div>
@@ -1078,34 +1096,90 @@ export default function AccountPage() {
               {profileMsg && <div className={`mb-3 p-2.5 sm:p-3 rounded-xl text-[12.5px] sm:text-[13px] ${profileMsg.includes('success') ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'}`}>{profileMsg}</div>}
               
               <div className="mb-4">
-                <label className="block text-[11.5px] sm:text-[12px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-medium">{t('Username / Email')}</label>
-                <div className="h-9.5 sm:h-10 bg-surface border border-[var(--border)] rounded-xl px-3.5 flex items-center text-[13px] sm:text-[13.5px] text-[var(--muted)] opacity-70">
+                <label className="block text-[12px] sm:text-[12.5px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-bold">{t('Username / Email')}</label>
+                <div className="h-11 bg-surface border border-[var(--border)] rounded-xl px-3.5 flex items-center text-[14px] sm:text-[15px] text-[var(--muted)] opacity-75 font-mono">
                   {user.email || user.username}
                 </div>
-                <p className="text-[var(--muted)] text-[11px] sm:text-[11.5px] mt-1">{t('Username/email cannot be changed here.')}</p>
+                <p className="text-[var(--muted)] text-[11.5px] mt-1">{t('Username/email cannot be changed here.')}</p>
               </div>
 
-              <form onSubmit={handleUpdateProfile} className="space-y-3.5">
+              <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-[11.5px] sm:text-[12px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-medium">{t('First Name')}</label>
-                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-9.5 sm:h-10 bg-surface border border-[var(--border)] rounded-xl px-3.5 text-[13px] sm:text-[13.5px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" />
+                    <label className="block text-[12px] sm:text-[12.5px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-bold">{t('First Name')}</label>
+                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-xl px-3.5 text-[15px] sm:text-[16px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors" />
                   </div>
                   <div>
-                    <label className="block text-[11.5px] sm:text-[12px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-medium">{t('Last Name')}</label>
-                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-9.5 sm:h-10 bg-surface border border-[var(--border)] rounded-xl px-3.5 text-[13px] sm:text-[13.5px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" />
+                    <label className="block text-[12px] sm:text-[12.5px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-bold">{t('Last Name')}</label>
+                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 bg-surface border border-[var(--border)] rounded-xl px-3.5 text-[15px] sm:text-[16px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11.5px] sm:text-[12px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-medium">{t('Phone Number')}</label>
+                  <label className="block text-[12px] sm:text-[12.5px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-bold">{t('Phone Number')}</label>
                   <EthiopianPhoneInput
                     value={phone}
                     onChange={val => setPhone(val)}
-                    className="h-9.5 sm:h-10"
+                    className="h-11 text-[15px] sm:text-[16px]"
                   />
                 </div>
-                <button type="submit" className="mt-3 w-full sm:w-auto h-9 sm:h-9.5 px-4.5 rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] text-[12.5px] sm:text-[13px] font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
-                  <i className="ph ph-check-circle text-[16px]"></i>
+
+                {/* Display Text Size Selector */}
+                <div className="pt-2 border-t border-[var(--border)]/60">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[12px] sm:text-[12.5px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
+                      <i className="ph ph-text-aa text-[16px] text-[var(--accent)]"></i>
+                      <span>{t('Display Text Size')}</span>
+                    </label>
+                    <span className="text-[11.5px] font-bold text-[var(--accent)] uppercase">
+                      {t(currentTextSize.charAt(0).toUpperCase() + currentTextSize.slice(1))}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { id: 'small', label: t('Small'), sample: 'A' },
+                      { id: 'normal', label: t('Normal'), sample: 'Aa' },
+                      { id: 'medium', label: t('Medium'), sample: 'Aa' },
+                      { id: 'large', label: t('Large'), sample: 'Aa' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => handleSelectTextSize(opt.id as TextSize)}
+                        className={`py-2 px-1 rounded-xl border text-center transition-all flex flex-col items-center justify-center cursor-pointer ${
+                          currentTextSize === opt.id
+                            ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] ring-1 ring-[var(--accent)] font-bold'
+                            : 'bg-surface border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--text)]'
+                        }`}
+                      >
+                        <span
+                          className={`font-bold leading-none ${
+                            opt.id === 'small'
+                              ? 'text-[12px]'
+                              : opt.id === 'normal'
+                              ? 'text-[14px]'
+                              : opt.id === 'medium'
+                              ? 'text-[16px]'
+                              : 'text-[18px]'
+                          }`}
+                        >
+                          {opt.sample}
+                        </span>
+                        <span className="text-[11px] font-medium mt-1 truncate max-w-full">
+                          {opt.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 p-2.5 rounded-xl bg-surface/50 border border-[var(--border)]/70 text-[var(--muted)] text-[12px] italic">
+                    <span className="font-semibold not-italic text-[var(--accent)] text-[10.5px] uppercase tracking-wider block mb-0.5">
+                      {t('Preview Text')}:
+                    </span>
+                    {t('Buna Hub Ethiopian artisanal coffee experience')}
+                  </div>
+                </div>
+
+                <button type="submit" className="mt-3 w-full sm:w-auto h-11 px-6 rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] text-[14px] font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                  <i className="ph ph-check-circle text-[17px]"></i>
                   <span>{t('Update Profile')}</span>
                 </button>
               </form>
