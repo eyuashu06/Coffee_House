@@ -523,7 +523,7 @@ export default function AccountPage() {
         fetchAddresses();
       } else {
         const errorData = await res.json().catch(() => ({}));
-        setAddrMsg(`Failed to add address: ${JSON.stringify(errorData)}`);
+        setAddrMsg(errorData.detail || errorData.error || t('Failed to add address. Please check the fields and try again.'));
       }
     } catch (err) {
       setAddrMsg(t('Failed to add address due to a network error.'));
@@ -692,7 +692,7 @@ export default function AccountPage() {
                                   #{order.order_number}
                                 </span>
                                 <span className="text-[10.5px] sm:text-[11px] px-1.5 py-0.5 rounded-md bg-surface border border-[var(--border)] text-[var(--muted)] font-medium">
-                                  {t(order.order_type, order.order_type)} {order.table_number ? `(${t('Table')} ${order.table_number})` : ''}
+                                  {t(order.order_type) || (order.order_type === 'DELIVERY' ? 'Delivery' : order.order_type === 'DINE_IN' ? 'Dine-In / Reserved Table' : 'Store Pickup')} {order.table_number ? `(${t('Table')} ${order.table_number})` : ''}
                                 </span>
                               </div>
                               <span className="inline-flex items-center gap-1 text-[11px] sm:text-[11.5px] text-[var(--muted)] mt-0.5">
@@ -877,7 +877,7 @@ export default function AccountPage() {
                                   #{order.order_number}
                                 </span>
                                 <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-surface border border-[var(--border)] text-[var(--muted)] font-medium">
-                                  {t(order.order_type, order.order_type)}
+                                  {t(order.order_type) || (order.order_type === 'DELIVERY' ? 'Delivery' : order.order_type === 'DINE_IN' ? 'Dine-In / Reserved Table' : 'Store Pickup')}
                                 </span>
                               </div>
                               <span className="inline-flex items-center gap-1 text-[11px] sm:text-[11.5px] text-[var(--muted)] mt-0.5">
@@ -1125,56 +1125,35 @@ export default function AccountPage() {
 
                 {/* Display Text Size Selector */}
                 <div className="pt-2 border-t border-[var(--border)]/60">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-[12px] sm:text-[12.5px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
-                      <i className="ph ph-text-aa text-[16px] text-[var(--accent)]"></i>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
+                      <i className="ph ph-text-aa text-[15px] text-[var(--accent)]"></i>
                       <span>{t('Display Text Size')}</span>
                     </label>
-                    <span className="text-[11.5px] font-bold text-[var(--accent)] uppercase">
+                    <span className="text-[11px] font-bold text-[var(--accent)] uppercase">
                       {t(currentTextSize.charAt(0).toUpperCase() + currentTextSize.slice(1))}
                     </span>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-4 gap-1.5">
                     {[
-                      { id: 'small', label: t('Small'), sample: 'A' },
-                      { id: 'normal', label: t('Normal'), sample: 'Aa' },
-                      { id: 'medium', label: t('Medium'), sample: 'Aa' },
-                      { id: 'large', label: t('Large'), sample: 'Aa' },
+                      { id: 'small', label: t('Small') },
+                      { id: 'normal', label: t('Normal') },
+                      { id: 'medium', label: t('Medium') },
+                      { id: 'large', label: t('Large') },
                     ].map((opt) => (
                       <button
                         key={opt.id}
                         type="button"
                         onClick={() => handleSelectTextSize(opt.id as TextSize)}
-                        className={`py-2 px-1 rounded-xl border text-center transition-all flex flex-col items-center justify-center cursor-pointer ${
+                        className={`h-9 px-2 rounded-xl border text-center transition-all flex items-center justify-center cursor-pointer text-[12px] font-bold ${
                           currentTextSize === opt.id
-                            ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] ring-1 ring-[var(--accent)] font-bold'
+                            ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] ring-1 ring-[var(--accent)] shadow-sm'
                             : 'bg-surface border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--text)]'
                         }`}
                       >
-                        <span
-                          className={`font-bold leading-none ${
-                            opt.id === 'small'
-                              ? 'text-[12px]'
-                              : opt.id === 'normal'
-                              ? 'text-[14px]'
-                              : opt.id === 'medium'
-                              ? 'text-[16px]'
-                              : 'text-[18px]'
-                          }`}
-                        >
-                          {opt.sample}
-                        </span>
-                        <span className="text-[11px] font-medium mt-1 truncate max-w-full">
-                          {opt.label}
-                        </span>
+                        <span className="truncate">{opt.label}</span>
                       </button>
                     ))}
-                  </div>
-                  <div className="mt-2 p-2.5 rounded-xl bg-surface/50 border border-[var(--border)]/70 text-[var(--muted)] text-[12px] italic">
-                    <span className="font-semibold not-italic text-[var(--accent)] text-[10.5px] uppercase tracking-wider block mb-0.5">
-                      {t('Preview Text')}:
-                    </span>
-                    {t('Buna Hub Ethiopian artisanal coffee experience')}
                   </div>
                 </div>
 
