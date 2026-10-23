@@ -428,6 +428,18 @@ export default function ProfileDropdown({
                 <span>{t('Sign Out')}</span>
               </button>
             </div>
+
+            {/* Close Dropdown Button — placed at the down position below all icons */}
+            <div className="pt-1 border-t border-[var(--border)] px-1.5 pb-0.5">
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="w-full px-3 py-1.5 rounded-xl text-[12px] text-[var(--muted)] hover:bg-surface hover:text-[var(--text)] transition-colors flex items-center justify-center gap-1.5 font-medium cursor-pointer"
+              >
+                <i className="ph ph-x text-[13px]"></i>
+                <span>{t('Close')}</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -529,56 +541,35 @@ export default function ProfileDropdown({
 
               {/* Display Text Size Selector for both customer and admin/manager */}
               <div className="pt-1">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-[12.5px] sm:text-[13px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
-                    <i className="ph ph-text-aa text-[16px] text-[var(--accent)]"></i>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
+                    <i className="ph ph-text-aa text-[15px] text-[var(--accent)]"></i>
                     <span>{t('Display Text Size')}</span>
                   </label>
-                  <span className="text-[11.5px] font-bold text-[var(--accent)] uppercase">
+                  <span className="text-[11px] font-bold text-[var(--accent)] uppercase">
                     {t(currentTextSize.charAt(0).toUpperCase() + currentTextSize.slice(1))}
                   </span>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-1.5">
                   {[
-                    { id: 'small', label: t('Small'), sample: 'A' },
-                    { id: 'normal', label: t('Normal'), sample: 'Aa' },
-                    { id: 'medium', label: t('Medium'), sample: 'Aa' },
-                    { id: 'large', label: t('Large'), sample: 'Aa' },
+                    { id: 'small', label: t('Small') },
+                    { id: 'normal', label: t('Normal') },
+                    { id: 'medium', label: t('Medium') },
+                    { id: 'large', label: t('Large') },
                   ].map((opt) => (
                     <button
                       key={opt.id}
                       type="button"
                       onClick={() => handleSelectTextSize(opt.id as TextSize)}
-                      className={`py-2 px-1 rounded-xl border text-center transition-all flex flex-col items-center justify-center cursor-pointer ${
+                      className={`h-9 px-2 rounded-xl border text-center transition-all flex items-center justify-center cursor-pointer text-[12px] font-bold ${
                         currentTextSize === opt.id
-                          ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] ring-1 ring-[var(--accent)]'
+                          ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] ring-1 ring-[var(--accent)] shadow-sm'
                           : 'bg-surface border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--text)]'
                       }`}
                     >
-                      <span
-                        className={`font-bold leading-none ${
-                          opt.id === 'small'
-                            ? 'text-[12px]'
-                            : opt.id === 'normal'
-                            ? 'text-[14px]'
-                            : opt.id === 'medium'
-                            ? 'text-[16px]'
-                            : 'text-[18px]'
-                        }`}
-                      >
-                        {opt.sample}
-                      </span>
-                      <span className="text-[11px] font-medium mt-1 truncate max-w-full">
-                        {opt.label}
-                      </span>
+                      <span className="truncate">{opt.label}</span>
                     </button>
                   ))}
-                </div>
-                <div className="mt-2 p-2 rounded-xl bg-surface/50 border border-[var(--border)]/70 text-[var(--muted)] text-[12px] italic">
-                  <span className="font-semibold not-italic text-[var(--accent)] text-[10.5px] uppercase tracking-wider block mb-0.5">
-                    {t('Preview Text')}:
-                  </span>
-                  {t('Buna Hub Ethiopian artisanal coffee experience')}
                 </div>
               </div>
 
