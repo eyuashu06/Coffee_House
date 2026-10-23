@@ -1,9 +1,7 @@
 // Service Worker for Artisanal Reserve Coffee PWA
 //
-// Bump this whenever a deploy changes the app. The worker cannot tell one build's
-// assets from another's, so without a bump a returning visitor keeps the previous
-// version's cached shell and chunks.
-const CACHE_NAME = 'artisanal-coffee-cache-v3';
+// Bump this whenever a deploy changes the app.
+const CACHE_NAME = 'artisanal-coffee-cache-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -12,19 +10,26 @@ const ASSETS_TO_CACHE = [
   '/icon-512.png'
 ];
 
-// Authenticated API data must never be written to the cache: it is per-user,
-// and a shared cache entry would hand one customer's orders or profile to
-// whoever else opens the app next.
-const isApiRequest = (url) =>
-  url.pathname.startsWith('/api/') || url.pathname.startsWith('/media/');
+const isLocalhost =
+  self.location.hostname === 'localhost' ||
+  self.location.hostname === '127.0.0.1' ||
+  self.location.hostname.endsWith('.local');
+
+// Never intercept API, media, or Next.js build/HMR chunks
+const shouldBypass = (url) =>
+  isLocalhost ||
+  url.pathname.startsWith('/api/') ||
+  url.pathname.startsWith('/media/') ||
+  url.pathname.startsWith('/_next/') ||
+  url.pathname.startsWith('/__next');
 
 self.addEventListener('install', (event) => {
+  if (isLocalhost) {
+    self.skipWaiting();
+    return;
+  }
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      // Add entries one at a time. cache.addAll() is atomic -- a single 404
-      // (which is exactly what a missing favicon used to cause) rejects the
-      // whole promise and the worker never activates, silently disabling every
-      // other precached asset as well.
       await Promise.all(
         ASSETS_TO_CACHE.map((asset) =>
           cache.add(asset).catch((err) => {
@@ -39,10 +44,14 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      // Delete every cache of ours that is not the current version. This condition was
-      // inverted: it deleted anything NOT sharing our prefix and kept everything that
-      // did, which is all of them. Invalidation had therefore never run.
+    caches.keys().then(async (cacheNames) => {
+      if (isLocalhost) {
+        await Promise.all(cacheNames.map((cache) => caches.delete(cache)));
+        if (self.registration) {
+          await self.registration.unregister();
+        }
+        return;
+      }
       return Promise.all(
         cacheNames.map((cache) => {
           if (cache.startsWith('artisanal-coffee-cache-') && cache !== CACHE_NAME) {
@@ -62,8 +71,8 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Same-origin only, and never API traffic.
-  if (url.origin !== self.location.origin || isApiRequest(url)) return;
+  // Same-origin only, and bypass ignored routes
+  if (url.origin !== self.location.origin || shouldBypass(url)) return;
 
   // Navigations: network first so a deploy is picked up immediately, falling
   // back to the cached shell only when genuinely offline.
@@ -82,7 +91,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: cache first, since their URLs are content-hashed or versioned.
+  // Static assets (icons, manifest): cache first
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
