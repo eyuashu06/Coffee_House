@@ -309,6 +309,11 @@ CHAPA_FALLBACK_EMAIL = os.environ.get('CHAPA_FALLBACK_EMAIL', 'customer@gmail.co
 # Reject signups whose email domain cannot receive mail (sendgrid/chapa need it).
 REQUIRE_EMAIL_MX = os.environ.get('REQUIRE_EMAIL_MX', 'True').lower() in ('1', 'true', 'yes')
 
+# links.et Ethiopian Bank & Mobile Money Verifier API
+LINKS_ET_API_KEY = os.environ.get('LINKS_ET_API_KEY', '').strip()
+LINKS_ET_API_URL = os.environ.get('LINKS_ET_API_URL', 'https://links.et').rstrip('/')
+LINKS_ET_TIMEOUT = int(os.environ.get('LINKS_ET_TIMEOUT', '25'))
+
 # How long an unpaid order stays alive before the expiry job closes it (FR-P7).
 # Measured from when the order was created. Kept comfortably above the gateway's own
 # settlement time so a customer who pays at the last moment is not closed out on top

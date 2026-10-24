@@ -61,6 +61,7 @@ interface Order {
     created_at: string;
     verified_at?: string | null;
     gateway_status?: string;
+    bank_verification?: any;
   } | null;
   /**
    * Whether the money is in, decided by the backend from whether *any* payment
@@ -793,30 +794,51 @@ export default function AccountPage() {
                                     </strong>
                                   </p>
                                 </div>
-                              ) : (order.latest_payment?.transaction_reference || ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(order.latest_payment?.payment_method || '')) ? (
-                                <div className="rounded-xl border border-blue-500/40 bg-blue-50 text-blue-900 dark:bg-blue-950/50 dark:text-blue-200 p-2.5 sm:p-3 text-[11px] sm:text-[11.5px] space-y-1">
-                                  <p className="flex items-start gap-1.5 font-bold text-blue-800 dark:text-blue-300 text-[11.5px] sm:text-[12px]">
-                                    <i className="ph ph-receipt text-[16px] shrink-0 mt-0.5"></i>
-                                    <span>
-                                      {t(
-                                        'Transfer Submitted — Manager Verifying Payment',
-                                        'የማስተላለፍ መረጃ ተልኳል — አስተዳዳሪው ክፍያዎን እያረጋገጡ ነው'
-                                      )}
-                                    </span>
-                                  </p>
-                                  <div className="p-1.5 rounded bg-surface border border-[var(--border)] font-mono text-[10.5px] space-y-0.5">
-                                    <div>{t('Method:')} <span className="font-sans font-bold capitalize">{order.latest_payment?.payment_method}</span></div>
-                                    <div>{t('Reference:')} <strong className="text-[var(--accent)] select-all">{order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref}</strong></div>
-                                    <div>{t('Amount:')} <strong>{Number(order.total_amount_etb).toFixed(2)} {birr}</strong></div>
+                              ) : (order.latest_payment?.transaction_reference || ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(order.latest_payment?.payment_method || '')) ? (() => {
+                                const isBankVerified = order.latest_payment?.gateway_status === 'verified' || order.latest_payment?.bank_verification?.verified;
+                                const bVer = order.latest_payment?.bank_verification;
+                                return isBankVerified ? (
+                                  <div className="rounded-xl border border-emerald-500/40 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200 p-2.5 sm:p-3 text-[11px] sm:text-[11.5px] space-y-1">
+                                    <p className="flex items-start gap-1.5 font-bold text-emerald-800 dark:text-emerald-300 text-[11.5px] sm:text-[12px]">
+                                      <i className="ph ph-shield-check text-[16px] shrink-0 mt-0.5 text-emerald-600"></i>
+                                      <span>
+                                        {t('Payment Verified at Bank Source')} ({bVer?.provider || 'Bank'})
+                                      </span>
+                                    </p>
+                                    <div className="p-1.5 rounded bg-surface border border-[var(--border)] font-mono text-[10.5px] space-y-0.5">
+                                      <div>{t('Method:')} <span className="font-sans font-bold capitalize">{order.latest_payment?.payment_method}</span></div>
+                                      <div>{t('Bank Reference:')} <strong className="text-[var(--accent)] select-all">{bVer?.reference || order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref}</strong></div>
+                                      <div>{t('Amount:')} <strong>{Number(order.total_amount_etb).toFixed(2)} {birr}</strong> {bVer?.amount_matches && <span className="text-emerald-600 font-sans">✓</span>}</div>
+                                    </div>
+                                    <p className="text-[10.5px] text-[var(--muted)]">
+                                      {t('Your payment was verified directly with the bank. The kitchen will prepare your order shortly.')}
+                                    </p>
                                   </div>
-                                  <p className="text-[10.5px] text-[var(--muted)]">
-                                    {t(
-                                      'Once the manager verifies the transfer in the account, the kitchen will immediately begin preparing your order.',
-                                      'ክፍያው እንደተረጋገጠ ወጥ ቤቱ ትዕዛዝዎን ማዘጋጀት ይጀምራል።'
-                                    )}
-                                  </p>
-                                </div>
-                              ) : (
+                                ) : (
+                                  <div className="rounded-xl border border-blue-500/40 bg-blue-50 text-blue-900 dark:bg-blue-950/50 dark:text-blue-200 p-2.5 sm:p-3 text-[11px] sm:text-[11.5px] space-y-1">
+                                    <p className="flex items-start gap-1.5 font-bold text-blue-800 dark:text-blue-300 text-[11.5px] sm:text-[12px]">
+                                      <i className="ph ph-receipt text-[16px] shrink-0 mt-0.5"></i>
+                                      <span>
+                                        {t(
+                                          'Transfer Submitted — Manager Verifying Payment',
+                                          'የማስተላለፍ መረጃ ተልኳል — አስተዳዳሪው ክፍያዎን እያረጋገጡ ነው'
+                                        )}
+                                      </span>
+                                    </p>
+                                    <div className="p-1.5 rounded bg-surface border border-[var(--border)] font-mono text-[10.5px] space-y-0.5">
+                                      <div>{t('Method:')} <span className="font-sans font-bold capitalize">{order.latest_payment?.payment_method}</span></div>
+                                      <div>{t('Reference:')} <strong className="text-[var(--accent)] select-all">{order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref}</strong></div>
+                                      <div>{t('Amount:')} <strong>{Number(order.total_amount_etb).toFixed(2)} {birr}</strong></div>
+                                    </div>
+                                    <p className="text-[10.5px] text-[var(--muted)]">
+                                      {t(
+                                        'Once the manager verifies the transfer in the account, the kitchen will immediately begin preparing your order.',
+                                        'ክፍያው እንደተረጋገጠ ወጥ ቤቱ ትዕዛዝዎን ማዘጋጀት ይጀምራል።'
+                                      )}
+                                    </p>
+                                  </div>
+                                );
+                              })() : (
                                 <div className="rounded-xl border border-red-500/40 bg-red-50 text-red-900 dark:bg-red-950/50 dark:text-red-200 p-2.5 sm:p-3 text-[11px] sm:text-[11.5px] space-y-1">
                                   <p className="flex items-start gap-1.5 text-red-800 dark:text-red-200 font-semibold text-[11.5px] sm:text-[12px]">
                                     <i className="ph ph-warning-octagon text-[16px] mt-0.5"></i>

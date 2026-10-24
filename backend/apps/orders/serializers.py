@@ -114,6 +114,17 @@ class OrderSerializer(serializers.ModelSerializer):
         payment = order.payments.order_by('-created_at').first()
         if not payment:
             return None
+
+        bank_verification = None
+        if payment.gateway_status in ('verified', 'verification_failed', 'pending_review') and payment.raw_response:
+            try:
+                import json
+                parsed = json.loads(payment.raw_response)
+                if isinstance(parsed, dict) and ('provider' in parsed or 'verified' in parsed):
+                    bank_verification = parsed
+            except Exception:
+                pass
+
         return {
             'id': payment.id,
             'tx_ref': payment.tx_ref,
@@ -129,6 +140,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'created_at': payment.created_at,
             'verified_at': payment.verified_at,
             'gateway_status': payment.gateway_status,
+            'bank_verification': bank_verification,
         }
 
     def get_payment_state(self, order):

@@ -1059,6 +1059,27 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Failed to delete address.': 'አድራሻውን መሰረዝ አልተሳካም።',
   'Network error. Failed to update address.': 'የግንኙነት ስህተት። አድራሻውን ማዘመን አልተሳካም።',
   'Network error. Failed to delete address.': 'የግንኙነት ስህተት። አድራሻውን መሰረዝ አልተሳካም።',
+
+  // ── Ethiopian Bank Verification (links.et) ─────────────────────────────
+  'Verify with Bank (links.et)': 'በባንክ አረጋግጥ (links.et)',
+  'Verify with Bank': 'በባንክ አረጋግጥ',
+  'Verifying with Bank...': 'በባንክ በማረጋገጥ ላይ...',
+  'Bank Verification': 'የባንክ ማረጋገጫ',
+  'Verified by Bank at Source': 'በቀጥታ ከባንኩ የተረጋገጠ',
+  'Bank Verified': 'በባንክ ተረጋግጧል',
+  'Bank Reference': 'የባንክ ማመሳከሪያ ቁጥር',
+  'Payer Name': 'የከፋይ ስም',
+  'Payer Account': 'የከፋይ ሂሳብ ቁጥር',
+  'Receiver': 'ተቀባይ',
+  'Amount Matches Order': 'መጠኑ ከትዕዛዙ ጋር ይዛመዳል',
+  'Amount Mismatch': 'የመጠን ልዩነት አለ',
+  'Bank Verification Failed': 'የባንክ ማረጋገጫ አልተሳካም',
+  'Bank payment verified successfully!': 'የባንክ ክፍያው በተሳካ ሁኔታ ተረጋግጧል!',
+  'Bank verification could not confirm receipt.': 'የባንክ ማረጋገጫው ደረሰኙን ማረጋገጥ አልቻለም።',
+  'Failed to verify payment with bank.': 'ክፍያውን በባንክ ማረጋገጥ አልተሳካም።',
+  'Error verifying payment with bank.': 'ክፍያውን በባንክ ሲያረጋግጥ ስህተት አጋጥሟል።',
+  'Verify & Approve': 'አረጋግጥና አፅድቅ',
+  'Verifying & Approving...': 'በማረጋገጥና በማፅደቅ ላይ...',
 };
 
 

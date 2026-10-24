@@ -20,6 +20,7 @@ from .serializers import (
     InitializePaymentSerializer,
     PaymentAccountSerializer,
 )
+from .links_et import verify_receipt, verify_receipt_image, is_links_et_configured
 from apps.orders.models import Order, OrderStatusHistory
 from apps.accounts.models import normalize_ethiopian_phone
 from apps.accounts.permissions import IsManager
@@ -252,17 +253,61 @@ class InitializePaymentView(APIView):
             }, status=status.HTTP_200_OK)
 
         # ── Manual Digital Transfers (Telebirr, CBE, Awash, E-Birr, M-Pesa) ─
-        # User transfers to designated account number and submits confirmation code.
-        # Order stays PENDING until admin verifies account and approves.
+        # User transfers to designated account number and submits confirmation code or receipt.
         if payment_method in {'telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'}:
+            receipt_base64 = request.data.get('receipt_base64', '')
             payment.transaction_reference = transaction_reference
-            payment.raw_response = f"Manual transfer submitted with reference: {transaction_reference or 'N/A'}"
+            verification_result = None
+
+            # Attempt real-time bank verification via links.et if configured
+            if is_links_et_configured():
+                from django.utils import timezone
+                if receipt_base64:
+                    verification_result = verify_receipt_image(
+                        receipt_base64,
+                        expected_amount=order.total_amount_etb
+                    )
+                elif transaction_reference and not transaction_reference.startswith('Receipt:'):
+                    verification_result = verify_receipt(
+                        transaction_reference,
+                        expected_amount=order.total_amount_etb
+                    )
+
+            if verification_result and verification_result.get('verified'):
+                from django.utils import timezone
+                payment.verified_at = timezone.now()
+                payment.gateway_status = 'verified'
+                payment.approval_notes = verification_result.get('message', 'Verified by links.et at bank source')
+                ref = verification_result.get('reference') or transaction_reference or payment.tx_ref
+                payment.mark_as_success(
+                    chapa_ref=f"LINKSET_{verification_result.get('provider_key', 'bank').upper()}_{ref}",
+                    raw_data=json.dumps(verification_result),
+                    gateway_status='verified'
+                )
+                return Response({
+                    'message': verification_result.get('message', 'Payment verified successfully!'),
+                    'message_am': verification_result.get('message_am', 'ክፍያው በተሳካ ሁኔታ ተረጋግጧል!'),
+                    'payment': PaymentSerializer(payment).data,
+                    'checkout_url': '',
+                    'verified': True,
+                    'bank_details': verification_result,
+                    'test_mode': False,
+                }, status=status.HTTP_200_OK)
+
+            if verification_result:
+                payment.approval_notes = verification_result.get('message', '')
+                payment.raw_response = json.dumps(verification_result)
+            else:
+                payment.raw_response = f"Manual transfer submitted with reference: {transaction_reference or 'N/A'}"
             payment.save()
+
             return Response({
                 'message': f"Transfer reference '{transaction_reference or payment.tx_ref}' submitted. Manager will verify and confirm your payment.",
                 'payment': PaymentSerializer(payment).data,
                 'checkout_url': '',
                 'pending_approval': True,
+                'verified': False,
+                'bank_details': verification_result,
                 'test_mode': False,
             }, status=status.HTTP_200_OK)
 
@@ -730,5 +775,113 @@ class RejectPaymentView(APIView):
             'message': f"Payment for Order #{payment.order.order_number} rejected.",
             'payment': PaymentSerializer(payment).data,
             'order_status': payment.order.status,
+        }, status=status.HTTP_200_OK)
+
+
+class VerifyBankPaymentView(APIView):
+    """
+    Verify an Ethiopian digital payment or transfer receipt with links.et at the bank source.
+    Accessible to managers and order owners.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.utils import timezone
+
+        if not is_links_et_configured():
+            return Response({
+                'ok': False,
+                'verified': False,
+                'error': 'LINKS_ET_API_KEY is not configured in .env',
+                'message': 'links.et verification service is not configured.',
+                'message_am': 'የ links.et ማረጋገጫ አገልግሎት አልተዋቀረም።',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Lookup payment by pk, order_id, tx_ref, or order_number
+        try:
+            if str(pk).isdigit():
+                payment = Payment.objects.select_related('order').filter(pk=int(pk)).first()
+                if not payment:
+                    payment = Payment.objects.select_related('order').filter(order_id=int(pk)).order_by('-created_at').first()
+                if not payment:
+                    raise Payment.DoesNotExist
+            else:
+                payment = Payment.objects.select_related('order').filter(tx_ref=str(pk)).first()
+                if not payment:
+                    payment = Payment.objects.select_related('order').filter(order__order_number=str(pk)).order_by('-created_at').first()
+                if not payment:
+                    raise Payment.DoesNotExist
+        except Payment.DoesNotExist:
+            return Response({'error': 'Payment transaction not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Permission check: must be staff/manager or the customer who placed the order
+        if not (request.user.is_manager_or_admin() or payment.order.customer == request.user):
+            return Response({'error': 'You do not have permission to verify this payment.'}, status=status.HTTP_403_FORBIDDEN)
+
+        url_or_ref = (
+            request.data.get('transaction_reference') or
+            request.data.get('url') or
+            payment.transaction_reference or
+            payment.tx_ref
+        )
+        image_base64 = request.data.get('image_base64') or request.data.get('receipt_base64')
+        auto_approve = request.data.get('auto_approve', False) and request.user.is_manager_or_admin()
+
+        if image_base64:
+            res = verify_receipt_image(
+                image_base64,
+                expected_amount=payment.amount_etb
+            )
+        else:
+            res = verify_receipt(
+                url_or_ref,
+                expected_amount=payment.amount_etb
+            )
+
+        # Record verification results on payment
+        payment.verified_at = timezone.now()
+        if res.get('verified'):
+            payment.gateway_status = 'verified'
+            payment.approval_notes = f"Verified by {res.get('provider')}: {res.get('message')}"
+            payment.raw_response = json.dumps(res)
+
+            # Auto approve if requested by manager or auto_approve=True
+            if auto_approve and payment.status != 'SUCCESS':
+                ref = res.get('reference') or payment.transaction_reference or payment.tx_ref
+                payment.approved_by = request.user
+                payment.approved_at = timezone.now()
+                payment.mark_as_success(
+                    chapa_ref=f"LINKSET_{res.get('provider_key', 'bank').upper()}_{ref}",
+                    raw_data=res,
+                    gateway_status='verified'
+                )
+            else:
+                payment.save()
+        else:
+            payment.gateway_status = 'verification_failed' if not res.get('ok') else 'pending_review'
+            payment.approval_notes = res.get('message', 'Bank verification could not confirm receipt.')
+            payment.raw_response = json.dumps(res)
+            payment.save()
+
+        return Response({
+            'ok': res.get('ok', False),
+            'verified': res.get('verified', False),
+            'provider': res.get('provider'),
+            'provider_key': res.get('provider_key'),
+            'reference': res.get('reference'),
+            'amount_etb': res.get('amount_etb'),
+            'expected_amount_etb': res.get('expected_amount_etb'),
+            'amount_matches': res.get('amount_matches'),
+            'payer_name': res.get('payer_name'),
+            'payer_account': res.get('payer_account'),
+            'receiver_name': res.get('receiver_name'),
+            'receiver_account': res.get('receiver_account'),
+            'payment_date': res.get('payment_date'),
+            'bank_status': res.get('bank_status'),
+            'message': res.get('message'),
+            'message_am': res.get('message_am'),
+            'payment': PaymentSerializer(payment).data,
+            'order_status': payment.order.status,
+            'raw_details': res,
         }, status=status.HTTP_200_OK)
 

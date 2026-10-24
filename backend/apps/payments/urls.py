@@ -8,6 +8,7 @@ from .views import (
     PaymentAccountViewSet,
     ApprovePaymentView,
     RejectPaymentView,
+    VerifyBankPaymentView,
 )
 
 class OptionalSlashRouter(DefaultRouter):
@@ -30,6 +31,8 @@ urlpatterns = [
     path('payments/<str:pk>/approve', ApprovePaymentView.as_view(), name='payment-approve-noslash'),
     path('payments/<str:pk>/reject/', RejectPaymentView.as_view(), name='payment-reject'),
     path('payments/<str:pk>/reject', RejectPaymentView.as_view(), name='payment-reject-noslash'),
+    path('payments/<str:pk>/verify-bank/', VerifyBankPaymentView.as_view(), name='payment-verify-bank'),
+    path('payments/<str:pk>/verify-bank', VerifyBankPaymentView.as_view(), name='payment-verify-bank-noslash'),
     path('', include(router.urls)),
 ]
 

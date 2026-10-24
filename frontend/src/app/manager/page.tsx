@@ -57,6 +57,7 @@ interface Order {
     created_at: string;
     verified_at?: string | null;
     gateway_status?: string;
+    bank_verification?: any;
   } | null;
   /** Backend's authoritative "has the money arrived" answer. */
   payment_state?: 'paid' | 'settling' | 'failed' | 'unpaid';
@@ -426,6 +427,8 @@ export default function ManagerDashboard() {
   const [deleteConfirmAccount, setDeleteConfirmAccount] = useState<PaymentAccount | null>(null);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isApprovingPayment, setIsApprovingPayment] = useState<number | null>(null);
+  const [isVerifyingBank, setIsVerifyingBank] = useState<number | null>(null);
+  const [bankVerificationResults, setBankVerificationResults] = useState<Record<number, any>>({});
 
   // Reports state
   const [reportData, setReportData] = useState<RevenueReport | null>(null);
@@ -1109,6 +1112,39 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
     }
   };
 
+  const handleVerifyBankPayment = async (order: Order, autoApprove: boolean = false) => {
+    const targetId = order.latest_payment?.id || order.id;
+    setIsVerifyingBank(order.id);
+    setActionMsg(null);
+    try {
+      const res = await apiFetch(`/api/v1/payments/${targetId}/verify-bank/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auto_approve: autoApprove }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setBankVerificationResults((prev) => ({ ...prev, [order.id]: data }));
+        if (data.verified) {
+          const msg = language === 'am' && data.message_am ? data.message_am : data.message;
+          setActionMsg(`✅ ${msg || t('Bank payment verified successfully!')}`);
+          await fetchOrders();
+          fetchAnalytics();
+        } else {
+          const msg = language === 'am' && data.message_am ? data.message_am : data.message;
+          setActionMsg(`⚠️ ${msg || t('Bank verification could not confirm receipt.')}`);
+        }
+        setTimeout(() => setActionMsg(null), 6000);
+      } else {
+        setActionMsg(`❌ ${data.error || data.message || t('Failed to verify payment with bank.')}`);
+      }
+    } catch (e: any) {
+      setActionMsg(`❌ ${e.message || t('Error verifying payment with bank.')}`);
+    } finally {
+      setIsVerifyingBank(null);
+    }
+  };
+
   const openRejectPaymentModal = (order: Order) => {
     setRejectOrder(order);
     setRejectReason(t('Payment verification failed.'));
@@ -1745,65 +1781,150 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                 </button>
                               </div>
                             </div>
-                          ) : (order.latest_payment?.transaction_reference || ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(order.latest_payment?.payment_method || '')) ? (
-                            <div className="p-3.5 rounded-[14px] bg-blue-500/10 border border-blue-500/30 text-xs space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-blue-800 dark:text-blue-300 flex items-center gap-1.5 text-[12.5px]">
-                                  <i className="ph ph-bank text-base"></i>
-                                  {t(PAYMENT_LABELS[order.latest_payment?.payment_method || ''] || 'Transfer')} {t('Verification', 'ማረጋገጫ')}
-                                </span>
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-800 dark:text-blue-300">
-                                  {t('Check Account', 'ሂሳብዎን ይፈትሹ')}
-                                </span>
-                              </div>
-                              <div className="p-2.5 rounded-lg bg-surface border border-[var(--border)] font-mono text-[11.5px] space-y-1">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-[var(--muted)] font-sans flex items-center gap-1">
-                                    <i className="ph ph-file-text text-[14px] text-[var(--accent)]"></i>
-                                    {order.latest_payment?.transaction_reference?.startsWith('Receipt:') ? t('Receipt Document:') : t('Transaction Ref:')}
+                          ) : (order.latest_payment?.transaction_reference || ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(order.latest_payment?.payment_method || '')) ? (() => {
+                            const bVerification = bankVerificationResults[order.id] || order.latest_payment?.bank_verification;
+                            const isBankVerified = bVerification?.verified || order.latest_payment?.gateway_status === 'verified';
+                            return (
+                              <div className="p-3.5 rounded-[14px] bg-blue-500/10 border border-blue-500/30 text-xs space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-blue-800 dark:text-blue-300 flex items-center gap-1.5 text-[12.5px]">
+                                    <i className="ph ph-bank text-base"></i>
+                                    {t(PAYMENT_LABELS[order.latest_payment?.payment_method || ''] || 'Transfer')} {t('Verification', 'ማረጋገጫ')}
                                   </span>
-                                  <strong className="text-[var(--accent)] text-[12px] select-all font-bold tracking-wider truncate max-w-[210px]" title={order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref || 'N/A'}>
-                                    {order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref || 'N/A'}
-                                  </strong>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${isBankVerified ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300' : 'bg-blue-500/20 text-blue-800 dark:text-blue-300'}`}>
+                                    {isBankVerified ? t('Bank Verified') : t('Check Account', 'ሂሳብዎን ይፈትሹ')}
+                                  </span>
                                 </div>
-                                {order.latest_payment?.phone_number && (
+                                <div className="p-2.5 rounded-lg bg-surface border border-[var(--border)] font-mono text-[11.5px] space-y-1">
                                   <div className="flex justify-between items-center">
-                                    <span className="text-[var(--muted)] font-sans">{t('Sender Phone:')}</span>
-                                    <span>{order.latest_payment.phone_number}</span>
+                                    <span className="text-[var(--muted)] font-sans flex items-center gap-1">
+                                      <i className="ph ph-file-text text-[14px] text-[var(--accent)]"></i>
+                                      {order.latest_payment?.transaction_reference?.startsWith('Receipt:') ? t('Receipt Document:') : t('Transaction Ref:')}
+                                    </span>
+                                    <strong className="text-[var(--accent)] text-[12px] select-all font-bold tracking-wider truncate max-w-[210px]" title={order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref || 'N/A'}>
+                                      {order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref || 'N/A'}
+                                    </strong>
+                                  </div>
+                                  {order.latest_payment?.phone_number && (
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[var(--muted)] font-sans">{t('Sender Phone:')}</span>
+                                      <span>{order.latest_payment.phone_number}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-[var(--muted)] font-sans">{t('Amount:')}</span>
+                                    <span className="font-bold text-[var(--text)]">{order.total_amount_etb} {birr}</span>
+                                  </div>
+                                </div>
+
+                                {isBankVerified && bVerification && (
+                                  <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] space-y-1">
+                                    <div className="flex items-center gap-1.5 font-bold text-emerald-800 dark:text-emerald-300 text-[11.5px]">
+                                      <i className="ph ph-shield-check text-base"></i>
+                                      <span>{t('Verified by Bank at Source')} ({bVerification.provider || 'Bank'})</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-1 font-mono pt-0.5 text-[10.5px]">
+                                      {bVerification.payer_name && (
+                                        <div>
+                                          <span className="text-[var(--muted)] font-sans block text-[10px]">{t('Payer Name')}:</span>
+                                          <span className="font-semibold text-[var(--text)]">{bVerification.payer_name}</span>
+                                        </div>
+                                      )}
+                                      {bVerification.reference && (
+                                        <div>
+                                          <span className="text-[var(--muted)] font-sans block text-[10px]">{t('Bank Reference')}:</span>
+                                          <span className="font-semibold text-[var(--accent)] truncate block">{bVerification.reference}</span>
+                                        </div>
+                                      )}
+                                      <div>
+                                        <span className="text-[var(--muted)] font-sans block text-[10px]">{t('Amount')}:</span>
+                                        <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                                          {bVerification.amount_etb || order.total_amount_etb} {birr}
+                                          {bVerification.amount_matches && <span className="ml-1 font-sans text-[9.5px]">✓</span>}
+                                        </span>
+                                      </div>
+                                      {bVerification.payment_date && (
+                                        <div>
+                                          <span className="text-[var(--muted)] font-sans block text-[10px]">{t('Date')}:</span>
+                                          <span className="text-[var(--text)] truncate block">{bVerification.payment_date}</span>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 )}
-                                <div className="flex justify-between items-center">
-                                  <span className="text-[var(--muted)] font-sans">{t('Amount:')}</span>
-                                  <span className="font-bold text-[var(--text)]">{order.total_amount_etb} {birr}</span>
+
+                                {!isBankVerified && bVerification && !bVerification.verified && (
+                                  <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] space-y-0.5">
+                                    <div className="flex items-center gap-1 font-bold text-amber-800 dark:text-amber-300 text-[11px]">
+                                      <i className="ph ph-warning"></i>
+                                      <span>{t('Bank Verification Failed')}</span>
+                                    </div>
+                                    <p className="text-[10.5px] text-amber-900/90 dark:text-amber-200/90 font-sans">
+                                      {language === 'am' && bVerification.message_am ? bVerification.message_am : (bVerification.message || bVerification.error || t('Bank verification could not confirm receipt.'))}
+                                    </p>
+                                  </div>
+                                )}
+
+                                <p className="text-[11px] text-[var(--muted)]">
+                                  {isBankVerified
+                                    ? t('Payment verified at bank source. You can approve or verify again anytime.')
+                                    : t('Check your cafe bank/wallet balance for this reference before approving.', 'ከማፅደቅዎ በፊት የባንክ/ቴሌብር ሂሳብዎን ይፈትሹ።')}
+                                </p>
+
+                                <div className="space-y-1.5 pt-0.5">
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={isVerifyingBank === order.id}
+                                      onClick={() => handleVerifyBankPayment(order, false)}
+                                      className="flex-1 h-8 rounded-[9px] bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11.5px] flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                      title={t('Verify with Bank (links.et)')}
+                                    >
+                                      {isVerifyingBank === order.id ? (
+                                        <i className="ph ph-spinner animate-spin"></i>
+                                      ) : (
+                                        <i className="ph ph-shield-check text-base"></i>
+                                      )}
+                                      <span>{isVerifyingBank === order.id ? t('Verifying with Bank...') : t('Verify with Bank (links.et)')}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isVerifyingBank === order.id || isApprovingPayment === order.id}
+                                      onClick={() => handleVerifyBankPayment(order, true)}
+                                      className="h-8 px-2.5 rounded-[9px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer disabled:opacity-50 shrink-0"
+                                      title={t('Verify & Approve')}
+                                    >
+                                      <i className="ph ph-lightning text-xs"></i>
+                                      <span>{t('Verify & Approve')}</span>
+                                    </button>
+                                  </div>
+
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={isApprovingPayment === order.id}
+                                      onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
+                                      className="flex-1 h-9 rounded-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[12px] flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                    >
+                                      {isApprovingPayment === order.id ? (
+                                        <i className="ph ph-spinner animate-spin"></i>
+                                      ) : (
+                                        <i className="ph ph-check-circle text-base"></i>
+                                      )}
+                                      <span>{t('Approve Payment (Funds Verified)', 'ክፍያውን አፅድቅ (ገንዘቡ ገብቷል)')}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => openRejectPaymentModal(order)}
+                                      className="h-9 px-3 rounded-[10px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[12px] transition-colors cursor-pointer shrink-0"
+                                    >
+                                      {t('Reject', 'አትቀበል')}
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
-                              <p className="text-[11px] text-[var(--muted)]">
-                                {t('Check your cafe bank/wallet balance for this reference before approving.', 'ከማፅደቅዎ በፊት የባንክ/ቴሌብር ሂሳብዎን ይፈትሹ።')}
-                              </p>
-                              <div className="flex gap-2 pt-1">
-                                <button
-                                  type="button"
-                                  disabled={isApprovingPayment === order.id}
-                                  onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
-                                  className="flex-1 h-9 rounded-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[12px] flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                                >
-                                  {isApprovingPayment === order.id ? (
-                                    <i className="ph ph-spinner animate-spin"></i>
-                                  ) : (
-                                    <i className="ph ph-check-circle text-base"></i>
-                                  )}
-                                  <span>{t('Approve Payment (Funds Verified)', 'ክፍያውን አፅድቅ (ገንዘቡ ገብቷል)')}</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => openRejectPaymentModal(order)}
-                                  className="h-9 px-3 rounded-[10px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[12px] transition-colors cursor-pointer"
-                                >
-                                  {t('Reject', 'አትቀበል')}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
+                            );
+                          })() : (
                             <div className="flex gap-2">
                               <div className="flex-1 h-10 rounded-[12px] bg-red-100 border border-red-300 text-red-800 dark:bg-red-950/50 dark:border-red-800 dark:text-red-300 text-[13px] font-semibold flex items-center justify-center px-3 text-center">
                                 {t('Unpaid — waiting on the customer')}

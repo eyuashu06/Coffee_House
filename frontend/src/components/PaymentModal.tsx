@@ -58,6 +58,7 @@ export default function PaymentModal({
   const [transactionRef, setTransactionRef] = useState('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [receiptBase64, setReceiptBase64] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,6 +73,7 @@ export default function PaymentModal({
       setTransactionRef('');
       setReceiptFile(null);
       setReceiptPreview(null);
+      setReceiptBase64(null);
       // Load payment accounts managed by admin
       apiFetch('/api/v1/payments/accounts/')
         .then((res) => res.json())
@@ -115,8 +117,15 @@ export default function PaymentModal({
     setReceiptFile(file);
     if (isImage) {
       setReceiptPreview(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        setReceiptBase64(result);
+      };
+      reader.readAsDataURL(file);
     } else {
       setReceiptPreview('pdf');
+      setReceiptBase64(null);
     }
     const sizeKb = (file.size / 1024).toFixed(0);
     const cleanName = file.name.replace(/[^a-zA-Z0-9._\-]/g, '_');
@@ -131,6 +140,7 @@ export default function PaymentModal({
   const handleRemoveReceipt = () => {
     setReceiptFile(null);
     setReceiptPreview(null);
+    setReceiptBase64(null);
     setTransactionRef('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -157,6 +167,7 @@ export default function PaymentModal({
           payment_method: paymentMethod,
           phone_number: phone,
           transaction_reference: transactionRef.trim(),
+          receipt_base64: receiptBase64 || undefined,
         }),
       });
 
@@ -169,11 +180,11 @@ export default function PaymentModal({
       const checkoutUrl = data.checkout_url;
       const mode = data.mode;
 
-      if (payment.status === 'SUCCESS') {
+      if (payment.status === 'SUCCESS' || data.verified === true) {
         onPaymentComplete(
           'SUCCESS',
           payment.tx_ref,
-          `${t('Payment of')} ${birr} ${totalAmountEtb} ${t('via')} ${t(paymentMethod.toUpperCase())} — ${t('successful!')}`
+          data.message || `${t('Payment of')} ${birr} ${totalAmountEtb} ${t('via')} ${t(paymentMethod.toUpperCase())} — ${t('successful!')}`
         );
       } else if (payment.status === 'FAILED') {
         setError(`${t('Payment Failed:')} ${payment.failure_reason || t('Processing error.')}`);
@@ -199,7 +210,7 @@ export default function PaymentModal({
           onPaymentComplete(
             'PENDING',
             payment.tx_ref,
-            t('Transfer reference submitted! Manager will verify the account and approve your order.')
+            data.message || t('Transfer reference submitted! Manager will verify the account and approve your order.')
           );
         }
       }

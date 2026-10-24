@@ -47,6 +47,8 @@ class PaymentSerializer(serializers.ModelSerializer):
             'approved_by_username',
             'approved_at',
             'approval_notes',
+            'verified_at',
+            'gateway_status',
             'created_at',
             'updated_at',
         )
@@ -58,6 +60,8 @@ class PaymentSerializer(serializers.ModelSerializer):
             'checkout_url',
             'approved_by',
             'approved_at',
+            'verified_at',
+            'gateway_status',
             'created_at',
             'updated_at',
         )
