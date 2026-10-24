@@ -530,6 +530,44 @@ export default function AccountPage() {
     }
   };
 
+  const handleSetDefaultAddress = async (addrId: number) => {
+    setAddrMsg(null);
+    try {
+      const res = await apiFetch(`/api/v1/addresses/${addrId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_default: true }),
+      });
+      if (res.ok) {
+        setAddrMsg(t('Address set as default.'));
+        fetchAddresses();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setAddrMsg(errorData.detail || errorData.error || t('Failed to update address.'));
+      }
+    } catch {
+      setAddrMsg(t('Network error. Failed to update address.'));
+    }
+  };
+
+  const handleDeleteAddress = async (addrId: number) => {
+    setAddrMsg(null);
+    try {
+      const res = await apiFetch(`/api/v1/addresses/${addrId}/`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setAddrMsg(t('Address deleted successfully.'));
+        fetchAddresses();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setAddrMsg(errorData.detail || errorData.error || t('Failed to delete address.'));
+      }
+    } catch {
+      setAddrMsg(t('Network error. Failed to delete address.'));
+    }
+  };
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileMsg(null);
@@ -1066,16 +1104,43 @@ export default function AccountPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {addresses.map(addr => (
-                    <div key={addr.id} className="bg-surface-2 border border-[var(--border)] rounded-2xl p-3.5 sm:p-4 relative group">
-                      {addr.is_default && (
-                        <span className="absolute top-3.5 right-3.5 text-[9.5px] sm:text-[10px] uppercase font-bold tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-0.5 rounded-md">{t('Default')}</span>
-                      )}
-                      <div className="flex items-start gap-2.5 mt-0.5">
-                        <i className="ph ph-map-pin text-[18px] text-[var(--muted)] mt-0.5 shrink-0"></i>
-                        <div>
-                          <p className="text-[var(--text)] font-semibold text-[13.5px] sm:text-[14.5px] mb-0.5">{addr.street_address}</p>
-                          <p className="text-[var(--muted)] text-[12.5px] sm:text-[13px]">{addr.subcity_or_zone ? `${addr.subcity_or_zone}, ` : ''}{addr.city}</p>
+                    <div key={addr.id} className="bg-surface-2 border border-[var(--border)] rounded-2xl p-3.5 sm:p-4 relative group flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2.5 mt-0.5">
+                            <i className="ph ph-map-pin text-[18px] text-[var(--accent)] mt-0.5 shrink-0"></i>
+                            <div>
+                              <p className="text-[var(--text)] font-semibold text-[13.5px] sm:text-[14.5px] mb-0.5">{addr.street_address}</p>
+                              <p className="text-[var(--muted)] text-[12.5px] sm:text-[13px]">{addr.subcity_or_zone ? `${addr.subcity_or_zone}, ` : ''}{addr.city}</p>
+                            </div>
+                          </div>
+                          {addr.is_default && (
+                            <span className="text-[9.5px] sm:text-[10px] uppercase font-bold tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-0.5 rounded-md shrink-0">{t('Default')}</span>
+                          )}
                         </div>
+                      </div>
+
+                      <div className="mt-3 pt-2.5 border-t border-[var(--border)]/60 flex items-center justify-between gap-2">
+                        {!addr.is_default ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSetDefaultAddress(addr.id)}
+                            className="text-[11.5px] font-semibold text-[var(--accent)] hover:underline cursor-pointer flex items-center gap-1"
+                          >
+                            <i className="ph ph-check-circle"></i>
+                            <span>{t('Set as Default')}</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-[var(--muted)] italic">{t('Primary delivery location')}</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAddress(addr.id)}
+                          className="w-7 h-7 rounded-lg border border-red-500/20 text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-colors cursor-pointer"
+                          title={t('Delete Address')}
+                        >
+                          <i className="ph ph-trash text-sm"></i>
+                        </button>
                       </div>
                     </div>
                   ))}
