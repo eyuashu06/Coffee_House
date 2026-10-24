@@ -98,6 +98,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }), []);
 
+function formatAuthError(data: any, fallback: string): string {
+  if (!data) return fallback;
+  if (typeof data === 'string') return data;
+  if (Array.isArray(data)) return data.map(item => formatAuthError(item, '')).filter(Boolean).join(' ');
+  if (typeof data === 'object') {
+    if (data.detail && typeof data.detail === 'string') return data.detail;
+    if (data.error && typeof data.error === 'string') return data.error;
+    if (data.error && typeof data.error === 'object' && data.error.message) return String(data.error.message);
+    if (data.non_field_errors && Array.isArray(data.non_field_errors)) return data.non_field_errors.join(' ');
+    const entries = Object.entries(data)
+      .map(([key, val]) => {
+        const valStr = formatAuthError(val, '');
+        if (key === 'error' || key === 'detail' || key === 'message') return valStr;
+        return `${key.replace(/_/g, ' ')}: ${valStr}`;
+      })
+      .filter(Boolean);
+    if (entries.length > 0) return entries.join('. ');
+  }
+  return fallback;
+}
+
   const login = async (usernameOrEmail: string, password: string) => {
     const res = await fetch('/api/v1/auth/login/', {
       method: 'POST',
@@ -108,9 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const data = await parseResponseData(res);
     if (!res.ok) {
-      const errorMsg = data.non_field_errors?.[0] || data.detail || (typeof data === 'object' ? Object.values(data)[0] : null) || 'Login failed';
-      const formatted = Array.isArray(errorMsg) ? errorMsg.join(' ') : errorMsg;
-      throw new Error(typeof formatted === 'string' ? formatted : JSON.stringify(formatted));
+      throw new Error(formatAuthError(data, 'Login failed. Please check your credentials.'));
     }
 
     setSessionExpired(false);
@@ -134,9 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const data = await parseResponseData(res);
     if (!res.ok) {
-      const errorMsg = data.non_field_errors?.[0] || data.detail || (typeof data === 'object' ? Object.values(data)[0] : null) || 'Registration failed';
-      const formatted = Array.isArray(errorMsg) ? errorMsg.join(' ') : errorMsg;
-      throw new Error(typeof formatted === 'string' ? formatted : JSON.stringify(formatted));
+      throw new Error(formatAuthError(data, 'Registration failed. Please check your details.'));
     }
 
     setUser(data.user);
