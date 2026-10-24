@@ -1041,6 +1041,24 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Submitted Reference:': 'የተላከው ማረጋገጫ፦',
   'Payment Method:': 'የክፍያ ዘዴ፦',
   'Payment rejected.': 'ክፍያው ውድቅ ተደርጓል።',
+
+  // ── Payment Account Deletion Modal ─────────────────────────────────────
+  'Delete Payment Account': 'የክፍያ ሂሳብ ሰርዝ',
+  'Are you sure you want to delete this payment account?': 'ይህን የክፍያ ሂሳብ በእርግጥ መሰረዝ ይፈልጋሉ?',
+  'Payment account deleted.': 'የክፍያ ሂሳብ ተሰርዟል።',
+  'Failed to delete payment account.': 'የክፍያ ሂሳቡን መሰረዝ አልተሳካም።',
+  'Error deleting payment account.': 'የክፍያ ሂሳብ ሲሰረዝ ስህተት አጋጥሟል።',
+
+  // ── Address Actions (Default & Delete) ─────────────────────────────────
+  'Set as Default': 'ነባሪ አድርግ',
+  'Delete Address': 'አድራሻ ሰርዝ',
+  'Address set as default.': 'አድራሻው እንደ ነባሪ ተዘጋጅቷል።',
+  'Address deleted successfully.': 'አድራሻው በተሳካ ሁኔታ ተሰርዟል።',
+  'Primary delivery location': 'ዋና የማድረሻ ቦታ',
+  'Failed to update address.': 'አድራሻውን ማዘመን አልተሳካም።',
+  'Failed to delete address.': 'አድራሻውን መሰረዝ አልተሳካም።',
+  'Network error. Failed to update address.': 'የግንኙነት ስህተት። አድራሻውን ማዘመን አልተሳካም።',
+  'Network error. Failed to delete address.': 'የግንኙነት ስህተት። አድራሻውን መሰረዝ አልተሳካም።',
 };
 
 
