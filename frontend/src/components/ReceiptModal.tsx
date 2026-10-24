@@ -48,7 +48,7 @@ const lineTotal = (item: OrderItem) =>
 
 export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
   const { t, tItem, locale, language } = useLanguage();
-  const { settings: cafeSettings } = useCafe();
+  const { settings: cafeSettings, primaryLocation } = useCafe();
   const cafeName = cafeSettings.cafe_name || 'Buna Hub';
   const birr = language === 'am' ? 'ብር' : 'ETB';
 
@@ -126,7 +126,7 @@ ${t('Thank you for visiting')} ${cafeName}!
         <div className=" bg-surface-2 border border-[var(--border)] rounded-xl p-4 font-mono text-xs text-[var(--muted)] space-y-3 shadow-inner">
           <div className="text-center border-b border-dashed border-[var(--border)] pb-2">
             <p className="font-bold text-sm text-[var(--accent)]">{cafeName}</p>
-            <p className="text-[10px] text-[var(--muted)]">{cafeSettings.address || t('Bole Medhanialem, Addis Ababa')}</p>
+            <p className="text-[10px] text-[var(--muted)]">{primaryLocation?.address || t('Bole Medhanialem, Addis Ababa')}</p>
             <p className="text-[10px] text-[var(--muted)]">{new Date(order.created_at).toLocaleString(locale)}</p>
           </div>
 

@@ -37,6 +37,7 @@ interface Order {
   contact_name: string;
   contact_phone: string;
   delivery_address: string;
+  special_instructions?: string;
   total_amount_etb: string;
   status: string;
   created_at: string;
