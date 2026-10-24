@@ -308,7 +308,6 @@ export const translations: Record<string, string> = {
   'Reservation': 'የቦታ ማስያዣ',
   'guest': 'ሰው',
   'guests': 'ሰዎች',
-  'View Details': 'ዝርዝሩን ይመልከቱ',
   'Checking...': 'በማረጋገጥ ላይ...',
   'No reservation with that code on your account.': 'በዚህ ኮድ በመለያዎ ላይ የተገኘ የቦታ ማስያዣ የለም።',
   'No order with that code on your account.': 'በዚህ ኮድ በመለያዎ ላይ የተገኘ ትዕዛዝ የለም።',
@@ -510,7 +509,6 @@ export const translations: Record<string, string> = {
   'Expired — never paid': 'ጊዜው አልፏል — ክፍያ አልተደረገም',
   'This order expired before we received payment. Place it again below and we will make it fresh.':
     'ይህ ትዕዛዝ ክፍያውን ከመቀበልን በፊት ጊዜው አልፏል። ከታች እንደገና ያዘዙት፤ በአዲስ እንዘጋጅዋለን።',
-  'Payment': 'ክፍያ',
   'Placed': 'ተልኳል',
   'Delivery': 'ማድረሻ',
 
@@ -542,7 +540,6 @@ export const translations: Record<string, string> = {
   'CONFIRMED': 'ተረጋግጧል',
   'PENDING': 'በመጠባበቅ ላይ',
   'item': 'ዕቃ',
-  'items': 'ዕቃዎች',
   'Date & Time:': 'ቀንና ሰዓት፦',
   'from': 'ከ',
   'today': 'ዛሬ',
@@ -1141,5 +1138,4 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Payment submitted for Order #': 'ክፍያ ተልኳል ለትዕዛዝ፦',
   'Matches Order': 'ከትዕዛዙ ጋር ይዛመዳል',
 };
-
 
