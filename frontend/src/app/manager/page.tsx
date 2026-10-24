@@ -2140,17 +2140,17 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
               /* ROW / TABLE VIEW ONE BY ONE */
               <div className="bg-surface-2 rounded-[18px] border border-[var(--border)] overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse min-w-[960px]">
+                  <table className="w-full text-left text-xs border-collapse min-w-[1080px]">
                     <thead>
                       <tr className="bg-surface-3/80 border-b border-[var(--border)] text-[var(--muted)] font-bold uppercase tracking-wider text-[11px]">
-                        <th className="py-3 px-3 w-10 text-center"></th>
-                        <th className="py-3 px-3">{t('Order # & Time')}</th>
-                        <th className="py-3 px-3">{t('Customer & Type')}</th>
-                        <th className="py-3 px-3">{t('Items')}</th>
-                        <th className="py-3 px-3">{t('Total & Payment')}</th>
-                        <th className="py-3 px-3 text-center">{t('Receipt')}</th>
-                        <th className="py-3 px-3 text-center">{t('Order Status')}</th>
-                        <th className="py-3 px-4 text-right">{t('Actions')}</th>
+                        <th className="py-3.5 px-3 w-12 text-center"></th>
+                        <th className="py-3.5 px-3 whitespace-nowrap">{t('Order # & Time')}</th>
+                        <th className="py-3.5 px-3 whitespace-nowrap">{t('Customer & Type')}</th>
+                        <th className="py-3.5 px-3 whitespace-nowrap">{t('Items')}</th>
+                        <th className="py-3.5 px-3 whitespace-nowrap">{t('Total & Payment')}</th>
+                        <th className="py-3.5 px-3 text-center whitespace-nowrap">{t('Receipt')}</th>
+                        <th className="py-3.5 px-3 text-center whitespace-nowrap">{t('Order Status')}</th>
+                        <th className="py-3.5 px-4 text-right whitespace-nowrap min-w-[220px]">{t('Actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)]/50">
@@ -2303,8 +2303,8 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                               </td>
 
                               {/* Actions Column */}
-                              <td className="py-3 px-4 text-right">
-                                <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                              <td className="py-3 px-4 text-right whitespace-nowrap min-w-[220px]">
+                                <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                                   {order.status === 'PENDING_PAYMENT' && (
                                     <>
                                       {order.latest_payment?.payment_method === 'cash' ? (
@@ -2313,23 +2313,23 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                             type="button"
                                             disabled={isApprovingPayment === order.id}
                                             onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
-                                            className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50"
+                                            className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 transition-colors shrink-0"
                                             title={t('Approve Cash Received')}
                                           >
                                             {isApprovingPayment === order.id ? (
-                                              <i className="ph ph-spinner animate-spin"></i>
+                                              <i className="ph ph-spinner animate-spin text-sm"></i>
                                             ) : (
-                                              <i className="ph ph-check-circle"></i>
+                                              <i className="ph ph-check-circle text-sm"></i>
                                             )}
                                             <span>{t('Approve Cash')}</span>
                                           </button>
                                           <button
                                             type="button"
                                             onClick={() => openRejectPaymentModal(order)}
-                                            className="h-7 px-2 rounded-lg border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[11px] cursor-pointer"
-                                            title={t('Reject')}
+                                            className="h-8 w-8 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                            title={t('Reject Payment')}
                                           >
-                                            <i className="ph ph-x"></i>
+                                            <i className="ph ph-x text-sm"></i>
                                           </button>
                                         </>
                                       ) : (order.latest_payment?.transaction_reference || ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(order.latest_payment?.payment_method || '')) ? (
@@ -2338,46 +2338,47 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                             type="button"
                                             disabled={isVerifyingBank === order.id}
                                             onClick={() => handleVerifyBankPayment(order, false)}
-                                            className="h-7 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50"
+                                            className="h-8 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs inline-flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50 transition-colors shrink-0"
                                             title={t('Verify with Bank (links.et)')}
                                           >
                                             {isVerifyingBank === order.id ? (
-                                              <i className="ph ph-spinner animate-spin"></i>
+                                              <i className="ph ph-spinner animate-spin text-sm"></i>
                                             ) : (
-                                              <i className="ph ph-shield-check"></i>
+                                              <i className="ph ph-shield-check text-sm"></i>
                                             )}
-                                            <span>{t('Bank Check')}</span>
+                                            <span>{t('Verify Bank')}</span>
                                           </button>
                                           <button
                                             type="button"
                                             disabled={isApprovingPayment === order.id}
                                             onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
-                                            className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50"
+                                            className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 transition-colors shrink-0"
                                             title={t('Approve Payment')}
                                           >
                                             {isApprovingPayment === order.id ? (
-                                              <i className="ph ph-spinner animate-spin"></i>
+                                              <i className="ph ph-spinner animate-spin text-sm"></i>
                                             ) : (
-                                              <i className="ph ph-check-circle"></i>
+                                              <i className="ph ph-check-circle text-sm"></i>
                                             )}
                                             <span>{t('Approve')}</span>
                                           </button>
                                           <button
                                             type="button"
                                             onClick={() => openRejectPaymentModal(order)}
-                                            className="h-7 px-2 rounded-lg border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[11px] cursor-pointer"
-                                            title={t('Reject')}
+                                            className="h-8 w-8 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                            title={t('Reject Payment')}
                                           >
-                                            <i className="ph ph-x"></i>
+                                            <i className="ph ph-x text-sm"></i>
                                           </button>
                                         </>
                                       ) : (
                                         <button
                                           type="button"
                                           onClick={() => handleUpdateStatus(order.id, 'CANCELLED', 'Customer never completed payment.')}
-                                          className="h-7 px-2.5 rounded-lg border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[11px] cursor-pointer"
+                                          className="h-8 px-3 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold text-xs inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
                                         >
-                                          {t('Cancel')}
+                                          <i className="ph ph-x-circle text-sm"></i>
+                                          <span>{t('Cancel')}</span>
                                         </button>
                                       )}
                                     </>
@@ -2388,16 +2389,18 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                       <button
                                         type="button"
                                         onClick={() => handleUpdateStatus(order.id, 'ACCEPTED')}
-                                        className="h-7 px-2.5 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] font-bold text-[11px] hover:brightness-110 cursor-pointer"
+                                        className="h-8 px-3.5 rounded-lg bg-[var(--accent)] text-[var(--accent-contrast)] hover:brightness-110 font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
                                       >
-                                        {t('Accept')}
+                                        <i className="ph ph-check text-sm"></i>
+                                        <span>{t('Accept Order')}</span>
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => handleUpdateStatus(order.id, 'REJECTED', 'Rejected by manager.')}
-                                        className="h-7 px-2 rounded-lg border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[11px] cursor-pointer"
+                                        className="h-8 w-8 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                        title={t('Reject')}
                                       >
-                                        <i className="ph ph-x"></i>
+                                        <i className="ph ph-x text-sm"></i>
                                       </button>
                                     </>
                                   )}
@@ -2406,9 +2409,10 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(order.id, 'PREPARING')}
-                                      className="h-7 px-2.5 rounded-lg bg-blue-100 border border-blue-300 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-300 font-bold text-[11px] cursor-pointer"
+                                      className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
                                     >
-                                      {t('Start Prep')}
+                                      <i className="ph ph-fire text-sm"></i>
+                                      <span>{t('Start Prep')}</span>
                                     </button>
                                   )}
 
@@ -2416,9 +2420,10 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(order.id, 'READY')}
-                                      className="h-7 px-2.5 rounded-lg bg-blue-100 border border-blue-300 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-300 font-bold text-[11px] cursor-pointer"
+                                      className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
                                     >
-                                      {t('Mark Ready')}
+                                      <i className="ph ph-bell-ringing text-sm"></i>
+                                      <span>{t('Mark Ready')}</span>
                                     </button>
                                   )}
 
@@ -2426,9 +2431,10 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(order.id, 'OUT_FOR_DELIVERY')}
-                                      className="h-7 px-2.5 rounded-lg bg-purple-100 border border-purple-300 text-purple-800 hover:bg-purple-200 dark:bg-purple-900/40 dark:border-purple-800 dark:text-purple-300 font-bold text-[11px] cursor-pointer"
+                                      className="h-8 px-3.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
                                     >
-                                      {t('Dispatch')}
+                                      <i className="ph ph-moped text-sm"></i>
+                                      <span>{t('Send for Delivery')}</span>
                                     </button>
                                   )}
 
@@ -2436,9 +2442,10 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(order.id, 'COMPLETED')}
-                                      className="h-7 px-2.5 rounded-lg bg-green-100 border border-green-300 text-green-800 hover:bg-green-200 dark:bg-green-900/40 dark:border-green-800 dark:text-green-300 font-bold text-[11px] cursor-pointer"
+                                      className="h-8 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
                                     >
-                                      {t('Complete')}
+                                      <i className="ph ph-check-circle text-sm"></i>
+                                      <span>{t('Complete Order')}</span>
                                     </button>
                                   )}
 
@@ -2446,9 +2453,10 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(order.id, 'COMPLETED')}
-                                      className="h-7 px-2.5 rounded-lg bg-green-100 border border-green-300 text-green-800 hover:bg-green-200 dark:bg-green-900/40 dark:border-green-800 dark:text-green-300 font-bold text-[11px] cursor-pointer"
+                                      className="h-8 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
                                     >
-                                      {t('Delivered')}
+                                      <i className="ph ph-check-circle text-sm"></i>
+                                      <span>{t('Mark Delivered')}</span>
                                     </button>
                                   )}
 
@@ -2456,20 +2464,26 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => setSelectedReceiptOrder(order)}
-                                      className="h-7 px-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] font-semibold text-[11px] cursor-pointer"
+                                      className="h-8 px-2.5 rounded-lg border border-[var(--border)] bg-surface text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] font-semibold text-xs inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
                                       title={t('View Receipt')}
                                     >
                                       <i className="ph ph-receipt text-sm"></i>
+                                      <span>{t('Receipt')}</span>
                                     </button>
                                   )}
 
                                   <button
                                     type="button"
                                     onClick={() => toggleRowExpanded(order.id)}
-                                    className="h-7 px-2 rounded-lg bg-surface hover:bg-surface-3 border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] text-[11px] font-semibold transition-colors cursor-pointer"
-                                    title={isExpanded ? t('Collapse') : t('Expand')}
+                                    className={`h-8 px-2.5 rounded-lg border font-semibold text-xs inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
+                                      isExpanded
+                                        ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]'
+                                        : 'bg-surface hover:bg-surface-3 border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
+                                    }`}
+                                    title={isExpanded ? t('Hide Details') : t('View Details')}
                                   >
-                                    <i className={`ph ${isExpanded ? 'ph-caret-up' : 'ph-caret-down'}`}></i>
+                                    <i className={`ph ${isExpanded ? 'ph-caret-up' : 'ph-caret-down'} text-xs`}></i>
+                                    <span>{isExpanded ? t('Hide') : t('Details')}</span>
                                   </button>
                                 </div>
                               </td>
@@ -2603,6 +2617,247 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                           </div>
                                         )}
                                       </div>
+                                    </div>
+                                  </div>
+
+                                  {/* EXPANDED ROW MANAGEMENT ACTION FOOTER */}
+                                  <div className="mt-4 pt-3.5 border-t border-[var(--border)] flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface-2 p-3.5 sm:p-4 rounded-xl border border-[var(--border)] shadow-xs">
+                                    {/* Left: Status Context Badge & Help Text */}
+                                    <div className="flex items-center gap-3">
+                                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${
+                                        isPaid
+                                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                          : order.latest_payment?.payment_method === 'cash'
+                                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                            : order.status === 'PENDING_PAYMENT'
+                                              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                                              : 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/20'
+                                      }`}>
+                                        <i className={`ph ${
+                                          isPaid
+                                            ? 'ph-check-circle'
+                                            : order.latest_payment?.payment_method === 'cash'
+                                              ? 'ph-hand-coins'
+                                              : order.latest_payment?.transaction_reference
+                                                ? 'ph-bank'
+                                                : order.status === 'PENDING_PAYMENT'
+                                                  ? 'ph-clock'
+                                                  : 'ph-lightning'
+                                        }`}></i>
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <h4 className="font-bold text-[13.5px] text-[var(--text)]">
+                                            {t('Manage Order')} #{order.order_number}
+                                          </h4>
+                                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${STATUS_BADGE[order.status] || 'bg-surface text-[var(--muted)]'}`}>
+                                            {t(STATUS_LABELS[order.status] || order.status)}
+                                          </span>
+                                        </div>
+                                        <p className="text-[11.5px] text-[var(--muted)] mt-0.5">
+                                          {order.status === 'PENDING_PAYMENT' && order.latest_payment?.payment_method === 'cash'
+                                            ? `${t('Cash payment on')} ${t(order.order_type)} — ${t('collect')} ${order.total_amount_etb} ${birr} ${t('and approve below.')}`
+                                            : order.status === 'PENDING_PAYMENT'
+                                              ? `${t('Customer submitted transfer reference')} "${order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref}". ${t('Check balance or verify with links.et.')}`
+                                              : order.status === 'PLACED'
+                                                ? t('New incoming order. Accept to notify kitchen or reject if unavailable.')
+                                                : order.status === 'ACCEPTED'
+                                                  ? t('Order accepted. Start preparation when kitchen is ready.')
+                                                  : order.status === 'PREPARING'
+                                                    ? t('Order is currently in preparation. Mark ready when completed.')
+                                                    : order.status === 'READY'
+                                                      ? t('Order is ready for pickup or handover to courier.')
+                                                      : order.status === 'OUT_FOR_DELIVERY'
+                                                        ? t('Order is out for delivery. Mark delivered once received by customer.')
+                                                        : t('Order is closed and completed.')}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Right: Full, comfortable, high-visibility action buttons */}
+                                    <div className="flex items-center gap-2 flex-wrap md:shrink-0">
+                                      {order.status === 'PENDING_PAYMENT' && (
+                                        <>
+                                          {order.latest_payment?.payment_method === 'cash' ? (
+                                            <>
+                                              <button
+                                                type="button"
+                                                disabled={isApprovingPayment === order.id}
+                                                onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
+                                                className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                                              >
+                                                {isApprovingPayment === order.id ? (
+                                                  <i className="ph ph-spinner animate-spin text-base"></i>
+                                                ) : (
+                                                  <i className="ph ph-check-circle text-base"></i>
+                                                )}
+                                                <span>{t('Approve Cash Received')}</span>
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => openRejectPaymentModal(order)}
+                                                className="h-9 px-3 rounded-xl border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                                              >
+                                                <i className="ph ph-x-circle text-base"></i>
+                                                <span>{t('Reject Payment')}</span>
+                                              </button>
+                                            </>
+                                          ) : (order.latest_payment?.transaction_reference || ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(order.latest_payment?.payment_method || '')) ? (
+                                            <>
+                                              <button
+                                                type="button"
+                                                disabled={isVerifyingBank === order.id}
+                                                onClick={() => handleVerifyBankPayment(order, false)}
+                                                className="h-9 px-3.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                                              >
+                                                {isVerifyingBank === order.id ? (
+                                                  <i className="ph ph-spinner animate-spin text-base"></i>
+                                                ) : (
+                                                  <i className="ph ph-shield-check text-base"></i>
+                                                )}
+                                                <span>{t('Verify with Bank (links.et)')}</span>
+                                              </button>
+                                              <button
+                                                type="button"
+                                                disabled={isApprovingPayment === order.id}
+                                                onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
+                                                className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                                              >
+                                                {isApprovingPayment === order.id ? (
+                                                  <i className="ph ph-spinner animate-spin text-base"></i>
+                                                ) : (
+                                                  <i className="ph ph-check-circle text-base"></i>
+                                                )}
+                                                <span>{t('Approve Payment')}</span>
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => openRejectPaymentModal(order)}
+                                                className="h-9 px-3 rounded-xl border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                                              >
+                                                <i className="ph ph-x text-base"></i>
+                                                <span>{t('Reject')}</span>
+                                              </button>
+                                            </>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleUpdateStatus(order.id, 'CANCELLED', 'Customer never completed payment.')}
+                                              className="h-9 px-4 rounded-xl border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold text-xs inline-flex items-center gap-2 transition-colors cursor-pointer"
+                                            >
+                                              <i className="ph ph-x-circle text-base"></i>
+                                              <span>{t('Cancel Order')}</span>
+                                            </button>
+                                          )}
+                                        </>
+                                      )}
+
+                                      {order.status === 'PLACED' && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUpdateStatus(order.id, 'ACCEPTED')}
+                                            className="h-9 px-4 rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] hover:brightness-110 font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                                          >
+                                            <i className="ph ph-check-circle text-base"></i>
+                                            <span>{t('Accept Order')}</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUpdateStatus(order.id, 'REJECTED', 'Rejected by manager.')}
+                                            className="h-9 px-3 rounded-xl border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                                          >
+                                            <i className="ph ph-x text-base"></i>
+                                            <span>{t('Reject')}</span>
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {order.status === 'ACCEPTED' && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateStatus(order.id, 'PREPARING')}
+                                          className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+                                        >
+                                          <i className="ph ph-fire text-base"></i>
+                                          <span>{t('Start Preparing')}</span>
+                                        </button>
+                                      )}
+
+                                      {order.status === 'PREPARING' && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateStatus(order.id, 'READY')}
+                                          className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+                                        >
+                                          <i className="ph ph-bell-ringing text-base"></i>
+                                          <span>{t('Mark Ready')}</span>
+                                        </button>
+                                      )}
+
+                                      {order.status === 'READY' && order.order_type === 'DELIVERY' && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateStatus(order.id, 'OUT_FOR_DELIVERY')}
+                                          className="h-9 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+                                        >
+                                          <i className="ph ph-moped text-base"></i>
+                                          <span>{t('Send for Delivery')}</span>
+                                        </button>
+                                      )}
+
+                                      {order.status === 'READY' && (order.order_type === 'DINE_IN' || order.order_type === 'PICKUP') && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateStatus(order.id, 'COMPLETED')}
+                                          className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+                                        >
+                                          <i className="ph ph-check-circle text-base"></i>
+                                          <span>{t('Complete Order')}</span>
+                                        </button>
+                                      )}
+
+                                      {order.status === 'OUT_FOR_DELIVERY' && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateStatus(order.id, 'COMPLETED')}
+                                          className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+                                        >
+                                          <i className="ph ph-check-circle text-base"></i>
+                                          <span>{t('Mark Delivered')}</span>
+                                        </button>
+                                      )}
+
+                                      {isPaid && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setSelectedReceiptOrder(order)}
+                                          className="h-9 px-3.5 rounded-xl border border-[var(--border)] bg-surface text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)] font-semibold text-xs inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+                                        >
+                                          <i className="ph ph-receipt text-base text-[var(--accent)]"></i>
+                                          <span>{t('View Customer Receipt')}</span>
+                                        </button>
+                                      )}
+
+                                      {hasReceipt && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setViewingReceipt({ order, url: receiptUrl, type: receiptType })}
+                                          className="h-9 px-3.5 rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 font-bold text-xs inline-flex items-center gap-2 hover:brightness-110 transition-all cursor-pointer shadow-xs"
+                                        >
+                                          <i className={`ph ${receiptType === 'pdf' ? 'ph-file-pdf' : 'ph-image'} text-base`}></i>
+                                          <span>{receiptType === 'pdf' ? t('Inspect PDF Document') : t('Inspect Image')}</span>
+                                        </button>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleRowExpanded(order.id)}
+                                        className="h-9 px-3 rounded-xl border border-[var(--border)] bg-surface-3 hover:bg-surface text-[var(--muted)] hover:text-[var(--text)] font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                                      >
+                                        <i className="ph ph-caret-up text-sm"></i>
+                                        <span>{t('Collapse')}</span>
+                                      </button>
                                     </div>
                                   </div>
                                 </td>

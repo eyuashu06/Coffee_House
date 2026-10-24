@@ -25,3 +25,7 @@ tsconfig.tsbuildinfo
 # TypeScript incremental build cache
 frontend/tsconfig.tsbuildinfo
 tsconfig.tsbuildinfo
+
+# Media uploads
+media/
+backend/media/
