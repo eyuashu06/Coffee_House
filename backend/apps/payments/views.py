@@ -635,9 +635,17 @@ class ApprovePaymentView(APIView):
 
         try:
             if str(pk).isdigit():
-                payment = Payment.objects.select_related('order').get(pk=int(pk))
+                payment = Payment.objects.select_related('order').filter(pk=int(pk)).first()
+                if not payment:
+                    payment = Payment.objects.select_related('order').filter(order_id=int(pk)).order_by('-created_at').first()
+                if not payment:
+                    raise Payment.DoesNotExist
             else:
-                payment = Payment.objects.select_related('order').get(tx_ref=str(pk))
+                payment = Payment.objects.select_related('order').filter(tx_ref=str(pk)).first()
+                if not payment:
+                    payment = Payment.objects.select_related('order').filter(order__order_number=str(pk)).order_by('-created_at').first()
+                if not payment:
+                    raise Payment.DoesNotExist
         except Payment.DoesNotExist:
             return Response({'error': 'Payment transaction not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -679,9 +687,17 @@ class RejectPaymentView(APIView):
 
         try:
             if str(pk).isdigit():
-                payment = Payment.objects.select_related('order').get(pk=int(pk))
+                payment = Payment.objects.select_related('order').filter(pk=int(pk)).first()
+                if not payment:
+                    payment = Payment.objects.select_related('order').filter(order_id=int(pk)).order_by('-created_at').first()
+                if not payment:
+                    raise Payment.DoesNotExist
             else:
-                payment = Payment.objects.select_related('order').get(tx_ref=str(pk))
+                payment = Payment.objects.select_related('order').filter(tx_ref=str(pk)).first()
+                if not payment:
+                    payment = Payment.objects.select_related('order').filter(order__order_number=str(pk)).order_by('-created_at').first()
+                if not payment:
+                    raise Payment.DoesNotExist
         except Payment.DoesNotExist:
             return Response({'error': 'Payment transaction not found.'}, status=status.HTTP_404_NOT_FOUND)
 
