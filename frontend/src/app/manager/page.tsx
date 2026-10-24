@@ -2139,18 +2139,16 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             ) : (
               /* ROW / TABLE VIEW ONE BY ONE */
               <div className="bg-surface-2 rounded-[18px] border border-[var(--border)] overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse min-w-[1080px]">
+                <div className="w-full overflow-hidden">
+                  <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-surface-3/80 border-b border-[var(--border)] text-[var(--muted)] font-bold uppercase tracking-wider text-[11px]">
-                        <th className="py-3.5 px-3 w-12 text-center"></th>
-                        <th className="py-3.5 px-3 whitespace-nowrap">{t('Order # & Time')}</th>
-                        <th className="py-3.5 px-3 whitespace-nowrap">{t('Customer & Type')}</th>
-                        <th className="py-3.5 px-3 whitespace-nowrap">{t('Items')}</th>
-                        <th className="py-3.5 px-3 whitespace-nowrap">{t('Total & Payment')}</th>
-                        <th className="py-3.5 px-3 text-center whitespace-nowrap">{t('Receipt')}</th>
-                        <th className="py-3.5 px-3 text-center whitespace-nowrap">{t('Order Status')}</th>
-                        <th className="py-3.5 px-4 text-right whitespace-nowrap min-w-[220px]">{t('Actions')}</th>
+                      <tr className="bg-surface-3/80 border-b border-[var(--border)] text-[var(--muted)] font-bold uppercase tracking-wider text-[10.5px]">
+                        <th className="py-3 px-3 w-[18%]">{t('Order # & Time')}</th>
+                        <th className="py-3 px-3 w-[18%]">{t('Customer & Type')}</th>
+                        <th className="py-3 px-3 w-[20%]">{t('Items')}</th>
+                        <th className="py-3 px-3 w-[18%]">{t('Total & Payment')}</th>
+                        <th className="py-3 px-2 text-center w-[10%]">{t('Status')}</th>
+                        <th className="py-3 px-3 text-right w-[16%]">{t('Actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)]/50">
@@ -2177,66 +2175,70 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     : 'hover:bg-surface-3/30'
                               }`}
                             >
-                              {/* Expand toggle */}
-                              <td className="py-3 px-3 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleRowExpanded(order.id)}
-                                  className="w-7 h-7 rounded-lg hover:bg-surface-3 flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
-                                  title={isExpanded ? t('Hide Details') : t('View Details')}
-                                >
-                                  <i className={`ph ${isExpanded ? 'ph-caret-down' : 'ph-caret-right'} text-[14px] transition-transform`}></i>
-                                </button>
-                              </td>
-
-                              {/* Order # & Time */}
+                              {/* 1. Order # & Time (with Caret Toggle) */}
                               <td className="py-3 px-3">
-                                <span className="font-mono font-bold text-[13px] text-[var(--text)] block">
-                                  #{order.order_number}
-                                </span>
-                                <span className="text-[10.5px] text-[var(--muted)] flex items-center gap-1 mt-0.5 whitespace-nowrap">
-                                  <i className="ph ph-clock text-[11px]"></i>
-                                  {new Date(order.created_at).toLocaleString(locale, {
-                                    month: 'short',
-                                    day: 'numeric',
-                                    hour: 'numeric',
-                                    minute: '2-digit',
-                                  })}
-                                </span>
-                              </td>
-
-                              {/* Customer & Type */}
-                              <td className="py-3 px-3">
-                                <span className="font-semibold text-[12.5px] text-[var(--text)] block truncate max-w-[170px]" title={order.contact_name}>
-                                  {order.contact_name}
-                                </span>
-                                <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[var(--muted)]">
-                                  {order.contact_phone ? (
-                                    <a
-                                      href={`tel:${order.contact_phone}`}
-                                      className="text-[var(--accent)] hover:underline truncate max-w-[120px]"
-                                      title={order.contact_phone}
-                                    >
-                                      {order.contact_phone}
-                                    </a>
-                                  ) : (
-                                    <span>{t('N/A')}</span>
-                                  )}
-                                  <span>·</span>
-                                  <span className="font-medium text-[var(--text)]">
-                                    {t(order.order_type)} {order.table_number ? `(${t('T-')}${order.table_number})` : ''}
-                                  </span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleRowExpanded(order.id)}
+                                    className="w-6 h-6 rounded-md hover:bg-surface-3 flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer shrink-0"
+                                    title={isExpanded ? t('Hide Details') : t('View Details')}
+                                  >
+                                    <i className={`ph ${isExpanded ? 'ph-caret-down' : 'ph-caret-right'} text-[13px]`}></i>
+                                  </button>
+                                  <div className="min-w-0">
+                                    <span className="font-mono font-bold text-[12.5px] text-[var(--text)] block truncate">
+                                      #{order.order_number}
+                                    </span>
+                                    <span className="text-[10px] text-[var(--muted)] flex items-center gap-1 mt-0.5 truncate">
+                                      <i className="ph ph-clock text-[10px] shrink-0"></i>
+                                      <span>
+                                        {new Date(order.created_at).toLocaleString(locale, {
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: 'numeric',
+                                          minute: '2-digit',
+                                        })}
+                                      </span>
+                                    </span>
+                                  </div>
                                 </div>
                               </td>
 
-                              {/* Items Summary */}
+                              {/* 2. Customer & Type */}
                               <td className="py-3 px-3">
-                                <div className="flex items-center gap-1.5">
+                                <div className="min-w-0">
+                                  <span className="font-semibold text-[12px] text-[var(--text)] block truncate" title={order.contact_name}>
+                                    {order.contact_name}
+                                  </span>
+                                  <div className="flex items-center gap-1.5 mt-0.5 text-[10.5px] text-[var(--muted)]">
+                                    {order.contact_phone ? (
+                                      <a
+                                        href={`tel:${order.contact_phone}`}
+                                        className="text-[var(--accent)] hover:underline truncate"
+                                        title={order.contact_phone}
+                                      >
+                                        {order.contact_phone}
+                                      </a>
+                                    ) : (
+                                      <span>{t('N/A')}</span>
+                                    )}
+                                    <span>·</span>
+                                    <span className="font-medium text-[var(--text)] shrink-0">
+                                      {t(order.order_type)} {order.table_number ? `(${t('T-')}${order.table_number})` : ''}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* 3. Items */}
+                              <td className="py-3 px-3">
+                                <div className="flex items-center gap-1.5 min-w-0">
                                   <span className="px-1.5 py-0.5 rounded bg-surface border border-[var(--border)] text-[10px] font-mono font-bold text-[var(--text)] shrink-0">
                                     {itemsCount} {t('items')}
                                   </span>
                                   <span
-                                    className="text-[11.5px] text-[var(--muted)] truncate max-w-[180px] cursor-pointer hover:text-[var(--text)]"
+                                    className="text-[11px] text-[var(--muted)] truncate cursor-pointer hover:text-[var(--text)]"
                                     onClick={() => toggleRowExpanded(order.id)}
                                     title={order.items.map(i => `${i.quantity}x ${tItem(i.item_name)}`).join(', ')}
                                   >
@@ -2245,14 +2247,25 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                 </div>
                               </td>
 
-                              {/* Total & Payment */}
+                              {/* 4. Total & Payment (Includes Receipt Chip) */}
                               <td className="py-3 px-3">
-                                <div className="font-mono font-bold text-[13px] text-[var(--accent)]">
-                                  {order.total_amount_etb} {birr}
+                                <div className="flex items-center gap-1.5 font-mono font-bold text-[12.5px] text-[var(--accent)]">
+                                  <span>{order.total_amount_etb} {birr}</span>
+                                  {hasReceipt && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setViewingReceipt({ order, url: receiptUrl, type: receiptType })}
+                                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--accent-soft)] text-[var(--accent)] hover:brightness-110 transition-all cursor-pointer border border-[var(--accent)]/30 shrink-0"
+                                      title={receiptType === 'pdf' ? t('View PDF Receipt') : t('View Receipt Image')}
+                                    >
+                                      <i className={`ph ${receiptType === 'pdf' ? 'ph-file-pdf' : 'ph-image'} text-[11px]`}></i>
+                                      <span>{receiptType === 'pdf' ? 'PDF' : t('IMG')}</span>
+                                    </button>
+                                  )}
                                 </div>
                                 <div className="mt-0.5">
                                   <span
-                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight ${
+                                    className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-tight ${
                                       isPaid
                                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800'
                                         : order.latest_payment?.payment_method === 'cash'
@@ -2264,46 +2277,31 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                               : 'bg-surface text-[var(--muted)] border border-[var(--border)]'
                                     }`}
                                   >
-                                    <i className={`ph ${isPaid ? 'ph-check-circle' : order.latest_payment?.payment_method === 'cash' ? 'ph-hand-coins' : order.latest_payment?.transaction_reference ? 'ph-clock' : 'ph-warning'} text-[11px]`}></i>
-                                    {isPaid
-                                      ? `${t('Paid')} (${t(PAYMENT_LABELS[order.latest_payment?.payment_method || ''] || order.latest_payment?.payment_method || '')})`
-                                      : order.latest_payment?.payment_method === 'cash'
-                                        ? t('Cash Pending')
-                                        : order.latest_payment?.transaction_reference
-                                          ? t('Transfer Verification')
-                                          : order.status === 'PENDING_PAYMENT'
-                                            ? t('Unpaid')
-                                            : t('Unknown')}
+                                    <i className={`ph ${isPaid ? 'ph-check-circle' : order.latest_payment?.payment_method === 'cash' ? 'ph-hand-coins' : order.latest_payment?.transaction_reference ? 'ph-clock' : 'ph-warning'} text-[10px]`}></i>
+                                    <span className="truncate">
+                                      {isPaid
+                                        ? `${t('Paid')} (${t(PAYMENT_LABELS[order.latest_payment?.payment_method || ''] || order.latest_payment?.payment_method || '')})`
+                                        : order.latest_payment?.payment_method === 'cash'
+                                          ? t('Cash Pending')
+                                          : order.latest_payment?.transaction_reference
+                                            ? t('Transfer Verification')
+                                            : order.status === 'PENDING_PAYMENT'
+                                              ? t('Unpaid')
+                                              : t('Unknown')}
+                                    </span>
                                   </span>
                                 </div>
                               </td>
 
-                              {/* Receipt Column */}
-                              <td className="py-3 px-3 text-center">
-                                {hasReceipt ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setViewingReceipt({ order, url: receiptUrl, type: receiptType })}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[var(--accent-soft)] text-[var(--accent)] hover:brightness-110 transition-all cursor-pointer border border-[var(--accent)]/30 shadow-xs"
-                                    title={receiptType === 'pdf' ? t('View PDF Receipt') : t('View Receipt Image')}
-                                  >
-                                    <i className={`ph ${receiptType === 'pdf' ? 'ph-file-pdf' : 'ph-image'} text-[13px]`}></i>
-                                    <span>{receiptType === 'pdf' ? 'PDF' : t('Image')}</span>
-                                  </button>
-                                ) : (
-                                  <span className="text-[var(--muted)] opacity-40 font-mono">—</span>
-                                )}
-                              </td>
-
-                              {/* Status Column */}
-                              <td className="py-3 px-3 text-center">
+                              {/* 5. Status */}
+                              <td className="py-3 px-2 text-center">
                                 <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider inline-block ${STATUS_BADGE[order.status] || 'bg-surface text-[var(--muted)] border border-[var(--border)]'}`}>
                                   {t(STATUS_LABELS[order.status] || order.status)}
                                 </span>
                               </td>
 
-                              {/* Actions Column */}
-                              <td className="py-3 px-4 text-right whitespace-nowrap min-w-[220px]">
+                              {/* 6. Actions */}
+                              <td className="py-3 px-3 text-right">
                                 <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                                   {order.status === 'PENDING_PAYMENT' && (
                                     <>
@@ -2313,23 +2311,23 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                             type="button"
                                             disabled={isApprovingPayment === order.id}
                                             onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
-                                            className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 transition-colors shrink-0"
+                                            className="h-7.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50 transition-colors shrink-0"
                                             title={t('Approve Cash Received')}
                                           >
                                             {isApprovingPayment === order.id ? (
-                                              <i className="ph ph-spinner animate-spin text-sm"></i>
+                                              <i className="ph ph-spinner animate-spin text-xs"></i>
                                             ) : (
-                                              <i className="ph ph-check-circle text-sm"></i>
+                                              <i className="ph ph-check-circle text-xs"></i>
                                             )}
                                             <span>{t('Approve Cash')}</span>
                                           </button>
                                           <button
                                             type="button"
                                             onClick={() => openRejectPaymentModal(order)}
-                                            className="h-8 w-8 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                            className="h-7.5 w-7.5 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors cursor-pointer shrink-0"
                                             title={t('Reject Payment')}
                                           >
-                                            <i className="ph ph-x text-sm"></i>
+                                            <i className="ph ph-x text-xs"></i>
                                           </button>
                                         </>
                                       ) : (order.latest_payment?.transaction_reference || ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(order.latest_payment?.payment_method || '')) ? (
@@ -2338,13 +2336,13 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                             type="button"
                                             disabled={isVerifyingBank === order.id}
                                             onClick={() => handleVerifyBankPayment(order, false)}
-                                            className="h-8 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs inline-flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50 transition-colors shrink-0"
+                                            className="h-7.5 px-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50 transition-colors shrink-0"
                                             title={t('Verify with Bank (links.et)')}
                                           >
                                             {isVerifyingBank === order.id ? (
-                                              <i className="ph ph-spinner animate-spin text-sm"></i>
+                                              <i className="ph ph-spinner animate-spin text-xs"></i>
                                             ) : (
-                                              <i className="ph ph-shield-check text-sm"></i>
+                                              <i className="ph ph-shield-check text-xs"></i>
                                             )}
                                             <span>{t('Verify Bank')}</span>
                                           </button>
@@ -2352,32 +2350,32 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                             type="button"
                                             disabled={isApprovingPayment === order.id}
                                             onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
-                                            className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 transition-colors shrink-0"
+                                            className="h-7.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50 transition-colors shrink-0"
                                             title={t('Approve Payment')}
                                           >
                                             {isApprovingPayment === order.id ? (
-                                              <i className="ph ph-spinner animate-spin text-sm"></i>
+                                              <i className="ph ph-spinner animate-spin text-xs"></i>
                                             ) : (
-                                              <i className="ph ph-check-circle text-sm"></i>
+                                              <i className="ph ph-check-circle text-xs"></i>
                                             )}
                                             <span>{t('Approve')}</span>
                                           </button>
                                           <button
                                             type="button"
                                             onClick={() => openRejectPaymentModal(order)}
-                                            className="h-8 w-8 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                            className="h-7.5 w-7.5 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors cursor-pointer shrink-0"
                                             title={t('Reject Payment')}
                                           >
-                                            <i className="ph ph-x text-sm"></i>
+                                            <i className="ph ph-x text-xs"></i>
                                           </button>
                                         </>
                                       ) : (
                                         <button
                                           type="button"
                                           onClick={() => handleUpdateStatus(order.id, 'CANCELLED', 'Customer never completed payment.')}
-                                          className="h-8 px-3 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold text-xs inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                                          className="h-7.5 px-2.5 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold text-[11px] inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
                                         >
-                                          <i className="ph ph-x-circle text-sm"></i>
+                                          <i className="ph ph-x-circle text-xs"></i>
                                           <span>{t('Cancel')}</span>
                                         </button>
                                       )}
@@ -2389,18 +2387,18 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                       <button
                                         type="button"
                                         onClick={() => handleUpdateStatus(order.id, 'ACCEPTED')}
-                                        className="h-8 px-3.5 rounded-lg bg-[var(--accent)] text-[var(--accent-contrast)] hover:brightness-110 font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
+                                        className="h-7.5 px-3 rounded-lg bg-[var(--accent)] text-[var(--accent-contrast)] hover:brightness-110 font-bold text-[11px] inline-flex items-center gap-1 shadow-xs transition-all cursor-pointer shrink-0"
                                       >
-                                        <i className="ph ph-check text-sm"></i>
+                                        <i className="ph ph-check text-xs"></i>
                                         <span>{t('Accept Order')}</span>
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => handleUpdateStatus(order.id, 'REJECTED', 'Rejected by manager.')}
-                                        className="h-8 w-8 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                        className="h-7.5 w-7.5 rounded-lg border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors cursor-pointer shrink-0"
                                         title={t('Reject')}
                                       >
-                                        <i className="ph ph-x text-sm"></i>
+                                        <i className="ph ph-x text-xs"></i>
                                       </button>
                                     </>
                                   )}
@@ -2409,9 +2407,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(order.id, 'PREPARING')}
-                                      className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+                                      className="h-7.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer shrink-0"
                                     >
-                                      <i className="ph ph-fire text-sm"></i>
+                                      <i className="ph ph-fire text-xs"></i>
                                       <span>{t('Start Prep')}</span>
                                     </button>
                                   )}
@@ -2420,9 +2418,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(order.id, 'READY')}
-                                      className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+                                      className="h-7.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer shrink-0"
                                     >
-                                      <i className="ph ph-bell-ringing text-sm"></i>
+                                      <i className="ph ph-bell-ringing text-xs"></i>
                                       <span>{t('Mark Ready')}</span>
                                     </button>
                                   )}
@@ -2431,9 +2429,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(order.id, 'OUT_FOR_DELIVERY')}
-                                      className="h-8 px-3.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+                                      className="h-7.5 px-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer shrink-0"
                                     >
-                                      <i className="ph ph-moped text-sm"></i>
+                                      <i className="ph ph-moped text-xs"></i>
                                       <span>{t('Send for Delivery')}</span>
                                     </button>
                                   )}
@@ -2442,9 +2440,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(order.id, 'COMPLETED')}
-                                      className="h-8 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+                                      className="h-7.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer shrink-0"
                                     >
-                                      <i className="ph ph-check-circle text-sm"></i>
+                                      <i className="ph ph-check-circle text-xs"></i>
                                       <span>{t('Complete Order')}</span>
                                     </button>
                                   )}
@@ -2453,9 +2451,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(order.id, 'COMPLETED')}
-                                      className="h-8 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+                                      className="h-7.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer shrink-0"
                                     >
-                                      <i className="ph ph-check-circle text-sm"></i>
+                                      <i className="ph ph-check-circle text-xs"></i>
                                       <span>{t('Mark Delivered')}</span>
                                     </button>
                                   )}
@@ -2464,18 +2462,19 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     <button
                                       type="button"
                                       onClick={() => setSelectedReceiptOrder(order)}
-                                      className="h-8 px-2.5 rounded-lg border border-[var(--border)] bg-surface text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] font-semibold text-xs inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-                                      title={t('View Receipt')}
+                                      className="h-7.5 px-2 rounded-lg border border-[var(--border)] bg-surface text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] font-semibold text-[11px] inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                                      title={t('View Customer Receipt')}
                                     >
-                                      <i className="ph ph-receipt text-sm"></i>
+                                      <i className="ph ph-receipt text-xs"></i>
                                       <span>{t('Receipt')}</span>
                                     </button>
                                   )}
 
+                                  {/* Dedicated Details / Expand toggle button */}
                                   <button
                                     type="button"
                                     onClick={() => toggleRowExpanded(order.id)}
-                                    className={`h-8 px-2.5 rounded-lg border font-semibold text-xs inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
+                                    className={`h-7.5 w-7.5 rounded-lg border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
                                       isExpanded
                                         ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]'
                                         : 'bg-surface hover:bg-surface-3 border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
@@ -2483,7 +2482,6 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     title={isExpanded ? t('Hide Details') : t('View Details')}
                                   >
                                     <i className={`ph ${isExpanded ? 'ph-caret-up' : 'ph-caret-down'} text-xs`}></i>
-                                    <span>{isExpanded ? t('Hide') : t('Details')}</span>
                                   </button>
                                 </div>
                               </td>
@@ -2492,7 +2490,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                             {/* EXPANDED ROW ACCORDION */}
                             {isExpanded && (
                               <tr className="bg-surface/60 border-b border-[var(--border)]">
-                                <td colSpan={8} className="p-4 sm:p-5">
+                                <td colSpan={6} className="p-4 sm:p-5">
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
                                     {/* Order Items */}
                                     <div className="p-3.5 rounded-xl bg-surface-2 border border-[var(--border)] space-y-2">
