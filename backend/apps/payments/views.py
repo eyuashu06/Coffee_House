@@ -130,6 +130,34 @@ def _can_manage_order(request, order):
     return order.customer_id == user.id
 
 
+def _save_receipt_payload(payment, receipt_base64, original_filename=''):
+    """Save customer-uploaded receipt image or PDF to payment.receipt_file and payment.receipt_data."""
+    if not receipt_base64 or not isinstance(receipt_base64, str):
+        return
+    payment.receipt_data = receipt_base64
+    is_pdf = 'application/pdf' in receipt_base64 or str(original_filename or '').lower().endswith('.pdf')
+    payment.receipt_type = 'pdf' if is_pdf else 'image'
+
+    try:
+        import base64
+        import uuid
+        from django.core.files.base import ContentFile
+
+        if ';base64,' in receipt_base64:
+            header, base64_str = receipt_base64.split(';base64,', 1)
+            ext = 'pdf' if is_pdf else ('jpg' if 'jpeg' in header or 'jpg' in header else ('webp' if 'webp' in header else 'png'))
+        else:
+            base64_str = receipt_base64
+            ext = 'pdf' if is_pdf else 'png'
+
+        file_bytes = base64.b64decode(base64_str)
+        clean_ext = ext.lstrip('.')
+        filename = f"receipt_{payment.tx_ref}_{uuid.uuid4().hex[:6]}.{clean_ext}"
+        payment.receipt_file.save(filename, ContentFile(file_bytes), save=False)
+    except Exception as exc:
+        logger.warning('Failed to decode receipt_base64 file for payment %s: %s', payment.tx_ref, exc)
+
+
 class InitializePaymentView(APIView):
     """
     Start a payment, rate limited per caller.
@@ -256,7 +284,10 @@ class InitializePaymentView(APIView):
         # User transfers to designated account number and submits confirmation code or receipt.
         if payment_method in {'telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'}:
             receipt_base64 = request.data.get('receipt_base64', '')
+            original_filename = request.data.get('original_filename', '')
             payment.transaction_reference = transaction_reference
+            _save_receipt_payload(payment, receipt_base64, original_filename)
+            payment.save()
             verification_result = None
 
             # Attempt real-time bank verification via links.et if configured
@@ -431,6 +462,24 @@ class InitializePaymentView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+def is_manual_transfer(payment):
+    """
+    Returns True if the payment is a manual bank transfer submitted with receipt
+    or customer reference, awaiting manager approval or bank verification.
+    """
+    if payment.payment_method not in {'telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'}:
+        return False
+    if payment.checkout_url or payment.chapa_reference:
+        return False
+    if bool(payment.receipt_file) or bool(payment.receipt_data) or bool(payment.transaction_reference):
+        return True
+    if 'Manual transfer submitted' in (payment.raw_response or ''):
+        return True
+    if payment.gateway_status in ('manual_review', 'verified'):
+        return True
+    return False
+
+
 class VerifyPaymentView(APIView):
     """
     Confirm one payment with the gateway and report the result.
@@ -454,6 +503,38 @@ class VerifyPaymentView(APIView):
         if not _can_manage_order(request, payment.order):
             return Response({'error': 'Payment transaction reference not found.'},
                             status=status.HTTP_404_NOT_FOUND)
+
+        # Cash on Delivery / Dine-in table orders are collected in person by staff
+        if payment.payment_method == 'cash':
+            if payment.status == 'FAILED' and 'No payment was ever started' in (payment.failure_reason or ''):
+                payment.status = 'PENDING'
+                payment.failure_reason = ''
+                payment.save(update_fields=['status', 'failure_reason', 'updated_at'])
+
+            return Response({
+                'payment': PaymentSerializer(payment).data,
+                'order_status': payment.order.status,
+                'verified': False,
+                'outcome': 'pending',
+                'message': 'Cash order placed; cash payment will be collected in person upon delivery, pickup, or at the table.',
+                'message_am': 'የጥሬ ገንዘብ ትዕዛዝ ተመዝግቧል፤ ክፍያው በደረሰዎት ወቅት፣ በመደብር ወይም በጠረጴዛዎ ላይ ይሰበሰባል።',
+                'test_mode': False,
+            }, status=status.HTTP_200_OK)
+
+        # Manual digital transfers (no Chapa checkout_url/chapa_reference) are verified via links.et or manager portal
+        if is_manual_transfer(payment):
+            if payment.status == 'FAILED' and 'No payment was ever started' in (payment.failure_reason or ''):
+                payment.status = 'PENDING'
+                payment.failure_reason = ''
+                payment.save(update_fields=['status', 'failure_reason', 'updated_at'])
+
+            return Response({
+                'payment': PaymentSerializer(payment).data,
+                'order_status': payment.order.status,
+                'verified': payment.gateway_status == 'verified' or payment.status == 'SUCCESS',
+                'outcome': payment.status.lower(),
+                'test_mode': False,
+            }, status=status.HTTP_200_OK)
 
         # Already answered by the gateway. Re-checking would ask about a
         # transaction that has been closed, and a settled payment must never be
@@ -483,13 +564,13 @@ def reconcile_payment(payment):
 
     Returns one of: 'success', 'failed', 'cancelled', 'pending', 'mismatch',
     'unknown'.
-
-    The distinction that matters is between "the gateway says they have not paid"
-    (a real answer, and the banner should say so) and "we could not reach the
-    gateway" (`unknown`, which must leave the payment PENDING rather than
-    declaring it unpaid - otherwise a momentary network blip destroys a payment
-    the customer actually completed).
     """
+    if payment.payment_method == 'cash':
+        return 'pending' if payment.status == 'PENDING' else payment.status.lower()
+
+    if is_manual_transfer(payment):
+        return 'pending' if payment.status == 'PENDING' else payment.status.lower()
+
     # A transaction the gateway has never heard of can never succeed, so it is
     # closed rather than retried. Leaving it PENDING is what made these orders
     # show "confirming..." indefinitely.
@@ -825,6 +906,11 @@ class VerifyBankPaymentView(APIView):
             payment.tx_ref
         )
         image_base64 = request.data.get('image_base64') or request.data.get('receipt_base64')
+        if not image_base64 and payment.receipt_data and payment.receipt_type != 'pdf':
+            image_base64 = payment.receipt_data
+        elif image_base64 and not payment.receipt_file:
+            _save_receipt_payload(payment, image_base64)
+
         auto_approve = request.data.get('auto_approve', False) and request.user.is_manager_or_admin()
 
         if image_base64:

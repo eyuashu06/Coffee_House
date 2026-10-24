@@ -230,9 +230,12 @@ export default function CartDrawer({
     if (payStatus === 'SUCCESS') {
       setOrderSuccess(`✅ ${t('Order')} #${activeOrder?.orderNumber || ''} ${t('placed and paid!')} ${message}`);
       onClearCart();
+    } else if (payStatus === 'CASH_PENDING' || message.includes('Cash') || message.includes('ጥሬ')) {
+      setOrderSuccess(`✅ ${t('Order')} #${activeOrder?.orderNumber || ''} ${t('placed!')} ${message}`);
+      onClearCart();
     } else if (payStatus === 'PENDING') {
-      // Payment still pending (e.g. gateway timeout) – order is saved, pay from My Orders
-      setOrderSuccess(`⏳ ${t('Payment is pending for Order #', 'ክፍያው በትዕዛዝ ላይ በመጠባበቅ ላይ ነው፦')}#${activeOrder?.orderNumber || ''}. ${t('Finish paying from My Orders in your account.')}`);
+      // Payment still pending (e.g. transfer verification)
+      setOrderSuccess(`⏳ ${t('Payment submitted for Order #', 'ክፍያ ተልኳል ለትዕዛዝ፦')}#${activeOrder?.orderNumber || ''}. ${message}`);
       onClearCart();
     } else {
       // Payment failed/cancelled – order is saved, customer retries from account

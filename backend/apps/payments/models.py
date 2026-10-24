@@ -61,6 +61,22 @@ class Payment(models.Model):
         blank=True,
         help_text='Customer-submitted transaction ID / reference code for manual transfers'
     )
+    receipt_file = models.FileField(
+        upload_to='payment_receipts/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text='Uploaded payment receipt document (image or PDF)'
+    )
+    receipt_data = models.TextField(
+        blank=True,
+        help_text='Base64 data URI of the receipt image or PDF as fallback'
+    )
+    receipt_type = models.CharField(
+        max_length=20,
+        blank=True,
+        default='',
+        help_text="'image' or 'pdf'"
+    )
     payment_method = models.CharField(max_length=30, choices=METHOD_CHOICES, default='telebirr')
     phone_number = models.CharField(max_length=25, blank=True, help_text='Phone number used for mobile payment')
     amount_etb = models.DecimalField(max_digits=10, decimal_places=2)
@@ -92,6 +108,17 @@ class Payment(models.Model):
             # The reconciliation job scans unsettled payments.
             models.Index(fields=['status', '-created_at']),
         ]
+
+    @property
+    def receipt_url(self):
+        if self.receipt_file:
+            try:
+                return self.receipt_file.url
+            except Exception:
+                pass
+        if self.receipt_data and (self.receipt_data.startswith('http') or self.receipt_data.startswith('data:')):
+            return self.receipt_data
+        return None
 
     def mark_as_success(self, chapa_ref='', raw_data='', gateway_status='success'):
         """Record a confirmed payment and hand the order to the kitchen.

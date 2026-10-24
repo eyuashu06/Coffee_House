@@ -62,6 +62,9 @@ interface Order {
     verified_at?: string | null;
     gateway_status?: string;
     bank_verification?: any;
+    receipt_url?: string | null;
+    receipt_data?: string | null;
+    receipt_type?: string | null;
   } | null;
   /**
    * Whether the money is in, decided by the backend from whether *any* payment
@@ -303,6 +306,12 @@ export default function AccountPage() {
   const reconcileUnsettled = useCallback(async (): Promise<number> => {
     const unsettled = ordersRef.current
       .filter(o => o.status === 'PENDING_PAYMENT' && o.latest_payment?.status === 'PENDING')
+      .filter(o => {
+        const method = o.latest_payment?.payment_method;
+        if (method === 'cash') return false;
+        if (['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(method || '')) return false;
+        return Boolean(o.latest_payment?.checkout_url) || method === 'card';
+      })
       .filter(o => o.latest_payment && !settledPaymentsRef.current.has(o.latest_payment.tx_ref));
     if (!unsettled.length) return 0;
 
@@ -809,6 +818,19 @@ export default function AccountPage() {
                                       <div>{t('Method:')} <span className="font-sans font-bold capitalize">{order.latest_payment?.payment_method}</span></div>
                                       <div>{t('Bank Reference:')} <strong className="text-[var(--accent)] select-all">{bVer?.reference || order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref}</strong></div>
                                       <div>{t('Amount:')} <strong>{Number(order.total_amount_etb).toFixed(2)} {birr}</strong> {bVer?.amount_matches && <span className="text-emerald-600 font-sans">✓</span>}</div>
+                                      {Boolean(order.latest_payment?.receipt_url || order.latest_payment?.receipt_data) && (
+                                        <div className="pt-0.5">
+                                          <a
+                                            href={order.latest_payment?.receipt_url || order.latest_payment?.receipt_data || '#'}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10.5px] text-[var(--accent)] font-semibold underline flex items-center gap-1"
+                                          >
+                                            <i className={`ph ${order.latest_payment?.receipt_type === 'pdf' ? 'ph-file-pdf' : 'ph-image'}`}></i>
+                                            <span>{order.latest_payment?.receipt_type === 'pdf' ? t('View Uploaded PDF Receipt') : t('View Uploaded Receipt Image')}</span>
+                                          </a>
+                                        </div>
+                                      )}
                                     </div>
                                     <p className="text-[10.5px] text-[var(--muted)]">
                                       {t('Your payment was verified directly with the bank. The kitchen will prepare your order shortly.')}
@@ -829,6 +851,19 @@ export default function AccountPage() {
                                       <div>{t('Method:')} <span className="font-sans font-bold capitalize">{order.latest_payment?.payment_method}</span></div>
                                       <div>{t('Reference:')} <strong className="text-[var(--accent)] select-all">{order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref}</strong></div>
                                       <div>{t('Amount:')} <strong>{Number(order.total_amount_etb).toFixed(2)} {birr}</strong></div>
+                                      {Boolean(order.latest_payment?.receipt_url || order.latest_payment?.receipt_data) && (
+                                        <div className="pt-0.5">
+                                          <a
+                                            href={order.latest_payment?.receipt_url || order.latest_payment?.receipt_data || '#'}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10.5px] text-[var(--accent)] font-semibold underline flex items-center gap-1"
+                                          >
+                                            <i className={`ph ${order.latest_payment?.receipt_type === 'pdf' ? 'ph-file-pdf' : 'ph-image'}`}></i>
+                                            <span>{order.latest_payment?.receipt_type === 'pdf' ? t('View Uploaded PDF Receipt') : t('View Uploaded Receipt Image')}</span>
+                                          </a>
+                                        </div>
+                                      )}
                                     </div>
                                     <p className="text-[10.5px] text-[var(--muted)]">
                                       {t(

@@ -27,6 +27,8 @@ class PaymentSerializer(serializers.ModelSerializer):
     order_number = serializers.CharField(source='order.order_number', read_only=True)
     approved_by_username = serializers.CharField(source='approved_by.username', read_only=True)
 
+    receipt_url = serializers.CharField(read_only=True)
+
     class Meta:
         model = Payment
         fields = (
@@ -36,6 +38,10 @@ class PaymentSerializer(serializers.ModelSerializer):
             'tx_ref',
             'chapa_reference',
             'transaction_reference',
+            'receipt_file',
+            'receipt_url',
+            'receipt_data',
+            'receipt_type',
             'payment_method',
             'phone_number',
             'amount_etb',

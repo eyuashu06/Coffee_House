@@ -141,6 +141,9 @@ class OrderSerializer(serializers.ModelSerializer):
             'verified_at': payment.verified_at,
             'gateway_status': payment.gateway_status,
             'bank_verification': bank_verification,
+            'receipt_url': payment.receipt_url,
+            'receipt_data': payment.receipt_data,
+            'receipt_type': payment.receipt_type or ('pdf' if (payment.receipt_file and payment.receipt_file.name.endswith('.pdf')) or (payment.receipt_data and 'application/pdf' in payment.receipt_data) else 'image'),
         }
 
     def get_payment_state(self, order):

@@ -58,6 +58,9 @@ interface Order {
     verified_at?: string | null;
     gateway_status?: string;
     bank_verification?: any;
+    receipt_url?: string | null;
+    receipt_data?: string | null;
+    receipt_type?: string | null;
   } | null;
   /** Backend's authoritative "has the money arrived" answer. */
   payment_state?: 'paid' | 'settling' | 'failed' | 'unpaid';
@@ -429,6 +432,11 @@ export default function ManagerDashboard() {
   const [isApprovingPayment, setIsApprovingPayment] = useState<number | null>(null);
   const [isVerifyingBank, setIsVerifyingBank] = useState<number | null>(null);
   const [bankVerificationResults, setBankVerificationResults] = useState<Record<number, any>>({});
+  const [viewingReceipt, setViewingReceipt] = useState<{
+    order: Order;
+    url: string;
+    type: 'pdf' | 'image';
+  } | null>(null);
 
   // Reports state
   const [reportData, setReportData] = useState<RevenueReport | null>(null);
@@ -1700,6 +1708,24 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     : t('Payment status unknown', 'የክፍያ ሁኔታ የማወቅ አልተቻለም')}
                           </span>
                         </p>
+                        {Boolean(order.latest_payment?.receipt_url || order.latest_payment?.receipt_data) && (
+                          <div className="pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const url = order.latest_payment?.receipt_url || order.latest_payment?.receipt_data || '';
+                                const type = order.latest_payment?.receipt_type === 'pdf' ? 'pdf' : 'image';
+                                setViewingReceipt({ order, url, type });
+                              }}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[var(--accent-soft)] text-[var(--accent)] hover:brightness-110 transition-all cursor-pointer border border-[var(--accent)]/30 shadow-xs"
+                            >
+                              <i className={`ph ${order.latest_payment?.receipt_type === 'pdf' ? 'ph-file-pdf' : 'ph-image'} text-[14px]`}></i>
+                              <span>
+                                {order.latest_payment?.receipt_type === 'pdf' ? t('View PDF Receipt', 'የፒዲኤፍ ደረሰኝ እይ') : t('View Receipt Image', 'የደረሰኝ ምስል እይ')}
+                              </span>
+                            </button>
+                          </div>
+                        )}
                         {order.latest_payment?.status === 'FAILED' && order.latest_payment.failure_reason && (
                           <p className="text-[12px] text-red-700 dark:text-red-300/90">
                             Last attempt: {order.latest_payment.failure_reason}
@@ -1817,6 +1843,52 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                   </div>
                                 </div>
 
+                                {Boolean(order.latest_payment?.receipt_url || order.latest_payment?.receipt_data) && (
+                                  <div className="p-2.5 rounded-lg bg-surface border border-[var(--border)] flex items-center justify-between gap-2.5">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      {order.latest_payment?.receipt_type === 'pdf' ? (
+                                        <div className="w-10 h-10 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center shrink-0 border border-red-500/20 text-xl font-bold">
+                                          <i className="ph ph-file-pdf"></i>
+                                        </div>
+                                      ) : (
+                                        <div
+                                          onClick={() => {
+                                            const url = order.latest_payment?.receipt_url || order.latest_payment?.receipt_data || '';
+                                            setViewingReceipt({ order, url, type: 'image' });
+                                          }}
+                                          className="w-10 h-10 rounded-lg overflow-hidden border border-[var(--border)] shrink-0 cursor-pointer hover:opacity-85 transition-opacity bg-black/10 flex items-center justify-center"
+                                        >
+                                          <img
+                                            src={order.latest_payment?.receipt_url || order.latest_payment?.receipt_data || ''}
+                                            alt="Receipt"
+                                            className="w-full h-full object-cover"
+                                          />
+                                        </div>
+                                      )}
+                                      <div className="min-w-0">
+                                        <p className="text-[11.5px] font-bold text-[var(--text)] truncate">
+                                          {order.latest_payment?.receipt_type === 'pdf' ? t('PDF Receipt Uploaded') : t('Receipt Image Uploaded')}
+                                        </p>
+                                        <p className="text-[10px] text-[var(--muted)] truncate">
+                                          {order.latest_payment?.receipt_type === 'pdf' ? t('Tap to view document') : t('Tap to inspect screenshot')}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const url = order.latest_payment?.receipt_url || order.latest_payment?.receipt_data || '';
+                                        const type = order.latest_payment?.receipt_type === 'pdf' ? 'pdf' : 'image';
+                                        setViewingReceipt({ order, url, type });
+                                      }}
+                                      className="px-2.5 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--accent-contrast)] text-[11px] font-bold hover:brightness-110 transition-all shrink-0 flex items-center gap-1 cursor-pointer shadow-xs"
+                                    >
+                                      <i className="ph ph-eye text-sm"></i>
+                                      <span>{t('View Receipt')}</span>
+                                    </button>
+                                  </div>
+                                )}
+
                                 {isBankVerified && bVerification && (
                                   <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] space-y-1">
                                     <div className="flex items-center gap-1.5 font-bold text-emerald-800 dark:text-emerald-300 text-[11.5px]">
@@ -1854,13 +1926,16 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                 )}
 
                                 {!isBankVerified && bVerification && !bVerification.verified && (
-                                  <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] space-y-0.5">
-                                    <div className="flex items-center gap-1 font-bold text-amber-800 dark:text-amber-300 text-[11px]">
-                                      <i className="ph ph-warning"></i>
-                                      <span>{t('Bank Verification Failed')}</span>
+                                  <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] space-y-1">
+                                    <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300 text-[11.5px]">
+                                      <i className="ph ph-warning-octagon text-base text-amber-600"></i>
+                                      <span>{t('Bank Verification Unconfirmed')}</span>
                                     </div>
-                                    <p className="text-[10.5px] text-amber-900/90 dark:text-amber-200/90 font-sans">
+                                    <p className="text-[11px] text-amber-900/90 dark:text-amber-200/90 font-sans leading-relaxed">
                                       {language === 'am' && bVerification.message_am ? bVerification.message_am : (bVerification.message || bVerification.error || t('Bank verification could not confirm receipt.'))}
+                                    </p>
+                                    <p className="text-[10px] text-[var(--muted)]">
+                                      {t('Inspect the customer receipt image/PDF above or check your account balance, then approve manually if funds arrived.')}
                                     </p>
                                   </div>
                                 )}
@@ -3737,6 +3812,209 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
           </div>
         </div>
       )}
+
+      {/* CUSTOMER PAYMENT RECEIPT VIEWER MODAL */}
+      {viewingReceipt && (() => {
+        const order = viewingReceipt.order;
+        const bVerification = bankVerificationResults[order.id] || order.latest_payment?.bank_verification;
+        const isBankVerified = bVerification?.verified || order.latest_payment?.gateway_status === 'verified';
+        const isPdf = viewingReceipt.type === 'pdf';
+
+        return (
+          <div
+            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fade-in"
+            onClick={() => setViewingReceipt(null)}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="bg-surface-2 border border-[var(--border)] rounded-[24px] max-w-2xl w-full p-4 sm:p-6 shadow-2xl text-[var(--text)] relative my-auto max-h-[92vh] flex flex-col space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-[var(--border)] shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-2xl font-bold shrink-0 ${
+                    isPdf ? 'bg-red-500/15 text-red-500 border border-red-500/30' : 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30'
+                  }`}>
+                    <i className={`ph ${isPdf ? 'ph-file-pdf' : 'ph-image'}`}></i>
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-[18px] text-[var(--text)] flex items-center gap-2">
+                      <span>{t('Customer Payment Receipt', 'የደንበኛ ክፍያ ደረሰኝ')}</span>
+                      <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-surface border border-[var(--border)]">
+                        #{order.order_number}
+                      </span>
+                    </h3>
+                    <p className="text-[12px] text-[var(--muted)] flex items-center gap-2 mt-0.5">
+                      <span>{t(PAYMENT_LABELS[order.latest_payment?.payment_method || ''] || order.latest_payment?.payment_method || 'Transfer')}</span>
+                      <span>•</span>
+                      <strong className="text-[var(--accent)] font-bold">{order.total_amount_etb} {birr}</strong>
+                      <span>•</span>
+                      <span className="capitalize">{order.contact_name}</span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewingReceipt(null)}
+                  className="w-8 h-8 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] hover:bg-surface-3 transition-colors cursor-pointer"
+                  title={t('Close')}
+                >
+                  <i className="ph ph-x text-base"></i>
+                </button>
+              </div>
+
+              {/* Bank Verification Badge / Details */}
+              {isBankVerified && bVerification ? (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs shrink-0 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 text-[12.5px]">
+                      <i className="ph ph-shield-check text-base"></i>
+                      {t('Verified by Bank at Source')} ({bVerification.provider || 'Bank'})
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">
+                      {t('Bank Verified')}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 font-mono text-[11px] pt-1 border-t border-emerald-500/20">
+                    <div>
+                      <span className="text-[var(--muted)] font-sans text-[10px] block">{t('Payer Name')}:</span>
+                      <span className="font-semibold text-[var(--text)]">{bVerification.payer_name || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--muted)] font-sans text-[10px] block">{t('Bank Reference')}:</span>
+                      <span className="font-semibold text-[var(--accent)] truncate block">{bVerification.reference || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--muted)] font-sans text-[10px] block">{t('Amount')}:</span>
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                        {bVerification.amount_etb || order.total_amount_etb} {birr}
+                        {bVerification.amount_matches && <span className="ml-1 font-sans text-[10px]">✓ {t('Matches Order')}</span>}
+                      </span>
+                    </div>
+                    {bVerification.payment_date && (
+                      <div>
+                        <span className="text-[var(--muted)] font-sans text-[10px] block">{t('Date')}:</span>
+                        <span className="text-[var(--text)] truncate block">{bVerification.payment_date}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : bVerification && !bVerification.verified ? (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs shrink-0 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300 text-[12px]">
+                    <i className="ph ph-warning-octagon text-base text-amber-600"></i>
+                    <span>{t('Bank Verification Unconfirmed')}</span>
+                  </div>
+                  <p className="text-[11px] text-amber-900/90 dark:text-amber-200/90 font-sans">
+                    {language === 'am' && bVerification.message_am ? bVerification.message_am : (bVerification.message || bVerification.error || t('Bank verification could not confirm receipt.'))}
+                  </p>
+                  <p className="text-[10.5px] text-[var(--muted)] pt-0.5">
+                    {t('Please inspect the uploaded document below to manually verify and approve.')}
+                  </p>
+                </div>
+              ) : null}
+
+              {/* Document Reference Info */}
+              <div className="p-2.5 rounded-xl bg-surface border border-[var(--border)] text-xs flex flex-wrap items-center justify-between gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 font-mono text-[11.5px] truncate max-w-sm">
+                  <span className="text-[var(--muted)] font-sans">{t('Transaction Ref:')}</span>
+                  <strong className="text-[var(--accent)] select-all truncate">
+                    {order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref || 'N/A'}
+                  </strong>
+                </div>
+                <a
+                  href={viewingReceipt.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold bg-surface-3 border border-[var(--border)] hover:border-[var(--accent)] text-[var(--text)] transition-colors cursor-pointer shrink-0"
+                >
+                  <i className="ph ph-arrow-square-out text-sm"></i>
+                  <span>{t('Open Full Screen / Download')}</span>
+                </a>
+              </div>
+
+              {/* Receipt Preview Body (Image / PDF) */}
+              <div className="flex-1 overflow-y-auto rounded-xl border border-[var(--border)] bg-surface p-2 flex items-center justify-center min-h-[300px]">
+                {isPdf ? (
+                  <iframe
+                    src={viewingReceipt.url}
+                    className="w-full h-[52vh] rounded-lg border-0 bg-white"
+                    title="PDF Receipt Document"
+                  />
+                ) : (
+                  <div className="w-full flex items-center justify-center p-2">
+                    <img
+                      src={viewingReceipt.url}
+                      alt="Customer Receipt Preview"
+                      className="max-h-[52vh] max-w-full object-contain rounded-lg shadow-md cursor-zoom-in"
+                      onClick={() => window.open(viewingReceipt.url, '_blank')}
+                      title={t('Click to open in new tab')}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-[var(--border)] shrink-0">
+                <div className="flex items-center gap-2">
+                  {order.status === 'PENDING_PAYMENT' && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={isVerifyingBank === order.id}
+                        onClick={() => handleVerifyBankPayment(order, false)}
+                        className="h-9 px-3.5 rounded-[10px] bg-sky-600 hover:bg-sky-700 text-white font-bold text-[12px] flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        {isVerifyingBank === order.id ? (
+                          <i className="ph ph-spinner animate-spin text-base"></i>
+                        ) : (
+                          <i className="ph ph-shield-check text-base"></i>
+                        )}
+                        <span>{t('Verify with Bank (links.et)')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isApprovingPayment === order.id}
+                        onClick={async () => {
+                          await handleApprovePayment(order.latest_payment?.id, order.id);
+                          setViewingReceipt(null);
+                        }}
+                        className="h-9 px-4 rounded-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[12px] flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        {isApprovingPayment === order.id ? (
+                          <i className="ph ph-spinner animate-spin text-base"></i>
+                        ) : (
+                          <i className="ph ph-check-circle text-base"></i>
+                        )}
+                        <span>{t('Approve Payment')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewingReceipt(null);
+                          openRejectPaymentModal(order);
+                        }}
+                        className="h-9 px-3 rounded-[10px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[12px] transition-colors cursor-pointer"
+                      >
+                        {t('Reject')}
+                      </button>
+                    </>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewingReceipt(null)}
+                  className="h-9 px-4 rounded-[10px] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] font-semibold text-[13px] transition-colors cursor-pointer ml-auto"
+                >
+                  {t('Close')}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* MOBILE STICKY BOTTOM NAVIGATION BAR */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface-2/95 backdrop-blur-md border-t border-[var(--border)] px-1 py-1.5 flex items-center justify-around shadow-2xl safe-area-inset-bottom">

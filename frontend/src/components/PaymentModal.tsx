@@ -115,17 +115,18 @@ export default function PaymentModal({
     }
     setError(null);
     setReceiptFile(file);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setReceiptBase64(result);
+    };
+    reader.readAsDataURL(file);
+
     if (isImage) {
       setReceiptPreview(URL.createObjectURL(file));
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        setReceiptBase64(result);
-      };
-      reader.readAsDataURL(file);
     } else {
       setReceiptPreview('pdf');
-      setReceiptBase64(null);
     }
     const sizeKb = (file.size / 1024).toFixed(0);
     const cleanName = file.name.replace(/[^a-zA-Z0-9._\-]/g, '_');
@@ -168,6 +169,7 @@ export default function PaymentModal({
           phone_number: phone,
           transaction_reference: transactionRef.trim(),
           receipt_base64: receiptBase64 || undefined,
+          original_filename: receiptFile?.name || '',
         }),
       });
 
@@ -202,7 +204,7 @@ export default function PaymentModal({
           }
         } else if (paymentMethod === 'cash') {
           onPaymentComplete(
-            'PENDING',
+            'CASH_PENDING',
             payment.tx_ref,
             t('Cash order placed! Staff will confirm payment upon delivery, pickup, or at your table.')
           );
