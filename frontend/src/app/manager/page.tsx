@@ -423,6 +423,8 @@ export default function ManagerDashboard() {
     is_active: true,
   });
   const [isSavingAccount, setIsSavingAccount] = useState(false);
+  const [deleteConfirmAccount, setDeleteConfirmAccount] = useState<PaymentAccount | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isApprovingPayment, setIsApprovingPayment] = useState<number | null>(null);
 
   // Reports state
@@ -622,18 +624,27 @@ export default function ManagerDashboard() {
     }
   };
 
-  const handleDeleteAccount = async (accId: number) => {
-    if (typeof window !== 'undefined' && !window.confirm(t('Are you sure you want to delete this payment account?'))) return;
+  const handleConfirmDeleteAccount = async () => {
+    if (!deleteConfirmAccount) return;
+    setIsDeletingAccount(true);
     try {
-      const res = await apiFetch(`/api/v1/payments/accounts/${accId}/`, {
+      const res = await apiFetch(`/api/v1/payments/accounts/${deleteConfirmAccount.id}/`, {
         method: 'DELETE',
       });
       if (res.ok) {
         setActionMsg(`🗑️ ${t('Payment account deleted.')}`);
         setTimeout(() => setActionMsg(null), 3000);
+        setDeleteConfirmAccount(null);
         await fetchPaymentAccounts();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setActionMsg(err.error || err.detail || t('Failed to delete payment account.'));
       }
-    } catch {}
+    } catch (e: any) {
+      setActionMsg(e.message || t('Error deleting payment account.'));
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   const handleOpenAddItem = () => {
@@ -2734,7 +2745,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteAccount(acc.id)}
+                            onClick={() => setDeleteConfirmAccount(acc)}
                             className="w-8 h-8 rounded-[10px] border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50 flex items-center justify-center transition-colors cursor-pointer"
                             title={t('Delete Account')}
                           >
@@ -3264,6 +3275,49 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                 className="flex-1 h-10 rounded-[12px] bg-red-600 text-white font-bold text-[13px] hover:bg-red-700 transition-colors disabled:opacity-50"
               >
                 {isDeletingLocation ? t('Saving...') : t('Delete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT ACCOUNT DELETE CONFIRM MODAL */}
+      {deleteConfirmAccount && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-surface-2 border border-red-300 dark:border-red-900/60 rounded-[22px] max-w-sm w-full p-6 shadow-2xl space-y-4 text-center text-[var(--text)] animate-fade-in">
+            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-950/70 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto text-2xl">
+              <i className="ph ph-warning-octagon"></i>
+            </div>
+            <div>
+              <h3 className="font-display text-[20px] font-bold text-[var(--text)] mb-1">
+                {t('Delete Payment Account')}
+              </h3>
+              <p className="text-[14px] text-[var(--muted)]">
+                {t('Are you sure you want to delete this payment account?')}
+              </p>
+              <p className="font-display text-[17px] font-bold text-[var(--accent)] mt-2">
+                {deleteConfirmAccount.account_name} ({deleteConfirmAccount.account_number})
+              </p>
+              <p className="text-[12px] text-red-500 dark:text-red-400 mt-1">
+                {t('This action cannot be undone.')}
+              </p>
+            </div>
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingAccount}
+                onClick={() => setDeleteConfirmAccount(null)}
+                className="flex-1 h-10 rounded-[12px] border border-[var(--border)] text-[var(--muted)] font-semibold text-[13px] hover:text-[var(--text)] transition-colors cursor-pointer"
+              >
+                {t('Cancel')}
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingAccount}
+                onClick={handleConfirmDeleteAccount}
+                className="flex-1 h-10 rounded-[12px] bg-red-600 text-white font-bold text-[13px] hover:bg-red-700 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {isDeletingAccount ? t('Saving...') : t('Delete')}
               </button>
             </div>
           </div>
