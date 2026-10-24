@@ -2145,10 +2145,10 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                       <tr className="bg-surface-3/80 border-b border-[var(--border)] text-[var(--muted)] font-bold uppercase tracking-wider text-[10.5px]">
                         <th className="py-3 px-3 w-[15%]">{t('Order # & Time')}</th>
                         <th className="py-3 px-3 w-[17%]">{t('Customer & Type')}</th>
-                        <th className="py-3 px-3 w-[19%]">{t('Items')}</th>
-                        <th className="py-3 px-3 w-[17%]">{t('Total & Payment')}</th>
-                        <th className="py-3 px-2 text-center w-[12%]">{t('Status')}</th>
-                        <th className="py-3 px-3 text-right w-[20%]">{t('Actions')}</th>
+                        <th className="py-3 px-3 w-[18%]">{t('Items')}</th>
+                        <th className="py-3 px-3.5 w-[21%]">{t('Total & Payment')}</th>
+                        <th className="py-3 px-3 text-center w-[15%]">{t('Status')}</th>
+                        <th className="py-3 px-3 text-right w-[14%]">{t('Actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)]/50">
@@ -2248,9 +2248,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                               </td>
 
                               {/* 4. Total & Payment (Includes Receipt Chip) */}
-                              <td className="py-3 px-3">
-                                <div className="flex items-center gap-1.5 font-mono font-bold text-[12.5px] text-[var(--accent)]">
-                                  <span>{order.total_amount_etb} {birr}</span>
+                              <td className="py-3 px-3.5 min-w-0">
+                                <div className="flex items-center gap-1.5 font-mono font-bold text-[13px] text-[var(--accent)]">
+                                  <span className="truncate">{order.total_amount_etb} {birr}</span>
                                   {hasReceipt && (
                                     <button
                                       type="button"
@@ -2263,9 +2263,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     </button>
                                   )}
                                 </div>
-                                <div className="mt-0.5">
+                                <div className="mt-1 flex items-center">
                                   <span
-                                    className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-tight ${
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-tight max-w-full truncate ${
                                       isPaid
                                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800'
                                         : order.latest_payment?.payment_method === 'cash'
@@ -2277,7 +2277,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                               : 'bg-surface text-[var(--muted)] border border-[var(--border)]'
                                     }`}
                                   >
-                                    <i className={`ph ${isPaid ? 'ph-check-circle' : order.latest_payment?.payment_method === 'cash' ? 'ph-hand-coins' : order.latest_payment?.transaction_reference ? 'ph-clock' : 'ph-warning'} text-[10px]`}></i>
+                                    <i className={`ph ${isPaid ? 'ph-check-circle' : order.latest_payment?.payment_method === 'cash' ? 'ph-hand-coins' : order.latest_payment?.transaction_reference ? 'ph-clock' : 'ph-warning'} text-[10px] shrink-0`}></i>
                                     <span className="truncate">
                                       {isPaid
                                         ? `${t('Paid')} (${t(PAYMENT_LABELS[order.latest_payment?.payment_method || ''] || order.latest_payment?.payment_method || '')})`
@@ -2294,15 +2294,19 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                               </td>
 
                               {/* 5. Status */}
-                              <td className="py-3 px-2 text-center">
-                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider inline-block ${STATUS_BADGE[order.status] || 'bg-surface text-[var(--muted)] border border-[var(--border)]'}`}>
+                              <td className="py-3 px-3 text-center min-w-0">
+                                <span
+                                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center justify-center whitespace-nowrap ${
+                                    STATUS_BADGE[order.status] || 'bg-surface text-[var(--muted)] border border-[var(--border)]'
+                                  }`}
+                                >
                                   {t(STATUS_LABELS[order.status] || order.status)}
                                 </span>
                               </td>
 
                               {/* 6. Actions — icon-only in compact row; full labels in expanded row */}
-                              <td className="py-3 px-3 text-right">
-                                <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                              <td className="py-3 px-3 text-right min-w-0">
+                                <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                                   {order.status === 'PENDING_PAYMENT' && (
                                     <>
                                       {order.latest_payment?.payment_method === 'cash' ? (
