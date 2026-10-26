@@ -15,7 +15,24 @@ v1_patterns = [
     path('', include('api.urls')),
 ]
 
+from django.http import JsonResponse
+
+def root_status_view(request):
+    return JsonResponse({
+        'status': 'online',
+        'service': 'Coffee House Backend API',
+        'version': 'v1',
+        'endpoints': {
+            'docs': '/api/docs/',
+            'admin': '/admin/',
+            'menu_items': '/api/v1/menu/items/',
+            'categories': '/api/v1/menu/categories/',
+            'assistant_chat': '/api/v1/assistant/message/',
+        }
+    })
+
 urlpatterns = [
+    path('', root_status_view, name='root-status'),
     path('admin/', admin.site.urls),
     # Versioned API routes. The namespace is what makes the two mounts below
     # unambiguous: `api/` was previously included un-namespaced, so its route names
