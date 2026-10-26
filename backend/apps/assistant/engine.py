@@ -132,18 +132,20 @@ def _resume_hint(intent, query, session):
         en_bits.append(f"the name {state['name']}")
         am_bits.append(f"ስምዎ {state['name']}")
     if state.get('date'):
-        en_bits.append(state['date'])
-        am_bits.append(state['date'])
+        en_bits.append(f"Date {state['date']}")
+        am_bits.append(f"ቀን {state['date']}")
     if state.get('time'):
-        en_bits.append(state['time'])
-        am_bits.append(state['time'])
+        from .responder import format_time_with_lt
+        lt = format_time_with_lt(state['time'])
+        en_bits.append(f"Time {lt['en']}")
+        am_bits.append(f"ሰዓት {lt['am']}")
     if state.get('guests'):
         en_bits.append(f"{state['guests']} guests")
         am_bits.append(f"{state['guests']} ሰዎች")
 
     if not en_bits:
         return None
-    return (' and '.join(en_bits), ' '.join(am_bits))
+    return (', '.join(en_bits), '፣ '.join(am_bits))
 
 
 def _auth_required_reply(intent, query, session):
@@ -273,6 +275,11 @@ def answer_query(query, session_id=None, user=None, use_agent=None):
         intent = 'reservation_status'
     elif re.search(r'ORD-\d{8}-[A-Za-z0-9]{4}', query, re.I):
         intent = 'order_status'
+
+    if intent == 'reservation_status' and not re.search(r'RES-\d{8}-[A-Za-z0-9]{4}', query, re.I):
+        low_q = query.lower()
+        if any(w in low_q for w in ('make', 'book', 'reserve', 'wanna', 'want', 'ያስይዙ', 'ማስያዝ', 'ቦታ', 'ጠረጴዛ')) and not any(w in low_q for w in ('status', 'check', 'did i', 'is my', 'ሁኔታ')):
+            intent = 'reservation_create'
 
     # A message that already carries booking details is a booking, even when it
     # never says "reserve": "name abebe, date tomorrow at 9 morning, with 10

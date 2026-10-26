@@ -444,7 +444,42 @@ def get_item_by_name(name):
 
 # ── Knowledge base retrieval ─────────────────────────────────────────
 
+def _ensure_knowledge_base():
+    try:
+        if KnowledgeBase.objects.exists():
+            return
+        KnowledgeBase.objects.bulk_create([
+            KnowledgeBase(
+                title='Geisha & Floral Micro-Lots Guide',
+                category='Origin & Science',
+                content='Panama Geisha and Ethiopian Geisha varieties cultivated above 1,900 MASL produce intoxicating floral aromatics of jasmine, bergamot, peach, and guava. Best brewed using pour-over V60 or Chemex at 92-94°C with soft water (50-70 ppm) to accentuate volatile floral oils.',
+                tags='geisha, ethiopia, panama, jasmine, pour over, v60, light roast, brew'
+            ),
+            KnowledgeBase(
+                title='Cold Extraction & Dutch Tower Method',
+                category='Brew Science',
+                content='Kyoto Dutch cold drip extraction uses ice-cold water dripping drop-by-drop over 12-18 hours. This slow oxidation prevents tannin bitterness while concentrating heavy cocoa esters, whiskey oak notes, and a velvety syrupy mouthfeel.',
+                tags='cold drip, kyoto, cold brew, dutch drip, dark roast, ice, dutch, brew'
+            ),
+            KnowledgeBase(
+                title='Artisanal Pastry Pairing Science',
+                category='Pairing',
+                content='Butter croissants pair impeccably with high-acidity washed Geishas. Rich chocolate pastries like tiramisu and cocoa truffles balance deep volcanic dark roasts like Sumatra Blue Batak and Roasted Hazelnut Truffle Mocha.',
+                tags='pairing, bakery, croissant, tiramisu, chocolate, breakfast, food'
+            ),
+            KnowledgeBase(
+                title='Ethiopian Traditional Jebena Buna Ceremony',
+                category='Heritage',
+                content='Traditional Ethiopian Buna is prepared using clay jebena pots. Green beans are freshly washed, roasted over open charcoal coals, ground fine by hand, and brewed three times (Abol, Tona, Baraka) accompanied by burning frankincense and popped corn.',
+                tags='jebena, buna, ceremony, abol, ethiopian tradition, roasting, clay pot'
+            ),
+        ])
+    except Exception:
+        pass
+
+
 def search_knowledge_base(text, limit=3):
+    _ensure_knowledge_base()
     tokens = set(tokenize(text))
     if not tokens:
         return []
@@ -452,7 +487,7 @@ def search_knowledge_base(text, limit=3):
     for doc in KnowledgeBase.objects.all():
         doc_tokens = set(tokenize(f"{doc.title} {doc.category} {doc.content} {doc.tags}"))
         overlap = len(tokens & doc_tokens)
-        title_hit = 2 if ' '.join(sorted(tokens)) in doc.title.lower() else 0
+        title_hit = 2 if any(t in doc.title.lower() for t in tokens if len(t) >= 3) else 0
         score = overlap + title_hit
         if score:
             scored.append((score, doc))
@@ -532,55 +567,81 @@ def _extract_date_and_time(text):
         except ValueError:
             pass
 
-    # time: 6pm / 18:30 / 9 morning / ከ18:00 / 6 ሰዓት
+    # time: 6pm / 18:30 / 9 morning / ከ18:00 / 6 ሰዓት / 1 at night LT / 1 night LT
     target_time = None
-    # Lookarounds rather than \b: in "ከ18:00" the Ethiopic letter and the digit are
-    # both word characters, so \b never matches and the time was silently lost.
+    is_lt = bool(re.search(r'\b(?:lt|local\s*time)\b', lowered) or 'በኢትዮጵያ' in lowered)
+
     time_match = re.search(r'(?<!\d)(\d{1,2})[:.](\d{2})(?!\d)', lowered)
     if time_match:
-        target_time = f"{int(time_match.group(1)):02d}:{time_match.group(2)}"
+        h = int(time_match.group(1))
+        m = time_match.group(2)
+        if is_lt:
+            if any(w in lowered for w in ('night', 'evening', 'ማታ', 'ከሰዓት')):
+                h = (h + 18) % 24 if h <= 6 else (h + 6) % 24
+            elif any(w in lowered for w in ('morning', 'ጠዋት', 'ቀን')):
+                h = (h + 6) % 24
+            elif h <= 6:
+                h = (h + 18) % 24
+        target_time = f"{h:02d}:{m}"
     else:
-        # Several word orders have to be recognised, because Amharic does not
-        # put the unit where English does:
-        #   "6pm"              digit then marker
-        #   "9 morning"        digit then day-part
-        #   "ከ6 ሰዓት"          ከ (preposition) + digit + ሰዓት
-        #   "ከ6 ማታ"          ከ + digit + ማታ
-        #   "ከሰዓት 6"          ሰዓት then digit
         marker = re.search(
-            r'(?<!\d)(\d{1,2})\s*(am|pm|morning|afternoon|evening|night|noon|midday'
-            r'|ጠዋት|ከሰዓት|ማታ)(?![a-z])', lowered)
+            r'(?<!\d)(\d{1,2})\s*(?:at\s+|in\s+(?:the\s+)?|on\s+)?(am|pm|morning|afternoon|evening|night|noon|midday|ጠዋት|ከሰዓት|ማታ|ሌሊት)(?![a-z])', lowered)
+        lt_lone = re.search(
+            r'(?<!\d)(\d{1,2})\s*(?:at\s+|on\s+)?(?:lt|local\s*time)\b', lowered)
         preposition = re.search(
-            r'ከ\s*(?<!\d)(\d{1,2})\s*(ሰዓት|ማታ|ጠዋት)(?![a-z])', lowered)
+            r'ከ\s*(?<!\d)(\d{1,2})\s*(?:ሰዓት|ማታ|ጠዋት|ሌሊት)(?![a-z])', lowered)
         unit_first = re.search(
-            r'(?<!\d)(ከሰዓት|ሰዓት|ማታ|ጠዋት)\s*(\d{1,2})(?!\d)', lowered)
+            r'(?<!\d)(ከሰዓት|ሰዓት|ማታ|ጠዋት|ሌሊት)\s*(?:ከ\s*|በ\s*)?(\d{1,2})(?!\d)', lowered)
 
         if marker:
             hour = int(marker.group(1))
             word = marker.group(2).strip()
-            if word in DAY_PART_WORDS and word not in ('am', 'pm', 'ጠዋት', 'ማታ'):
-                hour += DAY_PART_WORDS[word]
-                hour = min(hour, 23)
-            elif word in ('pm', 'ማታ') and hour < 12:
-                hour += 12
-            elif word in ('am', 'ጠዋት') and hour == 12:
-                hour = 0
+            if is_lt:
+                if word in ('night', 'evening', 'ማታ', 'ከሰዓት', 'ከሰዓት በኋላ'):
+                    hour = (hour + 18) % 24 if hour <= 6 else (hour + 6) % 24
+                elif word in ('morning', 'ጠዋት', 'ቀን'):
+                    hour = (hour + 6) % 24
+                elif word == 'ሌሊት':
+                    hour = (hour + 18) % 24 if hour <= 6 else (hour - 6) % 24
+                else:
+                    hour = (hour + 18) % 24 if hour <= 6 else (hour + 6) % 24
+            else:
+                if word in DAY_PART_WORDS and word not in ('am', 'pm', 'ጠዋት', 'ማታ'):
+                    hour += DAY_PART_WORDS[word]
+                    hour = min(hour, 23)
+                elif word in ('pm', 'ማታ') and hour < 12:
+                    hour += 12
+                elif word in ('am', 'ጠዋት') and hour == 12:
+                    hour = 0
+            target_time = f"{hour:02d}:00"
+        elif lt_lone:
+            hour = int(lt_lone.group(1))
+            if any(w in lowered for w in ('night', 'evening', 'ማታ', 'ከሰዓት')) or hour <= 6:
+                hour = (hour + 18) % 24
+            else:
+                hour = (hour + 6) % 24
             target_time = f"{hour:02d}:00"
         elif preposition:
             hour = int(preposition.group(1))
             word = preposition.group(2)
-            if word in ('ማታ',) and hour < 12:
-                hour += 12
-            elif word == 'ጠዋት' and hour == 12:
-                hour = 0
+            if is_lt:
+                hour = (hour + 18) % 24 if word == 'ማታ' else (hour + 6) % 24
+            else:
+                if word in ('ማታ',) and hour < 12:
+                    hour += 12
+                elif word == 'ጠዋት' and hour == 12:
+                    hour = 0
             target_time = f"{hour:02d}:00"
         elif unit_first:
             hour = int(unit_first.group(2))
             word = unit_first.group(1)
-            if word == 'ማታ' and hour < 12:
-                hour += 12
-            elif word == 'ጠዋት' and hour == 12:
-                hour = 0
+            if is_lt:
+                hour = (hour + 18) % 24 if word == 'ማታ' else (hour + 6) % 24
+            else:
+                if word == 'ማታ' and hour < 12:
+                    hour += 12
+                elif word == 'ጠዋት' and hour == 12:
+                    hour = 0
             target_time = f"{hour:02d}:00"
         elif 'noon' in lowered or 'midday' in lowered or 'ቀን ማታ' in lowered:
             target_time = '12:00'
@@ -623,19 +684,30 @@ def _extract_guests(text):
 def _extract_name(text):
     """A reservation name is usually the short phrase after 'name is' / 'ስም'."""
     patterns = [
-        r'(?:name is|my name is|for|name[:\s]+)\s*([A-Za-z][A-Za-z\s\-\.]{1,30})',
-        r'ስም\s*([^\s,.]{2,30})',
+        r'(?:my name is|name is|name[:\s]+|under the name of|under the name|under|named)\s+([A-Za-z][A-Za-z\s\-\.]{1,30})',
+        r'ስም(?:\s*ነው|\s*:\s*|\s+)\s*([^\s,.]{2,30})',
+        r'ስሜ\s*([^\s,.]{2,30})',
     ]
+    INVALID_NAME_WORDS = {
+        'the', 'a', 'an', 'for', 'reservation', 'booking', 'table', 'people', 'guests',
+        'person', 'pax', 'wanna', 'want', 'make', 'today', 'tomorrow', 'tonight',
+        'order', 'food', 'drink', 'coffee', 'buna', 'at', 'on', 'with', 'please',
+        'ማስያዝ', 'ቦታ', 'ጠረጴዛ', 'ሰዎች', 'ሰው', 'ነገ', 'ዛሬ', 'ማታ', 'ጠዋት'
+    }
     for pattern in patterns:
         match = re.search(pattern, (text or ''), re.IGNORECASE)
         if match:
             candidate = match.group(1).strip().split()
-            # drop trailing filler words
-            for stop in ('at', 'for', 'tomorrow', 'today', 'tonight', 'please', 'በ', 'ነገ'):
-                if candidate and candidate[-1].lower() == stop:
-                    candidate.pop()
-            if candidate:
-                return ' '.join(candidate).strip(' ,.')
+            while candidate and candidate[-1].lower() in ('at', 'for', 'tomorrow', 'today', 'tonight', 'please', 'በ', 'ነገ', 'with', 'on'):
+                candidate.pop()
+            if not candidate:
+                continue
+            first_word = candidate[0].lower()
+            if first_word in INVALID_NAME_WORDS or any(w.lower() in ('reservation', 'booking', 'wanna', 'guests', 'table') for w in candidate):
+                continue
+            name_val = ' '.join(candidate).strip(' ,.')
+            if len(name_val) >= 2:
+                return name_val
     return None
 
 

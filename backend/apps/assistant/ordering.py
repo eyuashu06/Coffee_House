@@ -41,32 +41,63 @@ def search_menu(query, limit=6, category_slug=None, available_only=True):
     for what exists and what it costs.
     """
     from .retriever import find_menu_items
+    from apps.menu.models import Category
 
-    items = find_menu_items(query or '', limit=limit, category_slug=category_slug,
+    cat_slugs = None
+    if category_slug:
+        slug_low = category_slug.strip().lower()
+        if slug_low in ('coffee', 'coffees', 'ቡና'):
+            cat_slugs = ['micro-lot-coffee', 'espresso-infusions']
+        elif slug_low in ('drinks', 'drink', 'beverage', 'beverages', 'መጠጥ'):
+            cat_slugs = ['micro-lot-coffee', 'espresso-infusions', 'premium-tea']
+        elif slug_low in ('food', 'foods', 'ምግብ'):
+            cat_slugs = ['artisanal-burgers', 'wood-fired-pizza', 'shawarma-wraps', 'fast-food', 'bakery-pastry']
+        else:
+            exact = Category.objects.filter(slug=slug_low).first()
+            if exact:
+                cat_slugs = [exact.slug]
+            else:
+                matches = list(Category.objects.filter(
+                    Q(slug__icontains=slug_low) | Q(name__icontains=slug_low)
+                ).values_list('slug', flat=True))
+                cat_slugs = matches if matches else [category_slug]
+
+    primary_slug = cat_slugs[0] if (cat_slugs and len(cat_slugs) == 1) else None
+    items = find_menu_items(query or '', limit=limit, category_slug=primary_slug,
                             available_only=available_only)
     if items:
-        return items
+        if cat_slugs and len(cat_slugs) > 1:
+            items = [i for i in items if i.category.slug in cat_slugs]
+        if items:
+            return items
 
     # A broad "what do you have?" style query has no product words, so fall back
     # to category or drink/food filtering rather than returning nothing.
     qs = MenuItem.objects.select_related('category').prefetch_related('variants', 'add_ons')
-    if category_slug:
+    if cat_slugs:
+        qs = qs.filter(category__slug__in=cat_slugs)
+    elif category_slug:
         qs = qs.filter(category__slug=category_slug)
     if available_only:
         qs = qs.filter(is_available=True)
 
     low = (query or '').strip().lower()
 
-    drink_terms = {'drink', 'drinks', 'beverage', 'beverages', 'መጠጥ', 'መጠጦች', 'ምን አይነት መጠጥ', 'ምን አይነት መጠጦች'}
-    if low in drink_terms or all(w in drink_terms or len(w) < 3 for w in low.split()):
-        return list(qs.filter(category__slug__in=['micro-lot-coffee', 'espresso-infusions', 'premium-tea'])[:limit])
+    if low:
+        coffee_terms = {'coffee', 'coffees', 'specialty coffee', 'ቡና', 'ቡናዎች'}
+        if low in coffee_terms or any(w in coffee_terms for w in low.split()):
+            return list(qs.filter(category__slug__in=['micro-lot-coffee', 'espresso-infusions'])[:limit])
 
-    food_terms = {'food', 'foods', 'meal', 'meals', 'dish', 'dishes', 'snack', 'snacks', 'ምግብ', 'ምግቦች', 'ምን አይነት ምግብ', 'ምን አይነት ምግቦች'}
-    if low in food_terms or all(w in food_terms or len(w) < 3 for w in low.split()):
-        return list(qs.filter(category__slug__in=['artisanal-burgers', 'wood-fired-pizza', 'shawarma-wraps', 'fast-food', 'bakery-pastry'])[:limit])
+        drink_terms = {'drink', 'drinks', 'beverage', 'beverages', 'መጠጥ', 'መጠጦች', 'ምን አይነት መጠጥ', 'ምን አይነት መጠጦች'}
+        if low in drink_terms or (low.split() and all(w in drink_terms or len(w) < 3 for w in low.split())):
+            return list(qs.filter(category__slug__in=['micro-lot-coffee', 'espresso-infusions', 'premium-tea'])[:limit])
 
-    if query:
+        food_terms = {'food', 'foods', 'meal', 'meals', 'dish', 'dishes', 'snack', 'snacks', 'ምግብ', 'ምግቦች', 'ምን አይነት ምግብ', 'ምን አይነት ምግቦች'}
+        if low in food_terms or (low.split() and all(w in food_terms or len(w) < 3 for w in low.split())):
+            return list(qs.filter(category__slug__in=['artisanal-burgers', 'wood-fired-pizza', 'shawarma-wraps', 'fast-food', 'bakery-pastry'])[:limit])
+
         qs = qs.filter(Q(name__icontains=query) | Q(description__icontains=query))
+
     return list(qs[:limit])
 
 

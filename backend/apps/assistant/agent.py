@@ -32,7 +32,7 @@ import re
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = 'gemini-2.5-flash'
+DEFAULT_MODEL = 'gemini-3.5-flash-lite'
 MAX_TOOL_ROUNDS = 6
 MAX_HISTORY_TURNS = 10
 
@@ -45,47 +45,42 @@ COMMIT_PHRASES = [
 ]
 
 
-SYSTEM_PROMPT = """You are the assistant for Buna Hub, a specialty coffee house in Addis Ababa.
+SYSTEM_PROMPT = """You are the official AI assistant for Buna Hub (Coffee House), a premier specialty coffee house and artisanal dining destination in Addis Ababa.
 
-You are talking with a customer in a chat panel. Be warm, direct and natural, the way a good barista \
-would be: two or three sentences for a simple question, no ceremony, no bullet lists of everything \
-you know. Never open with "Great question". Never repeat yourself.
+You are conversing with a customer in the online chat panel. Be warm, direct, helpful, and natural, like an expert barista and hospitality host: concise (2-3 sentences for simple questions), courteous, never repetitive, and never start with fillers like "Great question".
 
-FACTS
-Everything you say about the cafe must come from a tool result in this conversation. You do not \
-know the menu, prices, opening hours or table availability from memory. If a tool did not tell you \
-something, you do not say it. Never guess a price, never invent a product, never estimate a \
-wait time.
+KNOWLEDGE & WORK
+You represent Buna Hub. You assist guests with:
+1. Coffee & Drinks: 100% single-origin Ethiopian micro-lots (Guji Hambela, Sidama Bombe, Yirgacheffe Anaerobic, Jebena buna), espresso infusions, and specialty teas.
+2. Artisanal Food: Gourmet smash burgers, wood-fired pizzas, authentic shawarma wraps, fast-food favourites, and freshly baked pastries.
+3. Coffee Science & Brew Methods: Pour-over (V60, Chemex), Kyoto Dutch cold drip extraction, and Jebena roasting/brewing heritage.
+4. Ordering: Taking item choices (with sizes and add-ons) into a running cart, showing order summaries, and placing delivery, pickup, or dine-in orders.
+5. Table Reservations: Checking real-time table availability, party size limits, and booking tables.
+6. Venue Information: Operating hours, location in Addis Ababa, contact details, and average prep times.
 
-LANGUAGE
-Always answer in BOTH English and Amharic. Speak the Amharic the way a customer in Addis Ababa \
-actually speaks it - natural and warm, not translated word-for-word. Match the language the customer \
-wrote in: if they wrote Amharic, lead with Amharic tone and phrasing in the Amharic half.
+FACTS & TRUTHFULNESS
+Everything you state about items, prices, ingredients, availability, opening hours, and reservations MUST come directly from your tool results.
+Never guess or hallucinate a price. Never invent a product we do not sell. Never guess an availability or booking status. If a tool did not return it, do not state it.
 
-ACCOUNTS
-Reserving a table, placing an order, and looking up or cancelling the customer's own reservations \
-or orders require an account. A tool will refuse with auth_required if they are not signed in. When \
-that happens, tell them plainly that they need to sign in or create an account first, say what you \
-were about to do for them, and reassure them you will continue afterwards. Do not ask them to \
-repe information they already gave you. Browsing the menu, prices, availability and opening hours \
-never requires an account - offer those freely.
+DECISION MAKING & TOOLS
+- Always call `search_menu`, `get_item_detail`, or `list_categories` before talking about menu items or prices.
+- When asked about coffee, drinks, food, or pastries, search the relevant query or category.
+- When asked about cafe details or opening hours, call `get_venue_info`.
+- When asked about brewing guides, origins, or pairings, call `search_knowledge_base`.
+- When taking orders, use `add_to_order`, `view_order`, or `remove_from_order`.
+- When reserving a table, always call `check_table_availability` first. If full, propose the alternative times returned by the tool.
 
-ORDERING
-Add items one at a time with the matching tool. Confirm the order type and the delivery address \
-before placing it, then place it and read back the order number, the total and what is in it. Tell \
-them payment happens on the next step.
+ACCOUNTS & PRIVACY
+Browsing the menu, checking venue info, and viewing or adding items to a cart do NOT require an account.
+Placing an order, confirming a table reservation, and viewing or cancelling personal bookings/orders require an authenticated account.
+If a customer is not signed in and asks to place an order or book a table, explain warmly that they need to sign in or create an account, summarize what you have prepared for them, and reassure them you will complete it once signed in without having them repeat details.
 
-RESERVATIONS
-Collect the date, time, party size and name. Check availability before you promise anything, and \
-only say a reservation is confirmed when the tool tells you it was created. If a slot is full, offer \
-the alternatives the tool gave you.
+LANGUAGE REQUIREMENT
+Always provide your answer in BOTH English and Amharic. Speak natural, culturally authentic Amharic used in Addis Ababa (not stiff mechanical translation).
 
 STYLE
-Short paragraphs. Use a plain line per item only when listing several. Prices in ETB. No emoji. \
-No markdown headings, no bold. If you truly do not have the information, say so in one sentence and \
-point them to the team.
-
-Return your reply as JSON: {"en": "...", "am": "..."} and nothing else."""
+Clear, direct, and welcoming. Prices in ETB. No emojis. No markdown headers or bold text inside the JSON fields.
+Return your reply strictly as JSON: {"en": "...", "am": "..."} and nothing else."""
 
 
 # ── Tool declarations ─────────────────────────────────────────────────
@@ -111,8 +106,8 @@ def tool_declarations(include_private):
         _tool('search_menu',
               'Search the live menu. Use for anything about what is sold, what exists, or browsing a '
               'category. Returns items with their real prices and whether they are available.',
-              {'query': {'type': 'string', 'description': 'What the customer is asking about'},
-               'category': {'type': 'string', 'description': 'Optional category slug filter'},
+              {'query': {'type': 'string', 'description': 'What the customer is asking about (e.g. coffee, burger, latte)'},
+               'category': {'type': 'string', 'description': 'Optional category slug (e.g. micro-lot-coffee, espresso-infusions, premium-tea, artisanal-burgers, wood-fired-pizza, shawarma-wraps, fast-food, bakery-pastry)'},
                'available_only': {'type': 'boolean',
                                   'description': 'Only currently available items. Default true.'}}),
         _tool('get_item_detail',
@@ -121,8 +116,12 @@ def tool_declarations(include_private):
               {'name': {'type': 'string', 'description': 'Exact item name from the menu'}},
               ['name']),
         _tool('get_venue_info',
-              'Opening hours, whether the cafe is open right now, address, phone, email and the '
-              'average preparation time.'),
+              'Opening hours, whether the cafe is open right now, address, phone, email, cafe background '
+              'and the average preparation time.'),
+        _tool('search_knowledge_base',
+              'Search the cafe knowledge base: brewing science (pour over, V60, Dutch cold drip, Jebena), coffee bean origins, and pastry pairings.',
+              {'query': {'type': 'string', 'description': 'Topic or keywords to search'}},
+              ['query']),
         _tool('list_categories',
               'Every menu category with its item count.'),
         _tool('check_table_availability',
@@ -190,7 +189,7 @@ class ToolContext:
         self.user = user if (user and getattr(user, 'is_authenticated', False)) else None
         self.staged = staged
         self.session = session
-        self.allowed_numbers = set()
+        self.allowed_numbers = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 30, 45, 60}
         self.created_reservation = False
         self.placed_order = None
         self.auth_required = False
@@ -314,7 +313,10 @@ def execute_tool(name, args, ctx):
     if name == 'get_venue_info':
         venue = get_venue_info()
         ctx.remember_number(venue.default_prep_minutes)
+        for token in _NUMBER_RE.findall(f"{venue.opening_hours} {venue.contact_phone} {venue.address}"):
+            ctx.remember_number(token)
         return {
+            'name': 'Buna Hub (Coffee House)',
             'open_now': venue.is_open,
             'opening_hours': venue.opening_hours,
             'address': venue.address,
@@ -322,7 +324,21 @@ def execute_tool(name, args, ctx):
             'email': venue.contact_email,
             'average_prep_minutes': venue.default_prep_minutes,
             'max_reservation_guests': reservation_service.max_guests(),
+            'description': 'Buna Hub is a premier specialty coffee house and restaurant in Addis Ababa, celebrating authentic Ethiopian coffee heritage alongside wood-fired pizza, smash burgers, wraps, and fresh pastries.',
         }
+
+    if name == 'search_knowledge_base':
+        from .retriever import search_knowledge_base
+        results = search_knowledge_base(args.get('query', ''))
+        if not results:
+            return {'found': False, 'note': 'No matching knowledge base article found.'}
+        for r in results:
+            for token in _NUMBER_RE.findall(f"{r.title} {r.content}"):
+                ctx.remember_number(token)
+        return {'found': True, 'articles': [
+            {'title': r.title, 'category': r.category, 'content': r.content}
+            for r in results
+        ]}
 
     if name == 'list_categories':
         from apps.menu.models import Category
@@ -579,6 +595,8 @@ def run_agent(query, user=None, session=None, staged=None, language='en'):
     http_options = {'timeout': timeout_ms}
     history = list(getattr(session, 'history', []) or [])
     ctx = ToolContext(user=user, staged=staged, session=session)
+    for token in _NUMBER_RE.findall(query):
+        ctx.remember_number(token)
     include_private = ctx.user is not None
 
     contents = _to_gemini_contents(history[-MAX_HISTORY_TURNS:])
@@ -608,11 +626,24 @@ def run_agent(query, user=None, session=None, staged=None, language='en'):
         'http_options': http_options,
     }
 
-    try:
-        response = client.models.generate_content(
-            model=model, contents=contents, config=config)
-    except Exception:
-        logger.exception('Assistant agent request failed; falling back')
+    models_to_try = [model]
+    for fallback in ('gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash'):
+        if fallback not in models_to_try:
+            models_to_try.append(fallback)
+
+    response = None
+    active_model = model
+    for candidate_model in models_to_try:
+        try:
+            response = client.models.generate_content(
+                model=candidate_model, contents=contents, config=config)
+            active_model = candidate_model
+            break
+        except Exception as e:
+            logger.warning('Assistant model %s failed: %s; trying fallback', candidate_model, e)
+
+    if response is None:
+        logger.warning('All assistant models failed; falling back to deterministic engine')
         return None
 
     for _ in range(MAX_TOOL_ROUNDS):
@@ -641,9 +672,9 @@ def run_agent(query, user=None, session=None, staged=None, language='en'):
 
         try:
             response = client.models.generate_content(
-                model=model, contents=contents, config=config)
-        except Exception:
-            logger.exception('Assistant agent tool round failed; falling back')
+                model=active_model, contents=contents, config=config)
+        except Exception as e:
+            logger.exception('Assistant agent tool round failed with %s: %s; falling back', active_model, e)
             return None
 
     text = getattr(response, 'text', '') or ''

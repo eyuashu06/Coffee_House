@@ -12,6 +12,7 @@ ENV_FILES = (BASE_DIR / '.env', BASE_DIR.parent / '.env')
 # when it is blank: an empty `SECRET_KEY=` (an unset shell variable left in place, a
 # compose interpolation of a missing variable) is not a key, and treating it as one
 # would shadow the real value in the file and stop the app from booting.
+_loaded_keys = set()
 for _env_file in ENV_FILES:
     if _env_file.is_file():
         try:
@@ -21,8 +22,9 @@ for _env_file in ENV_FILES:
                     if _line and not _line.startswith('#') and '=' in _line:
                         _k, _v = _line.split('=', 1)
                         _k, _v = _k.strip(), _v.strip().strip("'\"")
-                        if not os.environ.get(_k, '').strip():
+                        if _k not in _loaded_keys:
                             os.environ[_k] = _v
+                            _loaded_keys.add(_k)
         except OSError:
             pass
 
@@ -124,7 +126,7 @@ INSTALLED_APPS = [
 # never invent a price or claim a booking that was not made.
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', os.environ.get('GOOGLE_API_KEY', ''))
 ASSISTANT_USE_LLM = os.environ.get('ASSISTANT_USE_LLM', 'False').lower() in ('1', 'true', 'yes')
-ASSISTANT_MODEL = os.environ.get('ASSISTANT_MODEL', 'gemini-2.5-flash')
+ASSISTANT_MODEL = os.environ.get('ASSISTANT_MODEL', 'gemini-3.5-flash-lite')
 #: Requests to the model are capped so a slow provider cannot hold a chat open.
 ASSISTANT_LLM_TIMEOUT = int(os.environ.get('ASSISTANT_LLM_TIMEOUT', '20'))
 

@@ -98,7 +98,12 @@ const RESUME_PROMPTS_AM: Record<string, string> = {
 let messageCounter = 0;
 const nextId = () => `m${Date.now()}-${messageCounter++}`;
 
-export default function AssistantChat() {
+export interface AssistantChatProps {
+  onAddToCart?: (item: AssistantItem) => void;
+  onOpenCart?: () => void;
+}
+
+export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChatProps = {}) {
   // The assistant answers in ONE language at a time. Showing English and Amharic
   // stacked for every reply doubled the height of every message and, for a
   // customer who reads only one of them, buried the part they needed.
@@ -111,6 +116,19 @@ export default function AssistantChat() {
   const [quickActions, setQuickActions] = useState<QuickAction[]>(FALLBACK_QUICK_ACTIONS);
   const [lastFailed, setLastFailed] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
+  const [addedItemId, setAddedItemId] = useState<number | null>(null);
+
+  const handleItemAddToCart = useCallback((e: React.MouseEvent, item: AssistantItem) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (onAddToCart) {
+      onAddToCart(item);
+      setAddedItemId(item.id);
+      setTimeout(() => {
+        setAddedItemId(prev => prev === item.id ? null : prev);
+      }, 1500);
+    }
+  }, [onAddToCart]);
 
   // Sign-in flow. The assistant asks for an account when the customer wants to
   // reserve a table or check their own orders; the modal opens from the message
@@ -343,26 +361,43 @@ export default function AssistantChat() {
                       </p>
                     </div>
                     {msg.items && msg.items.length > 0 && (
-                      <div className="grid grid-cols-2 gap-2 border-t border-[var(--border)] pt-3">
-                        {msg.items.slice(0, 6).map(item => (
-                          <a
-                            key={item.id}
-                            href="#menu"
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center gap-2 p-2 rounded-lg bg-surface-2 border border-[var(--border)] hover:border-[var(--accent)] transition-colors"
-                          >
-                            {item.image_url && (
-                              <img src={item.image_url} alt={tItem(item.name)} className="w-9 h-9 rounded object-cover shrink-0" />
-                            )}
-                            <span className="min-w-0">
-                              <span className="block text-[12px] font-bold text-[var(--text)] truncate">{tItem(item.name)}</span>
-                              <span className="block text-[11px] text-[var(--accent)] font-semibold">
-                                {Number(item.price).toFixed(0)} {language === 'am' ? 'ብር' : 'ETB'}
-                                {!item.available && <span className="text-red-600 dark:text-red-400"> · {t('Unavailable')}</span>}
-                              </span>
-                            </span>
-                          </a>
-                        ))}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-[var(--border)] pt-3">
+                        {msg.items.slice(0, 6).map(item => {
+                          const isJustAdded = addedItemId === item.id;
+                          return (
+                            <div
+                              key={item.id}
+                              className="flex flex-col justify-between p-2.5 rounded-xl bg-surface-2 border border-[var(--border)] hover:border-[var(--accent)] transition-all gap-2"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                {item.image_url && (
+                                  <img src={item.image_url} alt={tItem(item.name)} className="w-10 h-10 rounded-lg object-cover shrink-0 shadow-sm" />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <span className="block text-[12px] font-bold text-[var(--text)] truncate">{tItem(item.name)}</span>
+                                  <span className="block text-[11px] text-[var(--accent)] font-semibold">
+                                    {Number(item.price).toFixed(0)} {language === 'am' ? 'ብር' : 'ETB'}
+                                    {!item.available && <span className="text-red-600 dark:text-red-400"> · {t('Unavailable')}</span>}
+                                  </span>
+                                </div>
+                              </div>
+                              {onAddToCart && item.available && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleItemAddToCart(e, item)}
+                                  className={`w-full py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 ${
+                                    isJustAdded
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-[var(--accent)] text-[var(--accent-contrast)] hover:brightness-110'
+                                  }`}
+                                >
+                                  <i className={`ph ${isJustAdded ? 'ph-check-bold' : 'ph-shopping-bag'} text-sm`}></i>
+                                  <span>{isJustAdded ? (language === 'am' ? 'ተጨምሯል! ✓' : 'Added! ✓') : (language === 'am' ? 'ወደ ቅርጫት ጨምር' : 'Add to Cart')}</span>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
 

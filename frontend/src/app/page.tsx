@@ -609,6 +609,33 @@ export default function Home() {
         setIsCartOpen(true);
     };
 
+    const handleChatAddToCart = (chatItem: { id: number; name: string; price: string; image_url?: string; available: boolean }) => {
+        const full = items.find(i => i.id === chatItem.id);
+        if (full) {
+            if ((full.variants && full.variants.length > 0) || (full.available_add_ons && full.available_add_ons.length > 0)) {
+                handleOpenItemModal(full);
+            } else {
+                handleConfirmAddToCart(full, 1, 'HOT', 'WHOLE_MILK');
+            }
+        } else {
+            const fallback: MenuItem = {
+                id: chatItem.id,
+                name: chatItem.name,
+                description: '',
+                base_price_etb: chatItem.price,
+                price: chatItem.price,
+                category: 0,
+                image_url: chatItem.image_url || null,
+                is_available: chatItem.available,
+                calories: null,
+                preparation_time: 5,
+                spice_level: 'NONE',
+                allergens: '',
+            };
+            handleConfirmAddToCart(fallback, 1, 'HOT', 'WHOLE_MILK');
+        }
+    };
+
     const handleUpdateQty = (index: number, delta: number) => {
         const line = cartItems[index];
         if (!line) return;
@@ -1464,7 +1491,7 @@ export default function Home() {
                 onAddToCart={handleConfirmAddToCart}
             />
             {/* Bilingual AI assistant (RAG, grounded in the live menu database) */}
-            <AssistantChat />
+            <AssistantChat onAddToCart={handleChatAddToCart} onOpenCart={() => setIsCartOpen(true)} />
 
             <CartDrawer
                 isOpen={isCartOpen}

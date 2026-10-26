@@ -14,4 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+ENV PYTHONUNBUFFERED=1 \
+    PORT=8000
+
 EXPOSE 8000
+
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && exec gunicorn coffee_project.wsgi:application --bind 0.0.0.0:${PORT:-8000}"]

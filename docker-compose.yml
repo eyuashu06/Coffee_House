@@ -64,6 +64,8 @@ services:
       # container boot depend on the network being up.
       - REQUIRE_EMAIL_MX=${REQUIRE_EMAIL_MX:-false}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ASSISTANT_USE_LLM=${ASSISTANT_USE_LLM:-True}
+      - ASSISTANT_MODEL=${ASSISTANT_MODEL:-gemini-2.5-flash}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
       # Unpaid orders close themselves after this many minutes (FR-P7).
       - ORDER_PAYMENT_WINDOW_MINUTES=${ORDER_PAYMENT_WINDOW_MINUTES:-30}

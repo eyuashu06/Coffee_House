@@ -306,7 +306,67 @@ def _local_stamp(dt):
         return dt.strftime('%Y-%m-%d %H:%M')
 
 
+def format_time_with_lt(time_str):
+    """
+    Format 24h HH:MM with Ethiopian Local Time (LT) explanation.
+    e.g. 19:00 -> 19:00 (1:00 LT night / ምሽት 1:00 ሰዓት)
+    """
+    if not time_str:
+        return {'en': '', 'am': ''}
+    try:
+        parts = time_str.split(':')
+        hour = int(parts[0])
+        minute = int(parts[1]) if len(parts) > 1 else 0
+        min_str = f":{minute:02d}" if minute else ":00"
+
+        # Ethiopian time calculation: starts at 6:00 AM (12:00 dawn LT)
+        # 06:00 -> 12:00 day LT
+        # 07:00 -> 1:00 morning LT
+        # 12:00 -> 6:00 afternoon LT
+        # 13:00 -> 7:00 afternoon LT
+        # 18:00 -> 12:00 dusk LT
+        # 19:00 -> 1:00 night LT
+        # 24:00/00:00 -> 6:00 night LT
+        lt_hour = (hour - 6) % 12
+        if lt_hour == 0:
+            lt_hour = 12
+
+        if 6 <= hour < 12:
+            period_en = "morning"
+            period_am = "ጥዋት"
+        elif 12 <= hour < 18:
+            period_en = "afternoon"
+            period_am = "ከሰዓት"
+        elif 18 <= hour < 24:
+            period_en = "night"
+            period_am = "ምሽት"
+        else:
+            period_en = "night"
+            period_am = "ሌሊት"
+
+        en = f"{time_str} ({lt_hour}{min_str} LT {period_en})"
+        am = f"{time_str} ({period_am} {lt_hour}{min_str} ሰዓት)"
+        return {'en': en, 'am': am}
+    except Exception:
+        return {'en': time_str, 'am': time_str}
+
+
 def _reservation_prompt(missing, state):
+    details_en, details_am = [], []
+    if state.get('date'):
+        details_en.append(f"• Date: {state['date']}")
+        details_am.append(f"• ቀን፦ {state['date']}")
+    if state.get('time'):
+        lt_time = format_time_with_lt(state['time'])
+        details_en.append(f"• Time: {lt_time['en']}")
+        details_am.append(f"• ሰዓት፦ {lt_time['am']}")
+    if state.get('guests'):
+        details_en.append(f"• Party size: {state['guests']} guests")
+        details_am.append(f"• የሰዎች ብዛት፦ {state['guests']} ሰዎች")
+    if state.get('name'):
+        details_en.append(f"• Name: {state['name']}")
+        details_am.append(f"• ስም፦ {state['name']}")
+
     en_missing, am_missing = [], []
     labels = {
         'name': ('your name', 'ስምዎ'),
@@ -319,8 +379,11 @@ def _reservation_prompt(missing, state):
         en_missing.append(f"{labels[field][0]}")
         am_missing.append(f"{labels[field][1]}")
 
-    en = ("Sure, I can help you with that. Please provide: " + ', '.join(en_missing) + ".")
-    am = ("እሺ! ልረዳዎ እችላለሁ። እባክዎን የሚከተሉትን ያቅርቡ፦ " + '፣ '.join(am_missing) + "።")
+    noted_en = ("I have noted your reservation details:\n" + "\n".join(details_en) + "\n\n") if details_en else ""
+    noted_am = ("የቦታ ማስያዣዎን ዝርዝር ይዣለሁ፦\n" + "\n".join(details_am) + "\n\n") if details_am else ""
+
+    en = f"{noted_en}To complete your reservation, please provide: {', '.join(en_missing)}."
+    am = f"{noted_am}ቦታ ማስያዝዎን ለማጠናቀቅ እባክዎን {', '.join(am_missing)} ያቅርቡ።"
     return bilingual(en, am), None, []
 
 
@@ -328,6 +391,14 @@ def handle_reservation_create(text, state, user=None):
     from .retriever import extract_reservation_fields
 
     state = extract_reservation_fields(text, state)
+
+    # Auto-populate name and phone from authenticated user if not provided in text
+    if user and getattr(user, 'is_authenticated', False):
+        if not state.get('name'):
+            user_name = f"{getattr(user, 'first_name', '')} {getattr(user, 'last_name', '')}".strip()
+            state['name'] = user_name or getattr(user, 'username', '')
+        if not state.get('phone') and getattr(user, 'phone', ''):
+            state['phone'] = getattr(user, 'phone', '')
 
     missing = [f for f in ('name', 'date', 'time', 'guests') if not state.get(f)]
     if missing:
@@ -367,19 +438,41 @@ def handle_reservation_create(text, state, user=None):
         return bilingual(en, am), [], {}, {'action': 'none'}
 
     pretty_date = state['date']
-    en = ("Your reservation has been confirmed.\n\n"
-          f"Name: {reservation.name}\nDate: {pretty_date}\n"
-          f"Time: {state['time']}\nGuests: {reservation.party_size}\n\n"
-          "Our staff will confirm the table by phone. Thank you!")
-    am = ("የቦታ ማስያዣዎ ተረጋግጧል!\n\n"
-          f"ስም፦ {reservation.name}\nቀን፦ {pretty_date}\n"
-          f"ሰዓት፦ {state['time']}\nየሰዎች ብዛት፦ {reservation.party_size}\n\n"
-          "ሰራተኞቻችን በስልክ ያረጋግጣሉ። እናመሰግናለሁ!")
+    lt_time = format_time_with_lt(state['time'])
+    code_str = f"• Booking Code: {reservation.order_code}\n" if reservation.order_code else ""
+    code_str_am = f"• የማስያዣ ኮድ፦ {reservation.order_code}\n" if reservation.order_code else ""
+
+    en = ("🎉 Your reservation has been confirmed!\n\n"
+          "📋 Reservation Details:\n"
+          f"{code_str}"
+          f"• Name: {reservation.name}\n"
+          f"• Date: {pretty_date}\n"
+          f"• Time: {lt_time['en']}\n"
+          f"• Party Size: {reservation.party_size} guests\n"
+          f"• Venue: Buna Hub (Coffee House), Bole Road\n\n"
+          "Our team will have your table ready. We look forward to welcoming you!")
+    am = ("🎉 የቦታ ማስያዣዎ በተሳካ ሁኔታ ተረጋግጧል!\n\n"
+          "📋 የቦታ ማስያዣው ሙሉ ዝርዝር፦\n"
+          f"{code_str_am}"
+          f"• ስም፦ {reservation.name}\n"
+          f"• ቀን፦ {pretty_date}\n"
+          f"• ሰዓት፦ {lt_time['am']}\n"
+          f"• የሰዎች ብዛት፦ {reservation.party_size} ሰዎች\n"
+          f"• ቦታ፦ ቡና ሁብ (Coffee House)፣ ቦሌ መንገድ\n\n"
+          "ቡድናችን ጠረጴዛዎን ያዘጋጃል። በደስታ እንቀበልዎታለን!")
     return bilingual(en, am), [reservation_service.serialize(reservation)], state, {'action': 'reservation_created'}
 
 
 def handle_reservation_status(text, state, user=None):
     from .retriever import extract_reservation_fields
+
+    # Guard: If query contains booking/creation intent, redirect to handle_reservation_create!
+    import re
+    low = (text or '').lower()
+    booking_words = ('make', 'book', 'reserve', 'wanna', 'want', 'ያስይዙ', 'ማስያዝ', 'ቦታ', 'ጠረጴዛ')
+    has_party_or_time = bool(re.search(r'\b(?:guests?|party|people|at\s+\d+|night|morning|lt|local\s+time)\b', low) or 'ሰው' in text or 'ሰዎች' in text)
+    if any(w in low for w in booking_words) or has_party_or_time:
+        return handle_reservation_create(text, state, user=user)
 
     state = extract_reservation_fields(text, state)
     name = state.get('name')
