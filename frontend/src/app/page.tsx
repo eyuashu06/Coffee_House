@@ -612,7 +612,7 @@ export default function Home() {
     const handleChatAddToCart = (chatItem: { id: number; name: string; price: string; image_url?: string; available: boolean }) => {
         const full = items.find(i => i.id === chatItem.id);
         if (full) {
-            if ((full.variants && full.variants.length > 0) || (full.available_add_ons && full.available_add_ons.length > 0)) {
+            if ((full.variants && full.variants.length > 0) || (full.add_ons && full.add_ons.length > 0)) {
                 handleOpenItemModal(full);
             } else {
                 handleConfirmAddToCart(full, 1, 'HOT', 'WHOLE_MILK');
@@ -621,16 +621,14 @@ export default function Home() {
             const fallback: MenuItem = {
                 id: chatItem.id,
                 name: chatItem.name,
+                category_slug: 'micro-lot-coffee',
+                category_name: 'Micro-Lot Coffee',
                 description: '',
                 base_price_etb: chatItem.price,
                 price: chatItem.price,
-                category: 0,
-                image_url: chatItem.image_url || null,
+                image_url: chatItem.image_url || '',
+                is_signature: false,
                 is_available: chatItem.available,
-                calories: null,
-                preparation_time: 5,
-                spice_level: 'NONE',
-                allergens: '',
             };
             handleConfirmAddToCart(fallback, 1, 'HOT', 'WHOLE_MILK');
         }
