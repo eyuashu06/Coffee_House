@@ -89,8 +89,7 @@ class LoginSerializer(serializers.Serializer):
         if not username_or_email or not password:
             raise serializers.ValidationError('Both username/email and password are required.')
 
-        user = None
-        # Check if login identifier is an email
+        found_user = None
         if '@' in username_or_email:
             found_user = User.objects.filter(email__iexact=username_or_email).first()
             if not found_user:
@@ -98,18 +97,25 @@ class LoginSerializer(serializers.Serializer):
                     f"No account is registered with '{username_or_email}'. "
                     'Check the address, or sign up to create an account.'
                 )
-            user = authenticate(username=found_user.username, password=password)
-            if user is None:
-                raise serializers.ValidationError(
-                    f'The password for {username_or_email} is not correct. Please try again.'
-                )
         else:
-            user = authenticate(username=username_or_email, password=password)
-            if user is None and User.objects.filter(username__iexact=username_or_email).exists():
-                raise serializers.ValidationError('That password is not correct. Please try again.')
+            # Case-insensitive lookup so 'Admin' matches 'admin' and 'eyu' matches 'Eyu'
+            found_user = User.objects.filter(username__iexact=username_or_email).first()
+            if not found_user:
+                norm_phone = normalize_ethiopian_phone(username_or_email)
+                if norm_phone:
+                    found_user = User.objects.filter(phone=norm_phone).first()
 
-        if not user:
-            raise serializers.ValidationError('Invalid login credentials.')
+            if not found_user:
+                raise serializers.ValidationError(
+                    f"No account found with username or email '{username_or_email}'. "
+                    'Please check the spelling or sign up.'
+                )
+
+        # Authenticate using the exact canonical username stored in the database
+        user = authenticate(username=found_user.username, password=password)
+        if user is None:
+            raise serializers.ValidationError('That password is not correct. Please try again.')
+
         if not user.is_active:
             raise serializers.ValidationError('This user account is disabled.')
 
