@@ -39,21 +39,13 @@ def issue_tokens_for_user(user):
 
 
 def auth_cookie_kwargs():
-    """Flags shared by every cookie this module sets.
-
-    `Secure` is driven by SECURE_SSL, not by DEBUG. DEBUG answers "is this a
-    developer machine", SECURE_SSL answers "does this site speak HTTPS" - only the
-    second one is a fact about the transport. Keying off DEBUG broke in both
-    directions: an HTTPS deployment still running DEBUG=1 sent auth cookies without
-    the Secure flag, and a DEBUG=0 deployment over plain HTTP had its cookies
-    silently dropped by the browser, so sign-in looked like it worked while nothing
-    was stored. settings.py already derives the session/CSRF/JWT cookie flags from
-    SECURE_SSL for exactly this reason.
-    """
+    """Flags shared by every cookie this module sets."""
+    is_secure = bool(getattr(settings, 'COOKIE_SECURE', getattr(settings, 'SECURE_SSL', False)))
+    samesite = 'None' if is_secure else 'Lax'
     return {
         'httponly': True,
-        'samesite': 'Lax',
-        'secure': bool(getattr(settings, 'SECURE_SSL', False)),
+        'samesite': samesite,
+        'secure': is_secure,
     }
 
 

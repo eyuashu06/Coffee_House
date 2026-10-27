@@ -37,8 +37,8 @@ def _env_flag(name, default='false'):
 # In production, set DEBUG=0 or DEBUG=false to disable and enforce SECRET_KEY.
 DEBUG = _env_flag('DEBUG', 'true')
 
-#: The site is behind HTTPS end to end. Off by default: turning it on in a plain
-#: `runserver` environment redirects every request to a port nothing is listening on.
+#: The site is behind HTTPS end to end.
+IS_PRODUCTION_RENDER = bool(os.environ.get('RENDER') or os.environ.get('RENDER_EXTERNAL_HOSTNAME'))
 SECURE_SSL = _env_flag('SECURE_SSL')
 
 if SECURE_SSL:
@@ -49,11 +49,13 @@ if SECURE_SSL:
 else:
     SECURE_SSL_REDIRECT = False
 
-# Signed cookies (session, CSRF, JWT) may only travel over HTTPS when they do. The
-# auth views read this same flag, so there is one switch rather than four.
-SESSION_COOKIE_SECURE = SECURE_SSL
-CSRF_COOKIE_SECURE = SECURE_SSL
-SIMPLEJWT_COOKIE_SECURE = SECURE_SSL
+# Signed cookies (session, CSRF, JWT) may only travel over HTTPS when in production.
+COOKIE_SECURE = SECURE_SSL or IS_PRODUCTION_RENDER
+SESSION_COOKIE_SECURE = COOKIE_SECURE
+CSRF_COOKIE_SECURE = COOKIE_SECURE
+SIMPLEJWT_COOKIE_SECURE = COOKIE_SECURE
+SESSION_COOKIE_SAMESITE = 'None' if COOKIE_SECURE else 'Lax'
+CSRF_COOKIE_SAMESITE = 'None' if COOKIE_SECURE else 'Lax'
 
 SECRET_KEY = os.environ.get('SECRET_KEY', '').strip()
 
@@ -201,14 +203,23 @@ else:
         _parsed = urlparse(DATABASE_URL)
         _is_postgres = _parsed.scheme in ('postgres', 'postgresql')
         if _is_postgres:
+            _db_name = _parsed.path.lstrip('/')
+            if '?' in _db_name:
+                _db_name = _db_name.split('?')[0]
+            _ssl_mode = 'require' if (_parsed.hostname and _parsed.hostname not in ('localhost', '127.0.0.1')) else None
+            _options = {}
+            if _ssl_mode:
+                _options['sslmode'] = _ssl_mode
+
             DATABASES = {
                 'default': {
                     'ENGINE': 'django.db.backends.postgresql',
-                    'NAME': _parsed.path.lstrip('/'),
+                    'NAME': _db_name,
                     'USER': unquote(_parsed.username or ''),
                     'PASSWORD': unquote(_parsed.password or ''),
                     'HOST': _parsed.hostname or '',
                     'PORT': str(_parsed.port or 5432),
+                    'OPTIONS': _options,
                 }
             }
         else:
@@ -242,10 +253,16 @@ else:
             use_sqlite = True
 
         if use_sqlite:
+            data_dir = os.environ.get('DATA_DIR', '').strip()
+            if data_dir and os.path.isdir(data_dir):
+                _sqlite_path = Path(data_dir) / 'db.sqlite3'
+            else:
+                _sqlite_path = BASE_DIR / 'db.sqlite3'
+
             DATABASES = {
                 'default': {
                     'ENGINE': 'django.db.backends.sqlite3',
-                    'NAME': BASE_DIR / 'db.sqlite3',
+                    'NAME': _sqlite_path,
                 }
             }
         else:
