@@ -78,6 +78,8 @@ class InitializePaymentSerializer(serializers.Serializer):
     payment_method = serializers.ChoiceField(choices=Payment.METHOD_CHOICES, default='telebirr')
     phone_number = serializers.CharField(required=False, allow_blank=True)
     transaction_reference = serializers.CharField(required=False, allow_blank=True)
+    frontend_url = serializers.CharField(required=False, allow_blank=True)
+    return_url = serializers.CharField(required=False, allow_blank=True)
 
     def validate_order_id(self, value):
         try:
