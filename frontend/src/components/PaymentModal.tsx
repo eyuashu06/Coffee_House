@@ -170,6 +170,8 @@ export default function PaymentModal({
           transaction_reference: transactionRef.trim(),
           receipt_base64: receiptBase64 || undefined,
           original_filename: receiptFile?.name || '',
+          frontend_url: typeof window !== 'undefined' ? window.location.origin : undefined,
+          return_url: typeof window !== 'undefined' ? `${window.location.origin}/account` : undefined,
         }),
       });
 

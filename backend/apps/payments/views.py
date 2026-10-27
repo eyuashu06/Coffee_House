@@ -119,15 +119,15 @@ def _can_manage_order(request, order):
     """
     True when this caller may pay for, or read the payment of, this order.
 
-    The customer who owns the order, or staff. Anyone else gets a 404 rather than
-    a 403: the existence of someone else's order is not the caller's business.
+    The customer who owns the order, staff, or guest if order has no customer.
+    Anyone else gets a 404 rather than a 403.
     """
     user = request.user
     if not (user and user.is_authenticated):
-        return False
+        return order.customer_id is None
     if user.is_manager_or_admin():
         return True
-    return order.customer_id == user.id
+    return order.customer_id == user.id or order.customer_id is None
 
 
 def _save_receipt_payload(payment, receipt_base64, original_filename=''):
@@ -357,10 +357,62 @@ class InitializePaymentView(APIView):
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-        backend_url = getattr(settings, 'BACKEND_PUBLIC_URL', 'http://localhost:8000')
+        # Determine frontend_url dynamically with multiple layers of fallback:
+        # 1. Directly sent in request body payload (e.g. from PaymentModal)
+        # 2. Origin header from the browser/client (e.g. https://coffee-house-*.vercel.app)
+        # 3. Referer header from the browser/client
+        # 4. settings.FRONTEND_URL (from environment variable)
+        # 5. Default to http://localhost:3000
+        frontend_url = (request.data.get('frontend_url') or '').strip().rstrip('/')
+        if not frontend_url and request.data.get('return_url'):
+            raw_ret = request.data.get('return_url').strip().rstrip('/')
+            if '/account' in raw_ret:
+                frontend_url = raw_ret.split('/account')[0]
+            elif raw_ret.startswith('http'):
+                from urllib.parse import urlparse
+                p = urlparse(raw_ret)
+                frontend_url = f"{p.scheme}://{p.netloc}".rstrip('/')
 
-        return_url = f"{frontend_url}/account?order={order.order_number}&tx_ref={tx_ref}&payment_status=pending"
+        if not frontend_url:
+            origin = (request.headers.get('Origin') or request.META.get('HTTP_ORIGIN') or '').strip().rstrip('/')
+            if origin and (origin.startswith('http://') or origin.startswith('https://')):
+                frontend_url = origin
+
+        if not frontend_url:
+            referer = (request.headers.get('Referer') or request.META.get('HTTP_REFERER') or '').strip().rstrip('/')
+            if referer and (referer.startswith('http://') or referer.startswith('https://')):
+                from urllib.parse import urlparse
+                parsed = urlparse(referer)
+                frontend_url = f"{parsed.scheme}://{parsed.netloc}".rstrip('/')
+
+        if not frontend_url:
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').strip().rstrip('/')
+
+        # Determine backend_url for Chapa server-to-server webhook callback:
+        backend_url = getattr(settings, 'BACKEND_PUBLIC_URL', '').strip().rstrip('/')
+        if not backend_url or 'localhost' in backend_url or '127.0.0.1' in backend_url:
+            render_ext = os.environ.get('RENDER_EXTERNAL_URL') or os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+            if render_ext:
+                render_host = render_ext.strip().rstrip('/')
+                backend_url = render_host if render_host.startswith('http') else f"https://{render_host}"
+            else:
+                try:
+                    host = request.get_host()
+                    scheme = 'https' if request.is_secure() else 'http'
+                    if not ('localhost' in host or '127.0.0.1' in host):
+                        backend_url = f"{scheme}://{host}".rstrip('/')
+                except Exception:
+                    pass
+
+        if not backend_url:
+            backend_url = 'http://localhost:8000'
+
+        custom_return = (request.data.get('return_url') or '').strip()
+        if custom_return and custom_return.startswith('http'):
+            sep = '&' if '?' in custom_return else '?'
+            return_url = f"{custom_return}{sep}order={order.order_number}&tx_ref={tx_ref}&payment_status=pending"
+        else:
+            return_url = f"{frontend_url}/account?order={order.order_number}&tx_ref={tx_ref}&payment_status=pending"
 
         # Chapa only accepts addresses on domains that can really receive mail. The customer
         # signs up with a verified address, but fall back to a deliverable one if their
@@ -500,9 +552,12 @@ class VerifyPaymentView(APIView):
             return Response({'error': 'Payment transaction reference not found.'},
                             status=status.HTTP_404_NOT_FOUND)
 
-        if not _can_manage_order(request, payment.order):
-            return Response({'error': 'Payment transaction reference not found.'},
-                            status=status.HTTP_404_NOT_FOUND)
+        # Allow verification if caller is manager/admin, the ordering customer, or returning with the exact unguessable tx_ref
+        user = request.user
+        if user and user.is_authenticated:
+            if not user.is_manager_or_admin() and payment.order.customer_id and payment.order.customer_id != user.id:
+                return Response({'error': 'Payment transaction reference not found.'},
+                                status=status.HTTP_404_NOT_FOUND)
 
         # Cash on Delivery / Dine-in table orders are collected in person by staff
         if payment.payment_method == 'cash':

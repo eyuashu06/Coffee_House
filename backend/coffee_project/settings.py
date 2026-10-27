@@ -286,7 +286,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Disable automatic trailing slash redirects to prevent proxy loop (ERR_TOO_MANY_REDIRECTS)
 APPEND_SLASH = False
 
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+# Secure proxy SSL header for reverse proxies like Render / Heroku
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000').strip().rstrip('/')
 
 # Chapa Payment Gateway Credentials. They live only in .env (git-ignored) - never
 # as literals here, so a checkout of this repo cannot leak a live merchant key.
@@ -301,8 +304,13 @@ CHAPA_WEBHOOK_SECRET = os.environ.get('CHAPA_WEBHOOK_SECRET', '')
 # Where Chapa sends its server-to-server callback. This must be the API host, not
 # the frontend: the request never carries the customer's cookie, and on localhost
 # the frontend origin cannot be reached from the internet at all.
+_render_url = os.environ.get('RENDER_EXTERNAL_URL', '').strip().rstrip('/')
+if not _render_url and os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
+    _render_url = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME').strip()}"
+
 BACKEND_PUBLIC_URL = os.environ.get(
-    'BACKEND_PUBLIC_URL', os.environ.get('API_URL', 'http://localhost:8000')).rstrip('/')
+    'BACKEND_PUBLIC_URL', os.environ.get('API_URL', _render_url or 'http://localhost:8000')
+).rstrip('/')
 # Seconds to wait on the gateway when verifying a transaction.
 CHAPA_VERIFY_TIMEOUT = int(os.environ.get('CHAPA_VERIFY_TIMEOUT', '15'))
 # Receipt address used only when the customer's own email domain has no mail
