@@ -1156,5 +1156,14 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'View Uploaded Receipt Image': 'የተጫነውን የደረሰኝ ምስል እይ',
   'Payment submitted for Order #': 'ክፍያ ተልኳል ለትዕዛዝ፦',
   'Matches Order': 'ከትዕዛዙ ጋር ይዛመዳል',
+  'Contact & Phone Verification': 'የእውቂያ እና የስልክ ማረጋገጫ',
+  'Sign in to use saved details': 'የተቀመጡ መረጃዎችን ለመጠቀም ይግቡ',
+  'Your Name (Optional)': 'የእርስዎ ስም (አስገዳጅ አይደለም)',
+  'Please enter a valid phone number (at least 9 digits) to verify and confirm your order.': 'እባክዎ ትዕዛዝዎን ለማረጋገጥ ትክክለኛ ስልክ ቁጥር (ቢያንስ 9 ዲጂት) ያስገቡ።',
+  'We will contact this number for delivery and order updates. No account required.': 'ለትዕዛዝ መረጃና ለማድረስ በዚህ ስልክ እንደውላለን። መለያ መክፈት አይጠበቅብዎትም።',
+  'Using your saved account details': 'የተቀመጠ የመለያ መረጃን በመጠቀም ላይ',
+  'Save details for next time?': 'መረጃዎን ለቀጣይ ማስቀመጥ ይፈልጋሉ?',
+  'Create a free account with your phone number to track this order, save your delivery addresses, and never type your details again.': 'ይህን ትዕዛዝ ለመከታተል፣ አድራሻዎችን ለማስቀመጥ እና ዳግም ላለመጻፍ በነጻ ይመዝገቡ።',
+  'Create Free Account': 'በነጻ ይመዝገቡ',
 };
 

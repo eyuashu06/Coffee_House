@@ -203,11 +203,11 @@ export default function NotificationsDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[calc(100vw-32px)] max-w-sm sm:w-96 max-h-[460px] overflow-y-auto bg-surface-2 border border-[var(--border)] rounded-[20px] shadow-2xl py-2 z-[100] animate-fade-in backdrop-blur-md">
+        <div className="fixed inset-x-3 top-16 sm:inset-auto sm:absolute sm:right-0 sm:top-auto sm:mt-2 w-auto sm:w-96 max-h-[75vh] sm:max-h-[480px] overflow-y-auto bg-surface-2 border border-[var(--border)] rounded-[20px] shadow-2xl py-2 z-[100] animate-fade-in backdrop-blur-md">
           {/* Header */}
-          <div className="px-4 py-3 border-b border-[var(--border)] flex justify-between items-center sticky top-0 bg-surface-2/95 backdrop-blur-sm z-10">
+          <div className="px-4 py-2.5 border-b border-[var(--border)] flex justify-between items-center sticky top-0 bg-surface-2/95 backdrop-blur-sm z-10">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-[var(--text)] text-[14.5px]">{t('Notifications')}</span>
+              <span className="font-bold text-[var(--text)] text-sm">{t('Notifications')}</span>
               {unreadCount > 0 && (
                 <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-500 border border-red-500/30 text-[10px] font-bold">
                   {unreadCount} {t('unread')}
@@ -230,11 +230,11 @@ export default function NotificationsDropdown() {
 
           <div className="flex flex-col divide-y divide-[var(--border)]">
             {notifications.length === 0 ? (
-              <div className="px-4 py-10 text-center space-y-2">
-                <div className="w-12 h-12 rounded-full bg-surface border border-[var(--border)] flex items-center justify-center mx-auto text-[var(--muted)]">
-                  <i className="ph ph-bell-slash text-2xl"></i>
+              <div className="px-4 py-8 text-center space-y-2">
+                <div className="w-10 h-10 rounded-full bg-surface border border-[var(--border)] flex items-center justify-center mx-auto text-[var(--muted)]">
+                  <i className="ph ph-bell-slash text-xl"></i>
                 </div>
-                <p className="text-[var(--muted)] text-[13px]">{t('No notifications yet')}.</p>
+                <p className="text-[var(--muted)] text-xs">{t('No notifications yet')}.</p>
               </div>
             ) : (
               notifications.map((notification) => {
@@ -250,37 +250,37 @@ export default function NotificationsDropdown() {
                       e.stopPropagation();
                       handleNotificationClick(notification);
                     }}
-                    className={`w-full text-left p-3.5 hover:bg-[var(--accent-soft)]/30 transition-all flex items-start gap-3 group relative cursor-pointer ${
+                    className={`w-full text-left p-2.5 sm:p-3 hover:bg-[var(--accent-soft)]/30 transition-all flex items-start gap-2.5 group relative cursor-pointer ${
                       !notification.is_read ? 'bg-[var(--accent-soft)]/20' : ''
                     }`}
                   >
                     {/* Unread Indicator Bar */}
                     {!notification.is_read && (
-                      <span className="absolute left-0 top-3 bottom-3 w-1 bg-[var(--accent)] rounded-r-full" />
+                      <span className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-[var(--accent)] rounded-r-full" />
                     )}
 
                     {/* Icon */}
                     <span
-                      className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                      className={`mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
                         !notification.is_read
                           ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)]'
                           : 'bg-surface border-[var(--border)] text-[var(--muted)]'
                       }`}
                     >
-                      <i className={`${getNotificationIconPh(notification.title, notification.message)} text-[18px]`}></i>
+                      <i className={`${getNotificationIconPh(notification.title, notification.message)} text-base`}></i>
                     </span>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0 pr-1">
-                      <div className="flex justify-between items-start gap-1 mb-1">
+                      <div className="flex justify-between items-start gap-1 mb-0.5">
                         <h4
-                          className={`text-[13px] font-bold leading-tight group-hover:text-[var(--accent)] transition-colors ${
+                          className={`text-xs sm:text-[13px] font-bold leading-tight group-hover:text-[var(--accent)] transition-colors truncate ${
                             !notification.is_read ? 'text-[var(--accent)]' : 'text-[var(--text)]'
                           }`}
                         >
                           {notification.title}
                         </h4>
-                        <span className="text-[10px] text-[var(--muted)] shrink-0 font-mono mt-0.5">
+                        <span className="text-[10px] text-[var(--muted)] shrink-0 font-mono">
                           {new Date(notification.created_at).toLocaleTimeString(locale, {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -288,12 +288,12 @@ export default function NotificationsDropdown() {
                         </span>
                       </div>
 
-                      <p className="text-[12.5px] text-[var(--muted)] line-clamp-2 leading-relaxed">
+                      <p className="text-[11.5px] text-[var(--muted)] line-clamp-1 leading-snug">
                         {notification.message}
                       </p>
 
                       {/* Interactive Link Action Indicator */}
-                      <div className="mt-2 flex items-center justify-between text-[11px]">
+                      <div className="mt-1 flex items-center justify-between text-[10.5px]">
                         <span
                           role="button"
                           tabIndex={0}
@@ -301,7 +301,7 @@ export default function NotificationsDropdown() {
                             e.stopPropagation();
                             handleNotificationClick(notification);
                           }}
-                          className="inline-flex items-center gap-1 font-semibold text-[var(--accent)] hover:underline cursor-pointer py-0.5"
+                          className="inline-flex items-center gap-1 font-semibold text-[var(--accent)] hover:underline cursor-pointer"
                         >
                           <span>
                             {orderCode
@@ -312,11 +312,11 @@ export default function NotificationsDropdown() {
                               ? t('Open in Dashboard')
                               : t('View Details')}
                           </span>
-                          <i className="ph ph-arrow-up-right text-xs group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
+                          <i className="ph ph-arrow-up-right text-[10px] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
                         </span>
 
                         {!notification.is_read && (
-                          <span className="w-2 h-2 rounded-full bg-[var(--accent)] shadow-sm shrink-0"></span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-sm shrink-0"></span>
                         )}
                       </div>
                     </div>

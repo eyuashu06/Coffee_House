@@ -83,6 +83,11 @@ export default function CartDrawer({
   const [orderError, setOrderError] = useState<string | null>(null);
   const [isAuthRequiredOpen, setIsAuthRequiredOpen] = useState(false);
 
+  const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestName, setGuestName] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+
   // Fulfillment: how the customer wants the order, and the details that type needs.
   // The drawer used to hardcode DELIVERY with no address and no zone, so the courier
   // received an order it was impossible to deliver.
@@ -97,6 +102,15 @@ export default function CartDrawer({
   // Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState<{ id: number; orderNumber: string; totalAmount: string } | null>(null);
+
+  // Pre-fill user profile info if logged in so returning users never re-type
+  useEffect(() => {
+    if (user) {
+      const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+      if (!guestName && fullName) setGuestName(fullName);
+      if (!guestPhone && user.phone) setGuestPhone(user.phone);
+    }
+  }, [user]);
 
   const totalAmount = cartItems.reduce(
     (sum, item) => sum + lineUnitPrice(item) * item.quantity,
@@ -143,11 +157,14 @@ export default function CartDrawer({
     setOrderSuccess(null);
     setOrderError(null);
 
+    const contactName = user
+      ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username
+      : guestName.trim() || 'Valued Guest';
+    const contactPhone = (user?.phone || guestPhone).trim();
+
     const payload: Record<string, unknown> = {
-      contact_name: user
-        ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username
-        : 'Customer',
-      contact_phone: user?.phone || '',
+      contact_name: contactName,
+      contact_phone: contactPhone,
       order_type: orderType,
       items: cartItems.map(item => ({
         menu_item: item.coffee.id,
@@ -206,12 +223,17 @@ export default function CartDrawer({
     // A closed cafe cannot take the order, so do not open a payment modal for one.
     if (isClosedStore) return;
 
-    // Requirement: Customer must be logged in to complete checkout
-    if (!user) {
-      setIsAuthRequiredOpen(true);
+    // Verify phone number (must be at least 9 valid digits to reach customer)
+    const phoneToVerify = (user?.phone || guestPhone).trim();
+    const cleanDigits = phoneToVerify.replace(/[\s\-\(\)\+]/g, '');
+
+    if (!cleanDigits || cleanDigits.length < 9) {
+      setPhoneError(t('Please enter a valid phone number (at least 9 digits) to verify and confirm your order.'));
       return;
     }
+    setPhoneError(null);
 
+    // Guest checkout is fully permitted: no forced login gate!
     processOrderSubmission();
   };
 
@@ -292,6 +314,31 @@ export default function CartDrawer({
                   </div>
                   <h4 className="font-display text-xl text-[var(--text)] font-bold">{t('Order Placed!')}</h4>
                   <p className="text-sm text-[var(--muted)] leading-relaxed">{orderSuccess}</p>
+
+                  {/* For guest customers: give opportunity to sign up and save details for future orders */}
+                  {!user && (
+                    <div className="p-3.5 rounded-xl bg-surface-container/80 border border-[var(--accent)]/40 text-left space-y-2 my-2">
+                      <div className="flex items-center gap-2 text-[var(--accent)] font-bold text-xs">
+                        <span className="material-symbols-outlined text-base">bookmark_add</span>
+                        <span>{t('Save details for next time?')}</span>
+                      </div>
+                      <p className="text-[11px] text-[var(--muted)] leading-relaxed">
+                        {t('Create a free account with your phone number to track this order, save your delivery addresses, and never type your details again.')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMode('REGISTER');
+                          setIsAuthRequiredOpen(true);
+                        }}
+                        className="w-full py-2 px-3 rounded-lg bg-[var(--accent)] hover:brightness-110 text-[var(--accent-contrast)] font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-sm">person_add</span>
+                        <span>{t('Create Free Account')}</span>
+                      </button>
+                    </div>
+                  )}
+
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={() => { setOrderSuccess(null); onClose(); }}
@@ -400,6 +447,97 @@ export default function CartDrawer({
           {/* Footer Checkout */}
           {cartItems.length > 0 && !orderSuccess && (
             <div className="p-5 bg-surface-2 border-t border-[var(--border)] space-y-4">
+              {/* Contact Information & Phone Verification */}
+              {!user ? (
+                <div className="p-3.5 rounded-xl bg-surface-2 border border-[var(--border)] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-sm text-[var(--accent)]">phone_iphone</span>
+                      {t('Contact & Phone Verification')}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode('LOGIN');
+                        setIsAuthRequiredOpen(true);
+                      }}
+                      className="text-[11px] text-[var(--accent)] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-xs">login</span>
+                      <span>{t('Sign in to use saved details')}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10.5px] font-semibold text-[var(--text)] mb-1">
+                        {t('Phone Number')} <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={guestPhone}
+                        onChange={(e) => {
+                          setGuestPhone(e.target.value);
+                          if (phoneError) setPhoneError(null);
+                        }}
+                        placeholder="0911 234 567"
+                        className={`w-full px-3 py-2 rounded-xl bg-surface border text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:outline-none transition-colors ${
+                          phoneError ? 'border-red-500 focus:border-red-500' : 'border-[var(--border)] focus:border-[var(--accent)]'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10.5px] font-semibold text-[var(--text)] mb-1">
+                        {t('Your Name (Optional)')}
+                      </label>
+                      <input
+                        type="text"
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                        placeholder={t('e.g. Abebe')}
+                        className="w-full px-3 py-2 rounded-xl bg-surface border border-[var(--border)] text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {phoneError && (
+                    <p className="text-[11px] text-red-400 font-medium flex items-center gap-1">
+                      <span className="material-symbols-outlined text-xs">error</span>
+                      {phoneError}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-[var(--muted)] leading-tight">
+                    {t('We will contact this number for delivery and order updates. No account required.')}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-[var(--accent-soft)]/20 border border-[var(--accent)]/30 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-[var(--text)] min-w-0">
+                    <span className="material-symbols-outlined text-base text-[var(--accent)] shrink-0">verified_user</span>
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">
+                        {user.first_name || user.username} {user.phone ? `· ${user.phone}` : ''}
+                      </p>
+                      <p className="text-[10px] text-[var(--muted)]">{t('Using your saved account details')}</p>
+                    </div>
+                  </div>
+                  {!user.phone && (
+                    <div className="shrink-0 w-32">
+                      <input
+                        type="tel"
+                        value={guestPhone}
+                        onChange={(e) => {
+                          setGuestPhone(e.target.value);
+                          if (phoneError) setPhoneError(null);
+                        }}
+                        placeholder="0911..."
+                        className="w-full px-2 py-1 rounded-lg bg-surface border border-[var(--border)] text-xs text-[var(--text)]"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Fulfillment: delivery, pickup at the counter, or a table */}
               <div className="space-y-2">
                 <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold">
@@ -507,15 +645,18 @@ export default function CartDrawer({
         </div>
       </div>
 
-      {/* Auth Modal Triggered when Guest attempts checkout */}
+      {/* Auth Modal: optional sign in or post-order registration to save details */}
       <AuthModal
         isOpen={isAuthRequiredOpen}
         onClose={() => setIsAuthRequiredOpen(false)}
-        initialMode="LOGIN"
-        promptMessage={t('Please sign in or create an account to complete your order.')}
+        initialMode={authMode}
+        promptMessage={
+          authMode === 'REGISTER'
+            ? t('Create an account with your phone number to save your details for next time.')
+            : t('Sign in to automatically load your saved details and addresses.')
+        }
         onSuccessCallback={() => {
           setIsAuthRequiredOpen(false);
-          processOrderSubmission();
         }}
       />
 

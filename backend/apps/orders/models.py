@@ -200,25 +200,24 @@ def create_order_status_notification(sender, instance, created, **kwargs):
     if not created:
         return
 
-    # Notify the customer of every status change (with link to their orders)
+    # Short concise notification for customer
     if instance.order.customer:
         Notification.objects.create(
             user=instance.order.customer,
-            title=f"Order {instance.order.order_number} Updated",
-            message=f"Your order is now: {instance.get_status_display()}.",
+            title=f"Order #{instance.order.order_number}",
+            message=f"{instance.get_status_display()}",
             link='/account?tab=orders'
         )
 
-    # Notify managers/admins immediately when any new order enters the system
-    # (PENDING_PAYMENT = just created, PLACED = payment confirmed)
+    # Short concise notification for managers/admins
     if instance.status in ['PENDING_PAYMENT', 'PLACED']:
         managers = User.objects.filter(role__in=['ADMIN', 'MANAGER'])
         if instance.status == 'PLACED':
-            notif_title = "New Order Received"
-            notif_message = f"Customer placed order #{instance.order.order_number} (ETB {instance.order.total_amount_etb})."
+            notif_title = f"Paid #{instance.order.order_number}"
+            notif_message = f"{instance.order.contact_name} · ETB {instance.order.total_amount_etb}"
         else:
-            notif_title = "New Order — Awaiting Payment"
-            notif_message = f"Order #{instance.order.order_number} by {instance.order.contact_name} awaiting payment (ETB {instance.order.total_amount_etb})."
+            notif_title = f"New #{instance.order.order_number}"
+            notif_message = f"{instance.order.contact_name} · ETB {instance.order.total_amount_etb} (Awaiting)"
 
         Notification.objects.bulk_create([
             Notification(

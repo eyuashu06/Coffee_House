@@ -122,8 +122,8 @@ def create_new_menu_item_notification(sender, instance, created, **kwargs):
         notifications = [
             Notification(
                 user=user,
-                title="New Menu Item!",
-                message=f"{instance.name} is now available on our menu. Try it out!"
+                title="New Item",
+                message=f"{instance.name} is now available"
             ) for user in users
         ]
         if notifications:
@@ -139,8 +139,8 @@ def create_table_reservation_notification(sender, instance, created, **kwargs):
         notifications = [
             Notification(
                 user=user,
-                title="New Table Reservation",
-                message=f"{instance.name} has reserved a table for {instance.party_size} on {instance.date_time.strftime('%Y-%m-%d %H:%M')}.",
+                title=f"Table: {instance.name}",
+                message=f"{instance.party_size} guests · {instance.date_time.strftime('%b %d, %H:%M')}",
                 link="/manager"
             ) for user in managers_and_admins
         ]
