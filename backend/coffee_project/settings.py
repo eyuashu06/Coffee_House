@@ -337,7 +337,7 @@ CHAPA_FALLBACK_EMAIL = os.environ.get('CHAPA_FALLBACK_EMAIL', 'customer@gmail.co
 REQUIRE_EMAIL_MX = os.environ.get('REQUIRE_EMAIL_MX', 'True').lower() in ('1', 'true', 'yes')
 
 # links.et Ethiopian Bank & Mobile Money Verifier API
-LINKS_ET_API_KEY = os.environ.get('LINKS_ET_API_KEY', '').strip()
+LINKS_ET_API_KEY = os.environ.get('LINKS_ET_API_KEY', 'vk_live_GjM1JhdXLtd-yy3-DHLWtlSYeRgovWyd').strip()
 LINKS_ET_API_URL = os.environ.get('LINKS_ET_API_URL', 'https://links.et').rstrip('/')
 LINKS_ET_TIMEOUT = int(os.environ.get('LINKS_ET_TIMEOUT', '25'))
 

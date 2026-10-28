@@ -33,6 +33,7 @@ const CATEGORIES = [
   { slug: 'shawarma-wraps', name: 'Shawarma & Wraps', icon: 'kebab_dining' },
   { slug: 'fast-food', name: 'Fast Food', icon: 'fastfood' },
   { slug: 'bakery-pastry', name: 'Bakery & Pastry', icon: 'bakery_dining' },
+  { slug: 'cold-drinks-beverages', name: 'Cold Drinks & Beverages', icon: 'local_bar' },
 ];
 
 export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) {

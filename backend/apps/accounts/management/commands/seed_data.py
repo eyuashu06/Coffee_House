@@ -84,6 +84,7 @@ class Command(BaseCommand):
         cat_shawarma, _ = Category.objects.get_or_create(name='Shawarma & Wraps',     defaults={'slug': 'shawarma-wraps',     'icon': 'kebab_dining',   'display_order': 6})
         cat_fastfood, _ = Category.objects.get_or_create(name='Fast Food Favourites', defaults={'slug': 'fast-food',          'icon': 'fastfood',       'display_order': 7})
         cat_pastry, _   = Category.objects.get_or_create(name='Bakery & Pastry',      defaults={'slug': 'bakery-pastry',      'icon': 'bakery_dining',  'display_order': 8})
+        cat_drinks, _   = Category.objects.get_or_create(name='Cold Drinks & Beverages', defaults={'slug': 'cold-drinks-beverages', 'icon': 'local_bar', 'display_order': 9})
 
         # ─────────────────────────────────────────────
         # 5. Menu Items
@@ -387,6 +388,87 @@ class Command(BaseCommand):
                 'variants': [('Single Slice', 0)],
                 'addons': [('Extra Cocoa Dusting', 20), ('Espresso Shot on Side', 70)],
             },
+            # ── COLD DRINKS, BEVERAGES & ALCOHOL ──────
+            {
+                'category': cat_drinks, 'name': 'Coca-Cola Classic',
+                'slug': 'coca-cola-classic',
+                'description': 'Chilled original taste Coca-Cola, served ice-cold with optional lemon slice. The perfect refreshing companion for burgers and pizza.',
+                'base_price_etb': Decimal('50.00'), 'is_signature': False,
+                'image_url': 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=800',
+                'tasting_notes': 'Crisp, Bubbly, Sweet Caramel',
+                'variants': [('330ml Can', 0), ('500ml Bottle', 15)],
+                'addons': [('Ice & Lemon Slice', 0), ('Chilled Glass', 0)],
+            },
+            {
+                'category': cat_drinks, 'name': 'Fanta Orange',
+                'slug': 'fanta-orange',
+                'description': 'Bright and bubbly orange soda with fruit juice, served refreshing and ice-cold.',
+                'base_price_etb': Decimal('50.00'), 'is_signature': False,
+                'image_url': 'https://images.unsplash.com/photo-1624517452488-04869289c4ca?w=800',
+                'tasting_notes': 'Zesty Orange, Sweet, Sparkling',
+                'variants': [('330ml Can', 0), ('500ml Bottle', 15)],
+                'addons': [('Ice & Lemon Slice', 0), ('Chilled Glass', 0)],
+            },
+            {
+                'category': cat_drinks, 'name': 'Sprite Crisp Lemon-Lime',
+                'slug': 'sprite-lemon-lime',
+                'description': 'Clean, crisp lemon-lime refreshment with 100% natural flavours, served over ice.',
+                'base_price_etb': Decimal('50.00'), 'is_signature': False,
+                'image_url': 'https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=800',
+                'tasting_notes': 'Crisp Lemon, Zesty Lime, Clean',
+                'variants': [('330ml Can', 0), ('500ml Bottle', 15)],
+                'addons': [('Ice & Fresh Mint', 10), ('Chilled Glass', 0)],
+            },
+            {
+                'category': cat_drinks, 'name': 'Ambo Mineral Water (Ambo Wuha)',
+                'slug': 'ambo-mineral-water',
+                'description': 'Ethiopia’s iconic naturally sparkling highland mineral water from Senkele volcanic springs. Refreshing and rich in natural minerals.',
+                'base_price_etb': Decimal('40.00'), 'is_signature': True,
+                'image_url': 'https://images.unsplash.com/photo-1559839914-173ef29c2b32?w=800',
+                'tasting_notes': 'Naturally Sparkling, Crisp, Mineral Rich',
+                'variants': [('330ml Glass Bottle', 0), ('500ml Bottle', 10)],
+                'addons': [('Fresh Lemon Wedge', 0), ('Served Chilled with Ice', 0)],
+            },
+            {
+                'category': cat_drinks, 'name': 'Bottled Pure Spring Water',
+                'slug': 'bottled-spring-water',
+                'description': 'Premium bottled natural still spring water, purified and crystal clear.',
+                'base_price_etb': Decimal('30.00'), 'is_signature': False,
+                'image_url': 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800',
+                'tasting_notes': 'Pure Spring Water, Crisp, Hydrating',
+                'variants': [('500ml Bottle', 0), ('1 Litre Bottle', 15)],
+                'addons': [('Chilled with Lemon Slice', 0), ('Room Temperature', 0)],
+            },
+            {
+                'category': cat_drinks, 'name': 'St. George Premium Beer',
+                'slug': 'st-george-premium-beer',
+                'description': 'Ethiopia’s legendary heritage lager (4.7% ABV), brewed since 1922. Crisp golden malt with a smooth balanced finish.',
+                'base_price_etb': Decimal('90.00'), 'is_signature': True,
+                'image_url': 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=800',
+                'tasting_notes': 'Golden Malt, Crisp Hops, Refreshing',
+                'variants': [('330ml Chilled Bottle', 0), ('Bucket of 3 Bottles', 170)],
+                'addons': [('Frosted Beer Glass', 0)],
+            },
+            {
+                'category': cat_drinks, 'name': 'Habesha Cold Gold Beer',
+                'slug': 'habesha-cold-gold-beer',
+                'description': 'Authentic Ethiopian rich lager (5% ABV), crafted with pure highland spring water and roasted barley malt.',
+                'base_price_etb': Decimal('95.00'), 'is_signature': True,
+                'image_url': 'https://images.unsplash.com/photo-1518176258769-f227c798150e?w=800',
+                'tasting_notes': 'Deep Gold, Rich Malt, Smooth',
+                'variants': [('330ml Chilled Bottle', 0), ('Bucket of 3 Bottles', 180)],
+                'addons': [('Frosted Beer Glass', 0)],
+            },
+            {
+                'category': cat_drinks, 'name': 'Rift Valley Reserve House Wine',
+                'slug': 'rift-valley-reserve-wine',
+                'description': 'Artisanal Ethiopian wine produced from Ziway vineyards in the Great Rift Valley. Vibrant berry aromas with gentle balanced tannins.',
+                'base_price_etb': Decimal('220.00'), 'is_signature': True,
+                'image_url': 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800',
+                'tasting_notes': 'Wild Berries, Plum, Oak, Velvety',
+                'variants': [('By the Glass (150ml)', 0), ('Full Bottle (750ml)', 850)],
+                'addons': [('Red Syrah / Cabernet', 0), ('Crisp White Sauvignon', 0)],
+            },
         ]
 
         # ─────────────────────────────────────────────
@@ -439,7 +521,7 @@ class Command(BaseCommand):
                 addon.save()
 
         self.stdout.write(self.style.SUCCESS(
-            f'✔ Seeded {created_count} new menu items across 8 categories '
-            f'(Coffee, Espresso, Tea, Burgers, Pizza, Shawarma, Fast Food, Pastry)'
+            f'✔ Seeded {created_count} new menu items across 9 categories '
+            f'(Coffee, Espresso, Tea, Burgers, Pizza, Shawarma, Fast Food, Pastry, Cold Drinks & Beverages)'
         ))
         self.stdout.write(self.style.SUCCESS('✅ Database seeding completed successfully!'))

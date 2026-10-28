@@ -1,1863 +1,2321 @@
 [
-  {
-    "model": "menu.category",
-    "pk": 1,
-    "fields": {
-      "name": "Micro-Lot Coffee",
-      "slug": "micro-lot-coffee",
-      "icon": "local_cafe",
-      "display_order": 1,
-      "is_active": true
-    }
-  },
-  {
-    "model": "menu.category",
-    "pk": 2,
-    "fields": {
-      "name": "Espresso & Infusions",
-      "slug": "espresso-infusions",
-      "icon": "coffee",
-      "display_order": 2,
-      "is_active": true
-    }
-  },
-  {
-    "model": "menu.category",
-    "pk": 3,
-    "fields": {
-      "name": "Premium Tea",
-      "slug": "premium-tea",
-      "icon": "emoji_food_beverage",
-      "display_order": 3,
-      "is_active": true
-    }
-  },
-  {
-    "model": "menu.category",
-    "pk": 4,
-    "fields": {
-      "name": "Artisanal Burgers",
-      "slug": "artisanal-burgers",
-      "icon": "lunch_dining",
-      "display_order": 4,
-      "is_active": true
-    }
-  },
-  {
-    "model": "menu.category",
-    "pk": 5,
-    "fields": {
-      "name": "Wood-Fired Pizza",
-      "slug": "wood-fired-pizza",
-      "icon": "local_pizza",
-      "display_order": 5,
-      "is_active": true
-    }
-  },
-  {
-    "model": "menu.category",
-    "pk": 6,
-    "fields": {
-      "name": "Shawarma & Wraps",
-      "slug": "shawarma-wraps",
-      "icon": "kebab_dining",
-      "display_order": 6,
-      "is_active": true
-    }
-  },
-  {
-    "model": "menu.category",
-    "pk": 7,
-    "fields": {
-      "name": "Fast Food Favourites",
-      "slug": "fast-food",
-      "icon": "fastfood",
-      "display_order": 7,
-      "is_active": true
-    }
-  },
-  {
-    "model": "menu.category",
-    "pk": 8,
-    "fields": {
-      "name": "Bakery & Pastry",
-      "slug": "bakery-pastry",
-      "icon": "bakery_dining",
-      "display_order": 8,
-      "is_active": true
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 1,
-    "fields": {
-      "name": "Yirgacheffe Grade 1 Anaerobic",
-      "slug": "yirgacheffe-grade-1-anaerobic",
-      "category": 1,
-      "description": "Complex jasmine aromas, vibrant bergamot acidity, and a silky honeycomb body from Gedeo region.",
-      "base_price_etb": "85",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:09.363989",
-      "updated_at": "2026-10-12 11:28:28.433397"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 2,
-    "fields": {
-      "name": "Guji Hambela Natural Process",
-      "slug": "guji-hambela-natural-process",
-      "category": 1,
-      "description": "Wild blueberry sweetness, dark chocolate undertones, and a velvet mouthfeel from Guji highlands.",
-      "base_price_etb": "99",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:10.717746",
-      "updated_at": "2026-10-22 13:36:55.614246"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 3,
-    "fields": {
-      "name": "Sidama Bombe Washed",
-      "slug": "sidama-bombe-washed",
-      "category": 1,
-      "description": "Crisp peach and lemon acidity with a clean, tea-like finish. Sourced from high-altitude Bombe kebele.",
-      "base_price_etb": "75",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1497636577773-f1231844b336?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:12.466898",
-      "updated_at": "2026-10-12 11:28:30.004274"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 4,
-    "fields": {
-      "name": "Smoked Cardamom Cappuccino",
-      "slug": "smoked-cardamom-cappuccino",
-      "category": 2,
-      "description": "Double shot Geisha espresso infused with artisanal Ethiopian green cardamom and velvety steamed milk.",
-      "base_price_etb": "70",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1534778101976-62847782c213?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:13.043345",
-      "updated_at": "2026-10-12 11:28:30.656677"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 5,
-    "fields": {
-      "name": "Hazelnut Truffle Mocha",
-      "slug": "hazelnut-truffle-mocha",
-      "category": 2,
-      "description": "Rich espresso, house-made hazelnut truffle syrup, steamed oat milk, dark chocolate shavings on top.",
-      "base_price_etb": "80",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:14.897977",
-      "updated_at": "2026-10-12 11:28:31.390465"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 6,
-    "fields": {
-      "name": "Cold Brew Reserve",
-      "slug": "cold-brew-reserve",
-      "category": 2,
-      "description": "18-hour slow cold-steep using Guji Natural. Whiskey-like oak notes, incredibly smooth and low acid.",
-      "base_price_etb": "75",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:15.496856",
-      "updated_at": "2026-10-12 11:28:32.089725"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 7,
-    "fields": {
-      "name": "Ethiopian Ginger & Lemon Spice Tea",
-      "slug": "ethiopian-ginger-lemon-spice-tea",
-      "category": 3,
-      "description": "Fresh ginger root, lemon zest, and wild Ethiopian honey steeped in boiling spring water. Warming and vibrant.",
-      "base_price_etb": "45",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:16.184057",
-      "updated_at": "2026-10-12 11:28:32.751933"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 8,
-    "fields": {
-      "name": "Moroccan Mint Green Tea",
-      "slug": "moroccan-mint-green-tea",
-      "category": 3,
-      "description": "Gunpowder green tea leaves brewed with fresh spearmint. Traditionally sweetened with rock sugar.",
-      "base_price_etb": "40",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:16.991883",
-      "updated_at": "2026-10-12 11:28:33.449878"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 9,
-    "fields": {
-      "name": "Masala Chai Latte",
-      "slug": "masala-chai-latte",
-      "category": 3,
-      "description": "Assam CTC black tea simmered with whole spices — cardamom, cloves, ginger, black pepper — steamed with whole milk.",
-      "base_price_etb": "55",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:17.795343",
-      "updated_at": "2026-10-12 11:28:34.134615"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 10,
-    "fields": {
-      "name": "Hibiscus & Rosehip Iced Tea",
-      "slug": "hibiscus-rosehip-iced-tea",
-      "category": 3,
-      "description": "Vibrant crimson blend of dried hibiscus flowers and rosehip, served chilled with honey and citrus.",
-      "base_price_etb": "50",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1499638673689-79a0b5115d87?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:18.397018",
-      "updated_at": "2026-10-12 11:28:34.745245"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 11,
-    "fields": {
-      "name": "Reserve Wagyu Smash Burger",
-      "slug": "reserve-wagyu-smash-burger",
-      "category": 4,
-      "description": "Double smash patty of premium wagyu beef, American cheese, caramelized onions, house pickles & secret sauce on a toasted brioche.",
-      "base_price_etb": "650",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:19.035387",
-      "updated_at": "2026-10-12 11:28:35.710816"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 12,
-    "fields": {
-      "name": "Crispy Chicken Signature Burger",
-      "slug": "crispy-chicken-signature-burger",
-      "category": 4,
-      "description": "Buttermilk-marinated fried chicken thigh, coleslaw, jalapeños, honey mustard, pickled cucumber on brioche bun.",
-      "base_price_etb": "520",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:19.788771",
-      "updated_at": "2026-10-12 11:28:36.464790"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 13,
-    "fields": {
-      "name": "Plant-Based Beyond Burger",
-      "slug": "plant-based-beyond-burger",
-      "category": 4,
-      "description": "Beyond Meat patty, vegan cheese, roasted tomato, rocket lettuce, chipotle mayo, on a seeded whole-wheat bun.",
-      "base_price_etb": "560",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1550547660-d9450f859349?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:20.447986",
-      "updated_at": "2026-10-12 11:28:37.231677"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 14,
-    "fields": {
-      "name": "BBQ Bacon Cheeseburger",
-      "slug": "bbq-bacon-cheeseburger",
-      "category": 4,
-      "description": "Angus beef patty glazed with house BBQ sauce, cheddar, crispy bacon, fried egg, tomato, and lettuce.",
-      "base_price_etb": "590",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:21.280863",
-      "updated_at": "2026-10-12 11:28:37.902792"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 15,
-    "fields": {
-      "name": "Truffle & Wild Mushroom Pizza",
-      "slug": "truffle-wild-mushroom-pizza",
-      "category": 5,
-      "description": "Wood-fired sourdough crust, fior di latte mozzarella, roasted forest mushrooms, truffle oil emulsion, fresh thyme.",
-      "base_price_etb": "780",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:21.916031",
-      "updated_at": "2026-10-12 11:28:38.578681"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 16,
-    "fields": {
-      "name": "Margherita Classica",
-      "slug": "margherita-classica",
-      "category": 5,
-      "description": "San Marzano tomato, hand-pulled fior di latte, fresh basil, extra virgin olive oil on wood-fired Neapolitan crust.",
-      "base_price_etb": "580",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:22.562537",
-      "updated_at": "2026-10-12 11:28:39.223411"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 17,
-    "fields": {
-      "name": "Spicy Pepperoni & Nduja",
-      "slug": "spicy-pepperoni-nduja",
-      "category": 5,
-      "description": "Double pepperoni, fiery Calabrian nduja, honey chilli drizzle, smoked mozzarella, and fresh chilli rings.",
-      "base_price_etb": "720",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1579751626657-72bc17010498?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:23.193575",
-      "updated_at": "2026-10-12 11:28:40.117997"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 18,
-    "fields": {
-      "name": "BBQ Chicken & Caramelized Onion",
-      "slug": "bbq-chicken-caramelized-onion",
-      "category": 5,
-      "description": "Pulled chicken in smoky BBQ sauce, caramelized onions, red peppers, smoked cheddar, coriander leaves.",
-      "base_price_etb": "680",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:23.815209",
-      "updated_at": "2026-10-12 11:28:41.420551"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 19,
-    "fields": {
-      "name": "Classic Chicken Shawarma",
-      "slug": "classic-chicken-shawarma",
-      "category": 6,
-      "description": "Marinated rotisserie chicken, garlic toum, pickled turnip, fresh tomato, parsley in warm flatbread.",
-      "base_price_etb": "320",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1561651823-34feb02250e4?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:24.453008",
-      "updated_at": "2026-10-12 11:28:42.395584"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 20,
-    "fields": {
-      "name": "Beef & Lamb Shawarma",
-      "slug": "beef-lamb-shawarma",
-      "category": 6,
-      "description": "Slow-roasted spiced beef and lamb shoulder strips, tahini, pickles, tomato, onion in pillowy Arabic bread.",
-      "base_price_etb": "380",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1613514785940-daed07799d9b?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:25.493820",
-      "updated_at": "2026-10-12 11:28:43.515724"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 21,
-    "fields": {
-      "name": "Falafel & Hummus Wrap",
-      "slug": "falafel-hummus-wrap",
-      "category": 6,
-      "description": "Crispy herb falafel, creamy hummus, roasted red pepper, cucumber, rocket, and lemon tahini dressing.",
-      "base_price_etb": "280",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1592415486689-125cbbfcbee2?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:26.585305",
-      "updated_at": "2026-10-12 11:28:44.265346"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 22,
-    "fields": {
-      "name": "Grilled Veggie Shawarma",
-      "slug": "grilled-veggie-shawarma",
-      "category": 6,
-      "description": "Charred aubergine, zucchini, bell peppers, halloumi, pomegranate molasses glaze in a herb flatbread.",
-      "base_price_etb": "260",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:27.360255",
-      "updated_at": "2026-10-12 11:28:45.003693"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 23,
-    "fields": {
-      "name": "Loaded Cheese Fries",
-      "slug": "loaded-cheese-fries",
-      "category": 7,
-      "description": "Crispy golden fries topped with nacho cheese sauce, jalapeños, sour cream, spring onion, and smoked paprika.",
-      "base_price_etb": "220",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:27.894015",
-      "updated_at": "2026-10-12 11:28:45.993587"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 24,
-    "fields": {
-      "name": "Crispy Fried Chicken Wings",
-      "slug": "crispy-fried-chicken-wings",
-      "category": 7,
-      "description": "Double-battered chicken wings, your choice of Buffalo, Honey Garlic, or BBQ sauce. Served with blue cheese dip.",
-      "base_price_etb": "380",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1527477396000-e27163b481c2?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:29.306204",
-      "updated_at": "2026-10-12 11:28:46.813003"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 25,
-    "fields": {
-      "name": "Club Sandwich",
-      "slug": "club-sandwich",
-      "category": 7,
-      "description": "Triple-decker with grilled chicken, turkey ham, crispy bacon, egg, cheddar, lettuce, tomato and mayo.",
-      "base_price_etb": "390",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1619096252214-ef06c45683e3?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:30.147569",
-      "updated_at": "2026-10-12 11:28:47.637647"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 26,
-    "fields": {
-      "name": "Spicy Beef Hot Dog",
-      "slug": "spicy-beef-hot-dog",
-      "category": 7,
-      "description": "Jumbo all-beef frankfurter in a toasted brioche roll, chilli con carne, sriracha mayo, crispy onions.",
-      "base_price_etb": "280",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:30.980159",
-      "updated_at": "2026-10-12 11:28:48.789558"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 27,
-    "fields": {
-      "name": "Loaded Nachos",
-      "slug": "loaded-nachos",
-      "category": 7,
-      "description": "Tortilla chips piled with beef chilli, melted cheese, guacamole, jalapeños, pico de gallo, and sour cream.",
-      "base_price_etb": "350",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1573225342350-16731dd9bf3d?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:31.714395",
-      "updated_at": "2026-10-12 11:28:49.620555"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 28,
-    "fields": {
-      "name": "Croissant au Beurre",
-      "slug": "croissant-au-beurre",
-      "category": 8,
-      "description": "Authentic French laminated dough with 27 layers of Normandy butter. Baked fresh each morning.",
-      "base_price_etb": "120",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-03 11:30:32.384483",
-      "updated_at": "2026-10-12 11:28:50.813887"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 29,
-    "fields": {
-      "name": "Tiramisu Slice",
-      "slug": "tiramisu-slice",
-      "category": 8,
-      "description": "Savoiardi soaked in Yirgacheffe espresso, layered with mascarpone cream, dusted with Valrhona cocoa.",
-      "base_price_etb": "180",
-      "image": "",
-      "image_url": "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=800",
-      "is_available": true,
-      "is_signature": true,
-      "created_at": "2026-10-03 11:30:33.869408",
-      "updated_at": "2026-10-12 11:28:51.994117"
-    }
-  },
-  {
-    "model": "menu.menuitem",
-    "pk": 35,
-    "fields": {
-      "name": "buna",
-      "slug": "buna",
-      "category": 1,
-      "description": "",
-      "base_price_etb": "30",
-      "image": "menu_items/EA.png",
-      "image_url": "",
-      "is_available": true,
-      "is_signature": false,
-      "created_at": "2026-10-18 08:09:58.925059",
-      "updated_at": "2026-10-24 18:26:50.684741"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 1,
-    "fields": {
-      "menu_item": 1,
-      "name": "250ml",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 2,
-    "fields": {
-      "menu_item": 1,
-      "name": "400ml Large",
-      "price_modifier_etb": "15"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 3,
-    "fields": {
-      "menu_item": 2,
-      "name": "250ml",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 4,
-    "fields": {
-      "menu_item": 2,
-      "name": "400ml Large",
-      "price_modifier_etb": "15"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 5,
-    "fields": {
-      "menu_item": 3,
-      "name": "250ml",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 6,
-    "fields": {
-      "menu_item": 3,
-      "name": "400ml Large",
-      "price_modifier_etb": "15"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 7,
-    "fields": {
-      "menu_item": 4,
-      "name": "Single Shot",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 8,
-    "fields": {
-      "menu_item": 4,
-      "name": "Double Shot",
-      "price_modifier_etb": "15"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 9,
-    "fields": {
-      "menu_item": 5,
-      "name": "Regular",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 10,
-    "fields": {
-      "menu_item": 5,
-      "name": "Large",
-      "price_modifier_etb": "20"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 11,
-    "fields": {
-      "menu_item": 6,
-      "name": "300ml",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 12,
-    "fields": {
-      "menu_item": 6,
-      "name": "500ml",
-      "price_modifier_etb": "20"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 13,
-    "fields": {
-      "menu_item": 7,
-      "name": "300ml",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 14,
-    "fields": {
-      "menu_item": 7,
-      "name": "600ml Pot",
-      "price_modifier_etb": "25"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 15,
-    "fields": {
-      "menu_item": 8,
-      "name": "300ml",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 16,
-    "fields": {
-      "menu_item": 8,
-      "name": "600ml Pot",
-      "price_modifier_etb": "25"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 17,
-    "fields": {
-      "menu_item": 9,
-      "name": "Regular",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 18,
-    "fields": {
-      "menu_item": 9,
-      "name": "Large",
-      "price_modifier_etb": "15"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 19,
-    "fields": {
-      "menu_item": 10,
-      "name": "400ml",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 20,
-    "fields": {
-      "menu_item": 10,
-      "name": "600ml",
-      "price_modifier_etb": "20"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 21,
-    "fields": {
-      "menu_item": 11,
-      "name": "Single Patty",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 22,
-    "fields": {
-      "menu_item": 11,
-      "name": "Double Patty",
-      "price_modifier_etb": "150"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 23,
-    "fields": {
-      "menu_item": 12,
-      "name": "Regular",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 24,
-    "fields": {
-      "menu_item": 12,
-      "name": "With Fries",
-      "price_modifier_etb": "120"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 25,
-    "fields": {
-      "menu_item": 13,
-      "name": "Regular",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 26,
-    "fields": {
-      "menu_item": 13,
-      "name": "With Sweet Potato Fries",
-      "price_modifier_etb": "130"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 27,
-    "fields": {
-      "menu_item": 14,
-      "name": "Regular",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 28,
-    "fields": {
-      "menu_item": 14,
-      "name": "With Onion Rings",
-      "price_modifier_etb": "110"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 29,
-    "fields": {
-      "menu_item": 15,
-      "name": "25cm",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 30,
-    "fields": {
-      "menu_item": 15,
-      "name": "32cm",
-      "price_modifier_etb": "180"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 31,
-    "fields": {
-      "menu_item": 16,
-      "name": "25cm",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 32,
-    "fields": {
-      "menu_item": 16,
-      "name": "32cm",
-      "price_modifier_etb": "160"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 33,
-    "fields": {
-      "menu_item": 17,
-      "name": "25cm",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 34,
-    "fields": {
-      "menu_item": 17,
-      "name": "32cm",
-      "price_modifier_etb": "170"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 35,
-    "fields": {
-      "menu_item": 18,
-      "name": "25cm",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 36,
-    "fields": {
-      "menu_item": 18,
-      "name": "32cm",
-      "price_modifier_etb": "160"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 37,
-    "fields": {
-      "menu_item": 19,
-      "name": "Regular Wrap",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 38,
-    "fields": {
-      "menu_item": 19,
-      "name": "Large Plate with Rice",
-      "price_modifier_etb": "150"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 39,
-    "fields": {
-      "menu_item": 20,
-      "name": "Regular Wrap",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 40,
-    "fields": {
-      "menu_item": 20,
-      "name": "Large Plate with Fries",
-      "price_modifier_etb": "150"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 41,
-    "fields": {
-      "menu_item": 21,
-      "name": "Regular Wrap",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 42,
-    "fields": {
-      "menu_item": 21,
-      "name": "Large Plate",
-      "price_modifier_etb": "120"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 43,
-    "fields": {
-      "menu_item": 22,
-      "name": "Regular",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 44,
-    "fields": {
-      "menu_item": 23,
-      "name": "Regular",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 45,
-    "fields": {
-      "menu_item": 23,
-      "name": "Large",
-      "price_modifier_etb": "70"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 46,
-    "fields": {
-      "menu_item": 24,
-      "name": "6 Wings",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 47,
-    "fields": {
-      "menu_item": 24,
-      "name": "12 Wings",
-      "price_modifier_etb": "280"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 48,
-    "fields": {
-      "menu_item": 25,
-      "name": "With Fries",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 49,
-    "fields": {
-      "menu_item": 25,
-      "name": "With Salad",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 50,
-    "fields": {
-      "menu_item": 26,
-      "name": "Regular",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 51,
-    "fields": {
-      "menu_item": 26,
-      "name": "With Fries",
-      "price_modifier_etb": "100"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 52,
-    "fields": {
-      "menu_item": 27,
-      "name": "Regular",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 53,
-    "fields": {
-      "menu_item": 27,
-      "name": "Large Sharing",
-      "price_modifier_etb": "180"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 54,
-    "fields": {
-      "menu_item": 28,
-      "name": "Plain",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 55,
-    "fields": {
-      "menu_item": 28,
-      "name": "Almond Filled",
-      "price_modifier_etb": "40"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 56,
-    "fields": {
-      "menu_item": 28,
-      "name": "Chocolate Filled",
-      "price_modifier_etb": "50"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 57,
-    "fields": {
-      "menu_item": 29,
-      "name": "Single Slice",
-      "price_modifier_etb": "0"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 1,
-    "fields": {
-      "menu_item": 1,
-      "name": "Extra Espresso Shot",
-      "price_etb": "20"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 2,
-    "fields": {
-      "menu_item": 1,
-      "name": "Oat Milk Upgrade",
-      "price_etb": "20"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 3,
-    "fields": {
-      "menu_item": 2,
-      "name": "Extra Espresso Shot",
-      "price_etb": "20"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 4,
-    "fields": {
-      "menu_item": 2,
-      "name": "Almond Milk Upgrade",
-      "price_etb": "20"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 5,
-    "fields": {
-      "menu_item": 3,
-      "name": "Extra Shot",
-      "price_etb": "20"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 6,
-    "fields": {
-      "menu_item": 4,
-      "name": "Extra Cardamom",
-      "price_etb": "10"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 7,
-    "fields": {
-      "menu_item": 4,
-      "name": "Oat Milk",
-      "price_etb": "20"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 8,
-    "fields": {
-      "menu_item": 5,
-      "name": "Extra Chocolate Shavings",
-      "price_etb": "15"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 9,
-    "fields": {
-      "menu_item": 5,
-      "name": "Whipped Cream",
-      "price_etb": "15"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 10,
-    "fields": {
-      "menu_item": 6,
-      "name": "Simple Syrup",
-      "price_etb": "10"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 11,
-    "fields": {
-      "menu_item": 6,
-      "name": "Cream Float",
-      "price_etb": "15"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 12,
-    "fields": {
-      "menu_item": 7,
-      "name": "Extra Honey",
-      "price_etb": "10"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 13,
-    "fields": {
-      "menu_item": 7,
-      "name": "Cinnamon Stick",
-      "price_etb": "10"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 14,
-    "fields": {
-      "menu_item": 8,
-      "name": "Extra Sugar",
-      "price_etb": "5"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 15,
-    "fields": {
-      "menu_item": 8,
-      "name": "Fresh Mint Leaves",
-      "price_etb": "10"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 16,
-    "fields": {
-      "menu_item": 9,
-      "name": "Oat Milk",
-      "price_etb": "15"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 17,
-    "fields": {
-      "menu_item": 9,
-      "name": "Extra Spice",
-      "price_etb": "10"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 18,
-    "fields": {
-      "menu_item": 10,
-      "name": "Extra Honey",
-      "price_etb": "10"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 19,
-    "fields": {
-      "menu_item": 10,
-      "name": "Mint Garnish",
-      "price_etb": "10"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 20,
-    "fields": {
-      "menu_item": 11,
-      "name": "Extra Cheese",
-      "price_etb": "60"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 21,
-    "fields": {
-      "menu_item": 11,
-      "name": "Bacon Strips",
-      "price_etb": "100"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 22,
-    "fields": {
-      "menu_item": 11,
-      "name": "Avocado",
-      "price_etb": "80"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 23,
-    "fields": {
-      "menu_item": 12,
-      "name": "Extra Jalapeños",
-      "price_etb": "40"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 24,
-    "fields": {
-      "menu_item": 12,
-      "name": "Extra Sauce",
-      "price_etb": "30"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 25,
-    "fields": {
-      "menu_item": 13,
-      "name": "Extra Chipotle Mayo",
-      "price_etb": "40"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 26,
-    "fields": {
-      "menu_item": 13,
-      "name": "Pickled Red Onion",
-      "price_etb": "35"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 27,
-    "fields": {
-      "menu_item": 14,
-      "name": "Fried Egg",
-      "price_etb": "60"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 28,
-    "fields": {
-      "menu_item": 14,
-      "name": "Extra Bacon",
-      "price_etb": "90"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 29,
-    "fields": {
-      "menu_item": 15,
-      "name": "Extra Truffle Oil",
-      "price_etb": "80"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 30,
-    "fields": {
-      "menu_item": 15,
-      "name": "Parmesan Shavings",
-      "price_etb": "60"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 31,
-    "fields": {
-      "menu_item": 16,
-      "name": "Buffalo Mozzarella",
-      "price_etb": "100"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 32,
-    "fields": {
-      "menu_item": 16,
-      "name": "Cherry Tomatoes",
-      "price_etb": "50"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 33,
-    "fields": {
-      "menu_item": 17,
-      "name": "Extra Pepperoni",
-      "price_etb": "90"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 34,
-    "fields": {
-      "menu_item": 17,
-      "name": "Chilli Oil",
-      "price_etb": "40"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 35,
-    "fields": {
-      "menu_item": 18,
-      "name": "Extra Chicken",
-      "price_etb": "110"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 36,
-    "fields": {
-      "menu_item": 18,
-      "name": "Jalapeños",
-      "price_etb": "40"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 37,
-    "fields": {
-      "menu_item": 19,
-      "name": "Extra Toum",
-      "price_etb": "40"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 38,
-    "fields": {
-      "menu_item": 19,
-      "name": "Hot Sauce",
-      "price_etb": "30"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 39,
-    "fields": {
-      "menu_item": 19,
-      "name": "Extra Chicken",
-      "price_etb": "100"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 40,
-    "fields": {
-      "menu_item": 20,
-      "name": "Extra Tahini",
-      "price_etb": "40"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 41,
-    "fields": {
-      "menu_item": 20,
-      "name": "Fried Egg",
-      "price_etb": "70"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 42,
-    "fields": {
-      "menu_item": 20,
-      "name": "Hot Sauce",
-      "price_etb": "30"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 43,
-    "fields": {
-      "menu_item": 21,
-      "name": "Extra Hummus",
-      "price_etb": "50"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 44,
-    "fields": {
-      "menu_item": 21,
-      "name": "Chilli Sauce",
-      "price_etb": "30"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 45,
-    "fields": {
-      "menu_item": 22,
-      "name": "Extra Halloumi",
-      "price_etb": "80"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 46,
-    "fields": {
-      "menu_item": 22,
-      "name": "Tahini",
-      "price_etb": "40"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 47,
-    "fields": {
-      "menu_item": 23,
-      "name": "Bacon Bits",
-      "price_etb": "80"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 48,
-    "fields": {
-      "menu_item": 23,
-      "name": "Extra Jalapeños",
-      "price_etb": "40"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 49,
-    "fields": {
-      "menu_item": 23,
-      "name": "Extra Cheese Sauce",
-      "price_etb": "50"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 50,
-    "fields": {
-      "menu_item": 24,
-      "name": "Buffalo Sauce",
-      "price_etb": "50"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 51,
-    "fields": {
-      "menu_item": 24,
-      "name": "Honey Garlic Sauce",
-      "price_etb": "50"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 52,
-    "fields": {
-      "menu_item": 24,
-      "name": "Extra Blue Cheese Dip",
-      "price_etb": "60"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 53,
-    "fields": {
-      "menu_item": 25,
-      "name": "Extra Bacon",
-      "price_etb": "90"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 54,
-    "fields": {
-      "menu_item": 25,
-      "name": "Avocado",
-      "price_etb": "80"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 55,
-    "fields": {
-      "menu_item": 26,
-      "name": "Extra Chilli",
-      "price_etb": "50"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 56,
-    "fields": {
-      "menu_item": 26,
-      "name": "Extra Sriracha",
-      "price_etb": "30"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 57,
-    "fields": {
-      "menu_item": 27,
-      "name": "Extra Guacamole",
-      "price_etb": "80"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 58,
-    "fields": {
-      "menu_item": 27,
-      "name": "Extra Jalapeños",
-      "price_etb": "40"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 59,
-    "fields": {
-      "menu_item": 28,
-      "name": "House Jam",
-      "price_etb": "30"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 60,
-    "fields": {
-      "menu_item": 28,
-      "name": "Honey Butter",
-      "price_etb": "30"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 61,
-    "fields": {
-      "menu_item": 29,
-      "name": "Extra Cocoa Dusting",
-      "price_etb": "20"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 62,
-    "fields": {
-      "menu_item": 29,
-      "name": "Espresso Shot on Side",
-      "price_etb": "70"
-    }
-  },
-  {
-    "model": "orders.restaurantsettings",
-    "pk": 1,
-    "fields": {
-      "is_open": true,
-      "opening_hours": "1:00 – 3:00",
-      "default_prep_minutes": 20,
-      "contact_phone": "+251900123456",
-      "contact_email": "selam@bunahub.et",
-      "address": "Gulele Road 14, Piassa, Addis Ababa",
-      "auto_schedule": false
-    }
-  },
-  {
-    "model": "orders.deliveryzone",
-    "pk": 1,
-    "fields": {
-      "name": "Bole & Atlas",
-      "delivery_fee_etb": "100",
-      "is_active": true
-    }
-  },
-  {
-    "model": "orders.deliveryzone",
-    "pk": 2,
-    "fields": {
-      "name": "Kazanchis & Kirkos",
-      "delivery_fee_etb": "120",
-      "is_active": true
-    }
-  },
-  {
-    "model": "orders.deliveryzone",
-    "pk": 3,
-    "fields": {
-      "name": "Piazza & Arat Kilo",
-      "delivery_fee_etb": "150",
-      "is_active": true
-    }
-  },
-  {
-    "model": "orders.deliveryzone",
-    "pk": 4,
-    "fields": {
-      "name": "Old Airport & Bisrate Gabriel",
-      "delivery_fee_etb": "130",
-      "is_active": true
-    }
-  },
-  {
-    "model": "orders.deliveryzone",
-    "pk": 5,
-    "fields": {
-      "name": "CMC & Gerji",
-      "delivery_fee_etb": "180",
-      "is_active": true
-    }
-  },
-  {
-    "model": "api.knowledgebase",
-    "pk": 1,
-    "fields": {
-      "title": "Geisha & Floral Micro-Lots Guide",
-      "category": "Origin & Science",
-      "content": "Panama Geisha and Ethiopian Geisha varieties cultivated above 1,900 MASL produce intoxicating floral aromatics of jasmine, bergamot, peach, and guava. Best brewed using pour-over V60 or Chemex at 92-94°C with soft water (50-70 ppm) to accentuate volatile floral oils.",
-      "tags": "geisha, ethiopia, panama, jasmine, pour over, v60, light roast, brew",
-      "created_at": "2026-10-25 15:32:58.188137"
-    }
-  },
-  {
-    "model": "api.knowledgebase",
-    "pk": 2,
-    "fields": {
-      "title": "Cold Extraction & Dutch Tower Method",
-      "category": "Brew Science",
-      "content": "Kyoto Dutch cold drip extraction uses ice-cold water dripping drop-by-drop over 12-18 hours. This slow oxidation prevents tannin bitterness while concentrating heavy cocoa esters, whiskey oak notes, and a velvety syrupy mouthfeel.",
-      "tags": "cold drip, kyoto, cold brew, dutch drip, dark roast, ice, dutch, brew",
-      "created_at": "2026-10-25 15:32:58.188384"
-    }
-  },
-  {
-    "model": "api.knowledgebase",
-    "pk": 3,
-    "fields": {
-      "title": "Artisanal Pastry Pairing Science",
-      "category": "Pairing",
-      "content": "Butter croissants pair impeccably with high-acidity washed Geishas. Rich chocolate pastries like tiramisu and cocoa truffles balance deep volcanic dark roasts like Sumatra Blue Batak and Roasted Hazelnut Truffle Mocha.",
-      "tags": "pairing, bakery, croissant, tiramisu, chocolate, breakfast, food",
-      "created_at": "2026-10-25 15:32:58.188558"
-    }
-  },
-  {
-    "model": "api.knowledgebase",
-    "pk": 4,
-    "fields": {
-      "title": "Ethiopian Traditional Jebena Buna Ceremony",
-      "category": "Heritage",
-      "content": "Traditional Ethiopian Buna is prepared using clay jebena pots. Green beans are freshly washed, roasted over open charcoal coals, ground fine by hand, and brewed three times (Abol, Tona, Baraka) accompanied by burning frankincense and popped corn.",
-      "tags": "jebena, buna, ceremony, abol, ethiopian tradition, roasting, clay pot",
-      "created_at": "2026-10-25 15:32:58.188625"
-    }
-  },
-  {
-    "model": "accounts.user",
-    "pk": 1,
-    "fields": {
-      "password": "pbkdf2_sha256$600000$JEQ2QJAE_AY1vJZRKZ0SFQ$EPC1DQYVA4ZJv5UA3rW6SaolwHJQPhE7HWXtXAKDvHA=",
-      "last_login": "2026-10-22 18:11:49.426750",
-      "is_superuser": true,
-      "username": "admin",
-      "first_name": "System",
-      "last_name": "Admin",
-      "email": "admin@gmail.com",
-      "is_staff": true,
-      "is_active": true,
-      "date_joined": "2026-10-03 11:29:54.011705",
-      "phone": "+251911000001",
-      "role": "ADMIN"
-    }
-  },
-  {
-    "model": "accounts.user",
-    "pk": 2,
-    "fields": {
-      "password": "pbkdf2_sha256$600000$WH2Mu1I4-u_xdrDVEbISgA$u//8CMTGTsY36Y+qrgBhrTAbR45KKCiOOHnMKGk3lG0=",
-      "last_login": null,
-      "is_superuser": false,
-      "username": "manager",
-      "first_name": "Hotel",
-      "last_name": "Manager",
-      "email": "manager@gmail.com",
-      "is_staff": true,
-      "is_active": true,
-      "date_joined": "2026-10-03 11:29:55.313360",
-      "phone": "+251911000002",
-      "role": "MANAGER"
-    }
-  },
-  {
-    "model": "accounts.user",
-    "pk": 3,
-    "fields": {
-      "password": "pbkdf2_sha256$600000$hMcstr_--BbmqnIHgdaFbQ$dPtmXdXWykDFjR/QTI9khLMy++3XLtwVSrbI0G/rqOc=",
-      "last_login": null,
-      "is_superuser": false,
-      "username": "customer",
-      "first_name": "Abebe",
-      "last_name": "Bikila",
-      "email": "customer@gmail.com",
-      "is_staff": false,
-      "is_active": true,
-      "date_joined": "2026-10-03 11:29:56.939493",
-      "phone": "+251911000003",
-      "role": "CUSTOMER"
-    }
-  },
-  {
-    "model": "accounts.user",
-    "pk": 6,
-    "fields": {
-      "password": "pbkdf2_sha256$600000$t4cfvFAcKRkK6nxnmpVgt6$oogT/JNIaOQ+90ZllMFBj3pi0MgqbRoej5XZG6aTL7o=",
-      "last_login": null,
-      "is_superuser": false,
-      "username": "tile",
-      "first_name": "Tilahun",
-      "last_name": "Seifu",
-      "email": "tilahun@gmail.com",
-      "is_staff": false,
-      "is_active": true,
-      "date_joined": "2026-10-06 09:25:27.158801",
-      "phone": "+251923456789",
-      "role": "CUSTOMER"
-    }
-  },
-  {
-    "model": "accounts.user",
-    "pk": 9,
-    "fields": {
-      "password": "pbkdf2_sha256$600000$THunUSmKBeuSNkY8DJUvNe$OUcnJ7AP5LNeSxUen+JGm7lZGfa/HtEo8lUcRAVXI+g=",
-      "last_login": null,
-      "is_superuser": false,
-      "username": "Eyu",
-      "first_name": "Eyuel",
-      "last_name": "Ashenafi",
-      "email": "eashenafi82@gmail.com",
-      "is_staff": false,
-      "is_active": true,
-      "date_joined": "2026-10-20 06:07:15.513605",
-      "phone": "+251900000000",
-      "role": "CUSTOMER"
-    }
+{
+  "model": "menu.category",
+  "pk": 1,
+  "fields": {
+    "name": "Micro-Lot Coffee",
+    "slug": "micro-lot-coffee",
+    "icon": "local_cafe",
+    "display_order": 1,
+    "is_active": true
   }
+},
+{
+  "model": "menu.category",
+  "pk": 2,
+  "fields": {
+    "name": "Espresso & Infusions",
+    "slug": "espresso-infusions",
+    "icon": "coffee",
+    "display_order": 2,
+    "is_active": true
+  }
+},
+{
+  "model": "menu.category",
+  "pk": 3,
+  "fields": {
+    "name": "Premium Tea",
+    "slug": "premium-tea",
+    "icon": "emoji_food_beverage",
+    "display_order": 3,
+    "is_active": true
+  }
+},
+{
+  "model": "menu.category",
+  "pk": 4,
+  "fields": {
+    "name": "Artisanal Burgers",
+    "slug": "artisanal-burgers",
+    "icon": "lunch_dining",
+    "display_order": 4,
+    "is_active": true
+  }
+},
+{
+  "model": "menu.category",
+  "pk": 5,
+  "fields": {
+    "name": "Wood-Fired Pizza",
+    "slug": "wood-fired-pizza",
+    "icon": "local_pizza",
+    "display_order": 5,
+    "is_active": true
+  }
+},
+{
+  "model": "menu.category",
+  "pk": 6,
+  "fields": {
+    "name": "Shawarma & Wraps",
+    "slug": "shawarma-wraps",
+    "icon": "kebab_dining",
+    "display_order": 6,
+    "is_active": true
+  }
+},
+{
+  "model": "menu.category",
+  "pk": 7,
+  "fields": {
+    "name": "Fast Food Favourites",
+    "slug": "fast-food",
+    "icon": "fastfood",
+    "display_order": 7,
+    "is_active": true
+  }
+},
+{
+  "model": "menu.category",
+  "pk": 8,
+  "fields": {
+    "name": "Bakery & Pastry",
+    "slug": "bakery-pastry",
+    "icon": "bakery_dining",
+    "display_order": 8,
+    "is_active": true
+  }
+},
+{
+  "model": "menu.category",
+  "pk": 9,
+  "fields": {
+    "name": "Cold Drinks & Beverages",
+    "slug": "cold-drinks-beverages",
+    "icon": "local_bar",
+    "display_order": 9,
+    "is_active": true
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 1,
+  "fields": {
+    "name": "Yirgacheffe Grade 1 Anaerobic",
+    "slug": "yirgacheffe-grade-1-anaerobic",
+    "description": "Complex jasmine aromas, vibrant bergamot acidity, and a silky honeycomb body from Gedeo region.",
+    "category": 1,
+    "base_price_etb": "85.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:09.363Z",
+    "updated_at": "2026-10-28T13:43:15.900Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 2,
+  "fields": {
+    "name": "Guji Hambela Natural Process",
+    "slug": "guji-hambela-natural-process",
+    "description": "Wild blueberry sweetness, dark chocolate undertones, and a velvet mouthfeel from Guji highlands.",
+    "category": 1,
+    "base_price_etb": "80.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:10.717Z",
+    "updated_at": "2026-10-28T13:43:17.049Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 3,
+  "fields": {
+    "name": "Sidama Bombe Washed",
+    "slug": "sidama-bombe-washed",
+    "description": "Crisp peach and lemon acidity with a clean, tea-like finish. Sourced from high-altitude Bombe kebele.",
+    "category": 1,
+    "base_price_etb": "75.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1497636577773-f1231844b336?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:12.466Z",
+    "updated_at": "2026-10-28T13:43:18.228Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 4,
+  "fields": {
+    "name": "Smoked Cardamom Cappuccino",
+    "slug": "smoked-cardamom-cappuccino",
+    "description": "Double shot Geisha espresso infused with artisanal Ethiopian green cardamom and velvety steamed milk.",
+    "category": 2,
+    "base_price_etb": "70.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1534778101976-62847782c213?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:13.043Z",
+    "updated_at": "2026-10-28T13:43:19.172Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 5,
+  "fields": {
+    "name": "Hazelnut Truffle Mocha",
+    "slug": "hazelnut-truffle-mocha",
+    "description": "Rich espresso, house-made hazelnut truffle syrup, steamed oat milk, dark chocolate shavings on top.",
+    "category": 2,
+    "base_price_etb": "80.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:14.897Z",
+    "updated_at": "2026-10-28T13:43:20.340Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 6,
+  "fields": {
+    "name": "Cold Brew Reserve",
+    "slug": "cold-brew-reserve",
+    "description": "18-hour slow cold-steep using Guji Natural. Whiskey-like oak notes, incredibly smooth and low acid.",
+    "category": 2,
+    "base_price_etb": "75.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:15.496Z",
+    "updated_at": "2026-10-28T13:43:21.645Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 7,
+  "fields": {
+    "name": "Ethiopian Ginger & Lemon Spice Tea",
+    "slug": "ethiopian-ginger-lemon-spice-tea",
+    "description": "Fresh ginger root, lemon zest, and wild Ethiopian honey steeped in boiling spring water. Warming and vibrant.",
+    "category": 3,
+    "base_price_etb": "45.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:16.184Z",
+    "updated_at": "2026-10-28T13:43:22.877Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 8,
+  "fields": {
+    "name": "Moroccan Mint Green Tea",
+    "slug": "moroccan-mint-green-tea",
+    "description": "Gunpowder green tea leaves brewed with fresh spearmint. Traditionally sweetened with rock sugar.",
+    "category": 3,
+    "base_price_etb": "40.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:16.991Z",
+    "updated_at": "2026-10-28T13:43:24.603Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 9,
+  "fields": {
+    "name": "Masala Chai Latte",
+    "slug": "masala-chai-latte",
+    "description": "Assam CTC black tea simmered with whole spices — cardamom, cloves, ginger, black pepper — steamed with whole milk.",
+    "category": 3,
+    "base_price_etb": "55.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:17.795Z",
+    "updated_at": "2026-10-28T13:43:26.173Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 10,
+  "fields": {
+    "name": "Hibiscus & Rosehip Iced Tea",
+    "slug": "hibiscus-rosehip-iced-tea",
+    "description": "Vibrant crimson blend of dried hibiscus flowers and rosehip, served chilled with honey and citrus.",
+    "category": 3,
+    "base_price_etb": "50.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1499638673689-79a0b5115d87?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:18.397Z",
+    "updated_at": "2026-10-28T13:43:27.288Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 11,
+  "fields": {
+    "name": "Reserve Wagyu Smash Burger",
+    "slug": "reserve-wagyu-smash-burger",
+    "description": "Double smash patty of premium wagyu beef, American cheese, caramelized onions, house pickles & secret sauce on a toasted brioche.",
+    "category": 4,
+    "base_price_etb": "650.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:19.035Z",
+    "updated_at": "2026-10-28T13:43:28.268Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 12,
+  "fields": {
+    "name": "Crispy Chicken Signature Burger",
+    "slug": "crispy-chicken-signature-burger",
+    "description": "Buttermilk-marinated fried chicken thigh, coleslaw, jalapeños, honey mustard, pickled cucumber on brioche bun.",
+    "category": 4,
+    "base_price_etb": "520.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:19.788Z",
+    "updated_at": "2026-10-28T13:43:29.436Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 13,
+  "fields": {
+    "name": "Plant-Based Beyond Burger",
+    "slug": "plant-based-beyond-burger",
+    "description": "Beyond Meat patty, vegan cheese, roasted tomato, rocket lettuce, chipotle mayo, on a seeded whole-wheat bun.",
+    "category": 4,
+    "base_price_etb": "560.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1550547660-d9450f859349?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:20.447Z",
+    "updated_at": "2026-10-28T13:43:30.023Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 14,
+  "fields": {
+    "name": "BBQ Bacon Cheeseburger",
+    "slug": "bbq-bacon-cheeseburger",
+    "description": "Angus beef patty glazed with house BBQ sauce, cheddar, crispy bacon, fried egg, tomato, and lettuce.",
+    "category": 4,
+    "base_price_etb": "590.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:21.280Z",
+    "updated_at": "2026-10-28T13:43:30.783Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 15,
+  "fields": {
+    "name": "Truffle & Wild Mushroom Pizza",
+    "slug": "truffle-wild-mushroom-pizza",
+    "description": "Wood-fired sourdough crust, fior di latte mozzarella, roasted forest mushrooms, truffle oil emulsion, fresh thyme.",
+    "category": 5,
+    "base_price_etb": "780.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:21.916Z",
+    "updated_at": "2026-10-28T13:43:31.515Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 16,
+  "fields": {
+    "name": "Margherita Classica",
+    "slug": "margherita-classica",
+    "description": "San Marzano tomato, hand-pulled fior di latte, fresh basil, extra virgin olive oil on wood-fired Neapolitan crust.",
+    "category": 5,
+    "base_price_etb": "580.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:22.562Z",
+    "updated_at": "2026-10-28T13:43:32.372Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 17,
+  "fields": {
+    "name": "Spicy Pepperoni & Nduja",
+    "slug": "spicy-pepperoni-nduja",
+    "description": "Double pepperoni, fiery Calabrian nduja, honey chilli drizzle, smoked mozzarella, and fresh chilli rings.",
+    "category": 5,
+    "base_price_etb": "720.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1579751626657-72bc17010498?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:23.193Z",
+    "updated_at": "2026-10-28T13:43:33.380Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 18,
+  "fields": {
+    "name": "BBQ Chicken & Caramelized Onion",
+    "slug": "bbq-chicken-caramelized-onion",
+    "description": "Pulled chicken in smoky BBQ sauce, caramelized onions, red peppers, smoked cheddar, coriander leaves.",
+    "category": 5,
+    "base_price_etb": "680.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:23.815Z",
+    "updated_at": "2026-10-28T13:43:34.066Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 19,
+  "fields": {
+    "name": "Classic Chicken Shawarma",
+    "slug": "classic-chicken-shawarma",
+    "description": "Marinated rotisserie chicken, garlic toum, pickled turnip, fresh tomato, parsley in warm flatbread.",
+    "category": 6,
+    "base_price_etb": "320.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1561651823-34feb02250e4?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:24.453Z",
+    "updated_at": "2026-10-28T13:43:34.844Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 20,
+  "fields": {
+    "name": "Beef & Lamb Shawarma",
+    "slug": "beef-lamb-shawarma",
+    "description": "Slow-roasted spiced beef and lamb shoulder strips, tahini, pickles, tomato, onion in pillowy Arabic bread.",
+    "category": 6,
+    "base_price_etb": "380.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1613514785940-daed07799d9b?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:25.493Z",
+    "updated_at": "2026-10-28T13:43:35.654Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 21,
+  "fields": {
+    "name": "Falafel & Hummus Wrap",
+    "slug": "falafel-hummus-wrap",
+    "description": "Crispy herb falafel, creamy hummus, roasted red pepper, cucumber, rocket, and lemon tahini dressing.",
+    "category": 6,
+    "base_price_etb": "280.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1592415486689-125cbbfcbee2?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:26.585Z",
+    "updated_at": "2026-10-28T13:43:36.377Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 22,
+  "fields": {
+    "name": "Grilled Veggie Shawarma",
+    "slug": "grilled-veggie-shawarma",
+    "description": "Charred aubergine, zucchini, bell peppers, halloumi, pomegranate molasses glaze in a herb flatbread.",
+    "category": 6,
+    "base_price_etb": "260.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:27.360Z",
+    "updated_at": "2026-10-28T13:43:37.070Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 23,
+  "fields": {
+    "name": "Loaded Cheese Fries",
+    "slug": "loaded-cheese-fries",
+    "description": "Crispy golden fries topped with nacho cheese sauce, jalapeños, sour cream, spring onion, and smoked paprika.",
+    "category": 7,
+    "base_price_etb": "220.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:27.894Z",
+    "updated_at": "2026-10-28T13:43:37.611Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 24,
+  "fields": {
+    "name": "Crispy Fried Chicken Wings",
+    "slug": "crispy-fried-chicken-wings",
+    "description": "Double-battered chicken wings, your choice of Buffalo, Honey Garlic, or BBQ sauce. Served with blue cheese dip.",
+    "category": 7,
+    "base_price_etb": "380.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1527477396000-e27163b481c2?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:29.306Z",
+    "updated_at": "2026-10-28T13:43:38.412Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 25,
+  "fields": {
+    "name": "Club Sandwich",
+    "slug": "club-sandwich",
+    "description": "Triple-decker with grilled chicken, turkey ham, crispy bacon, egg, cheddar, lettuce, tomato and mayo.",
+    "category": 7,
+    "base_price_etb": "390.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1619096252214-ef06c45683e3?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:30.147Z",
+    "updated_at": "2026-10-28T13:43:39.206Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 26,
+  "fields": {
+    "name": "Spicy Beef Hot Dog",
+    "slug": "spicy-beef-hot-dog",
+    "description": "Jumbo all-beef frankfurter in a toasted brioche roll, chilli con carne, sriracha mayo, crispy onions.",
+    "category": 7,
+    "base_price_etb": "280.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:30.980Z",
+    "updated_at": "2026-10-28T13:43:39.799Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 27,
+  "fields": {
+    "name": "Loaded Nachos",
+    "slug": "loaded-nachos",
+    "description": "Tortilla chips piled with beef chilli, melted cheese, guacamole, jalapeños, pico de gallo, and sour cream.",
+    "category": 7,
+    "base_price_etb": "350.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1573225342350-16731dd9bf3d?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:31.714Z",
+    "updated_at": "2026-10-28T13:43:40.446Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 28,
+  "fields": {
+    "name": "Croissant au Beurre",
+    "slug": "croissant-au-beurre",
+    "description": "Authentic French laminated dough with 27 layers of Normandy butter. Baked fresh each morning.",
+    "category": 8,
+    "base_price_etb": "120.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-03T11:30:32.384Z",
+    "updated_at": "2026-10-28T13:43:41.078Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 29,
+  "fields": {
+    "name": "Tiramisu Slice",
+    "slug": "tiramisu-slice",
+    "description": "Savoiardi soaked in Yirgacheffe espresso, layered with mascarpone cream, dusted with Valrhona cocoa.",
+    "category": 8,
+    "base_price_etb": "180.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-03T11:30:33.869Z",
+    "updated_at": "2026-10-28T13:43:41.914Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 35,
+  "fields": {
+    "name": "buna",
+    "slug": "buna",
+    "description": "",
+    "category": 1,
+    "base_price_etb": "30.00",
+    "image": "menu_items/EA.png",
+    "image_url": "",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-18T08:09:58.925Z",
+    "updated_at": "2026-10-24T18:26:50.684Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 37,
+  "fields": {
+    "name": "Coca-Cola Classic",
+    "slug": "coca-cola-classic",
+    "description": "Chilled original taste Coca-Cola, served ice-cold with optional lemon slice. The perfect refreshing companion for burgers and pizza.",
+    "category": 9,
+    "base_price_etb": "50.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-28T13:43:42.543Z",
+    "updated_at": "2026-10-28T13:43:42.544Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 38,
+  "fields": {
+    "name": "Fanta Orange",
+    "slug": "fanta-orange",
+    "description": "Bright and bubbly orange soda with fruit juice, served refreshing and ice-cold.",
+    "category": 9,
+    "base_price_etb": "50.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1624517452488-04869289c4ca?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-28T13:43:43.769Z",
+    "updated_at": "2026-10-28T13:43:43.769Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 39,
+  "fields": {
+    "name": "Sprite Crisp Lemon-Lime",
+    "slug": "sprite-lemon-lime",
+    "description": "Clean, crisp lemon-lime refreshment with 100% natural flavours, served over ice.",
+    "category": 9,
+    "base_price_etb": "50.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-28T13:43:44.947Z",
+    "updated_at": "2026-10-28T13:43:44.947Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 40,
+  "fields": {
+    "name": "Ambo Mineral Water (Ambo Wuha)",
+    "slug": "ambo-mineral-water",
+    "description": "Ethiopia’s iconic naturally sparkling highland mineral water from Senkele volcanic springs. Refreshing and rich in natural minerals.",
+    "category": 9,
+    "base_price_etb": "40.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1559839914-173ef29c2b32?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-28T13:43:46.509Z",
+    "updated_at": "2026-10-28T13:43:46.509Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 41,
+  "fields": {
+    "name": "Bottled Pure Spring Water",
+    "slug": "bottled-spring-water",
+    "description": "Premium bottled natural still spring water, purified and crystal clear.",
+    "category": 9,
+    "base_price_etb": "30.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800",
+    "is_available": true,
+    "is_signature": false,
+    "created_at": "2026-10-28T13:43:48.386Z",
+    "updated_at": "2026-10-28T13:43:48.386Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 42,
+  "fields": {
+    "name": "St. George Premium Beer",
+    "slug": "st-george-premium-beer",
+    "description": "Ethiopia’s legendary heritage lager (4.7% ABV), brewed since 1922. Crisp golden malt with a smooth balanced finish.",
+    "category": 9,
+    "base_price_etb": "90.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-28T13:43:49.548Z",
+    "updated_at": "2026-10-28T13:43:49.548Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 43,
+  "fields": {
+    "name": "Habesha Cold Gold Beer",
+    "slug": "habesha-cold-gold-beer",
+    "description": "Authentic Ethiopian rich lager (5% ABV), crafted with pure highland spring water and roasted barley malt.",
+    "category": 9,
+    "base_price_etb": "95.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1518176258769-f227c798150e?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-28T13:43:50.487Z",
+    "updated_at": "2026-10-28T13:43:50.487Z"
+  }
+},
+{
+  "model": "menu.menuitem",
+  "pk": 44,
+  "fields": {
+    "name": "Rift Valley Reserve House Wine",
+    "slug": "rift-valley-reserve-wine",
+    "description": "Artisanal Ethiopian wine produced from Ziway vineyards in the Great Rift Valley. Vibrant berry aromas with gentle balanced tannins.",
+    "category": 9,
+    "base_price_etb": "220.00",
+    "image": "",
+    "image_url": "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800",
+    "is_available": true,
+    "is_signature": true,
+    "created_at": "2026-10-28T13:43:51.480Z",
+    "updated_at": "2026-10-28T13:43:51.480Z"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 1,
+  "fields": {
+    "menu_item": 1,
+    "name": "250ml",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 2,
+  "fields": {
+    "menu_item": 1,
+    "name": "400ml Large",
+    "price_modifier_etb": "15.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 3,
+  "fields": {
+    "menu_item": 2,
+    "name": "250ml",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 4,
+  "fields": {
+    "menu_item": 2,
+    "name": "400ml Large",
+    "price_modifier_etb": "15.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 5,
+  "fields": {
+    "menu_item": 3,
+    "name": "250ml",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 6,
+  "fields": {
+    "menu_item": 3,
+    "name": "400ml Large",
+    "price_modifier_etb": "15.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 7,
+  "fields": {
+    "menu_item": 4,
+    "name": "Single Shot",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 8,
+  "fields": {
+    "menu_item": 4,
+    "name": "Double Shot",
+    "price_modifier_etb": "15.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 9,
+  "fields": {
+    "menu_item": 5,
+    "name": "Regular",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 10,
+  "fields": {
+    "menu_item": 5,
+    "name": "Large",
+    "price_modifier_etb": "20.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 11,
+  "fields": {
+    "menu_item": 6,
+    "name": "300ml",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 12,
+  "fields": {
+    "menu_item": 6,
+    "name": "500ml",
+    "price_modifier_etb": "20.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 13,
+  "fields": {
+    "menu_item": 7,
+    "name": "300ml",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 14,
+  "fields": {
+    "menu_item": 7,
+    "name": "600ml Pot",
+    "price_modifier_etb": "25.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 15,
+  "fields": {
+    "menu_item": 8,
+    "name": "300ml",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 16,
+  "fields": {
+    "menu_item": 8,
+    "name": "600ml Pot",
+    "price_modifier_etb": "25.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 17,
+  "fields": {
+    "menu_item": 9,
+    "name": "Regular",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 18,
+  "fields": {
+    "menu_item": 9,
+    "name": "Large",
+    "price_modifier_etb": "15.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 19,
+  "fields": {
+    "menu_item": 10,
+    "name": "400ml",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 20,
+  "fields": {
+    "menu_item": 10,
+    "name": "600ml",
+    "price_modifier_etb": "20.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 21,
+  "fields": {
+    "menu_item": 11,
+    "name": "Single Patty",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 22,
+  "fields": {
+    "menu_item": 11,
+    "name": "Double Patty",
+    "price_modifier_etb": "150.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 23,
+  "fields": {
+    "menu_item": 12,
+    "name": "Regular",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 24,
+  "fields": {
+    "menu_item": 12,
+    "name": "With Fries",
+    "price_modifier_etb": "120.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 25,
+  "fields": {
+    "menu_item": 13,
+    "name": "Regular",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 26,
+  "fields": {
+    "menu_item": 13,
+    "name": "With Sweet Potato Fries",
+    "price_modifier_etb": "130.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 27,
+  "fields": {
+    "menu_item": 14,
+    "name": "Regular",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 28,
+  "fields": {
+    "menu_item": 14,
+    "name": "With Onion Rings",
+    "price_modifier_etb": "110.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 29,
+  "fields": {
+    "menu_item": 15,
+    "name": "25cm",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 30,
+  "fields": {
+    "menu_item": 15,
+    "name": "32cm",
+    "price_modifier_etb": "180.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 31,
+  "fields": {
+    "menu_item": 16,
+    "name": "25cm",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 32,
+  "fields": {
+    "menu_item": 16,
+    "name": "32cm",
+    "price_modifier_etb": "160.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 33,
+  "fields": {
+    "menu_item": 17,
+    "name": "25cm",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 34,
+  "fields": {
+    "menu_item": 17,
+    "name": "32cm",
+    "price_modifier_etb": "170.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 35,
+  "fields": {
+    "menu_item": 18,
+    "name": "25cm",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 36,
+  "fields": {
+    "menu_item": 18,
+    "name": "32cm",
+    "price_modifier_etb": "160.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 37,
+  "fields": {
+    "menu_item": 19,
+    "name": "Regular Wrap",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 38,
+  "fields": {
+    "menu_item": 19,
+    "name": "Large Plate with Rice",
+    "price_modifier_etb": "150.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 39,
+  "fields": {
+    "menu_item": 20,
+    "name": "Regular Wrap",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 40,
+  "fields": {
+    "menu_item": 20,
+    "name": "Large Plate with Fries",
+    "price_modifier_etb": "150.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 41,
+  "fields": {
+    "menu_item": 21,
+    "name": "Regular Wrap",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 42,
+  "fields": {
+    "menu_item": 21,
+    "name": "Large Plate",
+    "price_modifier_etb": "120.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 43,
+  "fields": {
+    "menu_item": 22,
+    "name": "Regular",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 44,
+  "fields": {
+    "menu_item": 23,
+    "name": "Regular",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 45,
+  "fields": {
+    "menu_item": 23,
+    "name": "Large",
+    "price_modifier_etb": "70.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 46,
+  "fields": {
+    "menu_item": 24,
+    "name": "6 Wings",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 47,
+  "fields": {
+    "menu_item": 24,
+    "name": "12 Wings",
+    "price_modifier_etb": "280.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 48,
+  "fields": {
+    "menu_item": 25,
+    "name": "With Fries",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 49,
+  "fields": {
+    "menu_item": 25,
+    "name": "With Salad",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 50,
+  "fields": {
+    "menu_item": 26,
+    "name": "Regular",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 51,
+  "fields": {
+    "menu_item": 26,
+    "name": "With Fries",
+    "price_modifier_etb": "100.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 52,
+  "fields": {
+    "menu_item": 27,
+    "name": "Regular",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 53,
+  "fields": {
+    "menu_item": 27,
+    "name": "Large Sharing",
+    "price_modifier_etb": "180.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 54,
+  "fields": {
+    "menu_item": 28,
+    "name": "Plain",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 55,
+  "fields": {
+    "menu_item": 28,
+    "name": "Almond Filled",
+    "price_modifier_etb": "40.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 56,
+  "fields": {
+    "menu_item": 28,
+    "name": "Chocolate Filled",
+    "price_modifier_etb": "50.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 57,
+  "fields": {
+    "menu_item": 29,
+    "name": "Single Slice",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 58,
+  "fields": {
+    "menu_item": 37,
+    "name": "330ml Can",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 59,
+  "fields": {
+    "menu_item": 37,
+    "name": "500ml Bottle",
+    "price_modifier_etb": "15.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 60,
+  "fields": {
+    "menu_item": 38,
+    "name": "330ml Can",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 61,
+  "fields": {
+    "menu_item": 38,
+    "name": "500ml Bottle",
+    "price_modifier_etb": "15.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 62,
+  "fields": {
+    "menu_item": 39,
+    "name": "330ml Can",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 63,
+  "fields": {
+    "menu_item": 39,
+    "name": "500ml Bottle",
+    "price_modifier_etb": "15.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 64,
+  "fields": {
+    "menu_item": 40,
+    "name": "330ml Glass Bottle",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 65,
+  "fields": {
+    "menu_item": 40,
+    "name": "500ml Bottle",
+    "price_modifier_etb": "10.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 66,
+  "fields": {
+    "menu_item": 41,
+    "name": "500ml Bottle",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 67,
+  "fields": {
+    "menu_item": 41,
+    "name": "1 Litre Bottle",
+    "price_modifier_etb": "15.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 68,
+  "fields": {
+    "menu_item": 42,
+    "name": "330ml Chilled Bottle",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 69,
+  "fields": {
+    "menu_item": 42,
+    "name": "Bucket of 3 Bottles",
+    "price_modifier_etb": "170.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 70,
+  "fields": {
+    "menu_item": 43,
+    "name": "330ml Chilled Bottle",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 71,
+  "fields": {
+    "menu_item": 43,
+    "name": "Bucket of 3 Bottles",
+    "price_modifier_etb": "180.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 72,
+  "fields": {
+    "menu_item": 44,
+    "name": "By the Glass (150ml)",
+    "price_modifier_etb": "0.00"
+  }
+},
+{
+  "model": "menu.itemvariant",
+  "pk": 73,
+  "fields": {
+    "menu_item": 44,
+    "name": "Full Bottle (750ml)",
+    "price_modifier_etb": "850.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 1,
+  "fields": {
+    "menu_item": 1,
+    "name": "Extra Espresso Shot",
+    "price_etb": "20.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 2,
+  "fields": {
+    "menu_item": 1,
+    "name": "Oat Milk Upgrade",
+    "price_etb": "20.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 3,
+  "fields": {
+    "menu_item": 2,
+    "name": "Extra Espresso Shot",
+    "price_etb": "20.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 4,
+  "fields": {
+    "menu_item": 2,
+    "name": "Almond Milk Upgrade",
+    "price_etb": "20.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 5,
+  "fields": {
+    "menu_item": 3,
+    "name": "Extra Shot",
+    "price_etb": "20.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 6,
+  "fields": {
+    "menu_item": 4,
+    "name": "Extra Cardamom",
+    "price_etb": "10.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 7,
+  "fields": {
+    "menu_item": 4,
+    "name": "Oat Milk",
+    "price_etb": "20.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 8,
+  "fields": {
+    "menu_item": 5,
+    "name": "Extra Chocolate Shavings",
+    "price_etb": "15.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 9,
+  "fields": {
+    "menu_item": 5,
+    "name": "Whipped Cream",
+    "price_etb": "15.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 10,
+  "fields": {
+    "menu_item": 6,
+    "name": "Simple Syrup",
+    "price_etb": "10.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 11,
+  "fields": {
+    "menu_item": 6,
+    "name": "Cream Float",
+    "price_etb": "15.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 12,
+  "fields": {
+    "menu_item": 7,
+    "name": "Extra Honey",
+    "price_etb": "10.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 13,
+  "fields": {
+    "menu_item": 7,
+    "name": "Cinnamon Stick",
+    "price_etb": "10.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 14,
+  "fields": {
+    "menu_item": 8,
+    "name": "Extra Sugar",
+    "price_etb": "5.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 15,
+  "fields": {
+    "menu_item": 8,
+    "name": "Fresh Mint Leaves",
+    "price_etb": "10.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 16,
+  "fields": {
+    "menu_item": 9,
+    "name": "Oat Milk",
+    "price_etb": "15.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 17,
+  "fields": {
+    "menu_item": 9,
+    "name": "Extra Spice",
+    "price_etb": "10.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 18,
+  "fields": {
+    "menu_item": 10,
+    "name": "Extra Honey",
+    "price_etb": "10.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 19,
+  "fields": {
+    "menu_item": 10,
+    "name": "Mint Garnish",
+    "price_etb": "10.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 20,
+  "fields": {
+    "menu_item": 11,
+    "name": "Extra Cheese",
+    "price_etb": "60.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 21,
+  "fields": {
+    "menu_item": 11,
+    "name": "Bacon Strips",
+    "price_etb": "100.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 22,
+  "fields": {
+    "menu_item": 11,
+    "name": "Avocado",
+    "price_etb": "80.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 23,
+  "fields": {
+    "menu_item": 12,
+    "name": "Extra Jalapeños",
+    "price_etb": "40.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 24,
+  "fields": {
+    "menu_item": 12,
+    "name": "Extra Sauce",
+    "price_etb": "30.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 25,
+  "fields": {
+    "menu_item": 13,
+    "name": "Extra Chipotle Mayo",
+    "price_etb": "40.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 26,
+  "fields": {
+    "menu_item": 13,
+    "name": "Pickled Red Onion",
+    "price_etb": "35.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 27,
+  "fields": {
+    "menu_item": 14,
+    "name": "Fried Egg",
+    "price_etb": "60.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 28,
+  "fields": {
+    "menu_item": 14,
+    "name": "Extra Bacon",
+    "price_etb": "90.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 29,
+  "fields": {
+    "menu_item": 15,
+    "name": "Extra Truffle Oil",
+    "price_etb": "80.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 30,
+  "fields": {
+    "menu_item": 15,
+    "name": "Parmesan Shavings",
+    "price_etb": "60.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 31,
+  "fields": {
+    "menu_item": 16,
+    "name": "Buffalo Mozzarella",
+    "price_etb": "100.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 32,
+  "fields": {
+    "menu_item": 16,
+    "name": "Cherry Tomatoes",
+    "price_etb": "50.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 33,
+  "fields": {
+    "menu_item": 17,
+    "name": "Extra Pepperoni",
+    "price_etb": "90.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 34,
+  "fields": {
+    "menu_item": 17,
+    "name": "Chilli Oil",
+    "price_etb": "40.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 35,
+  "fields": {
+    "menu_item": 18,
+    "name": "Extra Chicken",
+    "price_etb": "110.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 36,
+  "fields": {
+    "menu_item": 18,
+    "name": "Jalapeños",
+    "price_etb": "40.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 37,
+  "fields": {
+    "menu_item": 19,
+    "name": "Extra Toum",
+    "price_etb": "40.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 38,
+  "fields": {
+    "menu_item": 19,
+    "name": "Hot Sauce",
+    "price_etb": "30.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 39,
+  "fields": {
+    "menu_item": 19,
+    "name": "Extra Chicken",
+    "price_etb": "100.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 40,
+  "fields": {
+    "menu_item": 20,
+    "name": "Extra Tahini",
+    "price_etb": "40.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 41,
+  "fields": {
+    "menu_item": 20,
+    "name": "Fried Egg",
+    "price_etb": "70.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 42,
+  "fields": {
+    "menu_item": 20,
+    "name": "Hot Sauce",
+    "price_etb": "30.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 43,
+  "fields": {
+    "menu_item": 21,
+    "name": "Extra Hummus",
+    "price_etb": "50.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 44,
+  "fields": {
+    "menu_item": 21,
+    "name": "Chilli Sauce",
+    "price_etb": "30.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 45,
+  "fields": {
+    "menu_item": 22,
+    "name": "Extra Halloumi",
+    "price_etb": "80.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 46,
+  "fields": {
+    "menu_item": 22,
+    "name": "Tahini",
+    "price_etb": "40.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 47,
+  "fields": {
+    "menu_item": 23,
+    "name": "Bacon Bits",
+    "price_etb": "80.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 48,
+  "fields": {
+    "menu_item": 23,
+    "name": "Extra Jalapeños",
+    "price_etb": "40.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 49,
+  "fields": {
+    "menu_item": 23,
+    "name": "Extra Cheese Sauce",
+    "price_etb": "50.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 50,
+  "fields": {
+    "menu_item": 24,
+    "name": "Buffalo Sauce",
+    "price_etb": "50.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 51,
+  "fields": {
+    "menu_item": 24,
+    "name": "Honey Garlic Sauce",
+    "price_etb": "50.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 52,
+  "fields": {
+    "menu_item": 24,
+    "name": "Extra Blue Cheese Dip",
+    "price_etb": "60.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 53,
+  "fields": {
+    "menu_item": 25,
+    "name": "Extra Bacon",
+    "price_etb": "90.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 54,
+  "fields": {
+    "menu_item": 25,
+    "name": "Avocado",
+    "price_etb": "80.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 55,
+  "fields": {
+    "menu_item": 26,
+    "name": "Extra Chilli",
+    "price_etb": "50.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 56,
+  "fields": {
+    "menu_item": 26,
+    "name": "Extra Sriracha",
+    "price_etb": "30.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 57,
+  "fields": {
+    "menu_item": 27,
+    "name": "Extra Guacamole",
+    "price_etb": "80.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 58,
+  "fields": {
+    "menu_item": 27,
+    "name": "Extra Jalapeños",
+    "price_etb": "40.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 59,
+  "fields": {
+    "menu_item": 28,
+    "name": "House Jam",
+    "price_etb": "30.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 60,
+  "fields": {
+    "menu_item": 28,
+    "name": "Honey Butter",
+    "price_etb": "30.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 61,
+  "fields": {
+    "menu_item": 29,
+    "name": "Extra Cocoa Dusting",
+    "price_etb": "20.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 62,
+  "fields": {
+    "menu_item": 29,
+    "name": "Espresso Shot on Side",
+    "price_etb": "70.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 63,
+  "fields": {
+    "menu_item": 37,
+    "name": "Ice & Lemon Slice",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 64,
+  "fields": {
+    "menu_item": 37,
+    "name": "Chilled Glass",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 65,
+  "fields": {
+    "menu_item": 38,
+    "name": "Ice & Lemon Slice",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 66,
+  "fields": {
+    "menu_item": 38,
+    "name": "Chilled Glass",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 67,
+  "fields": {
+    "menu_item": 39,
+    "name": "Ice & Fresh Mint",
+    "price_etb": "10.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 68,
+  "fields": {
+    "menu_item": 39,
+    "name": "Chilled Glass",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 69,
+  "fields": {
+    "menu_item": 40,
+    "name": "Fresh Lemon Wedge",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 70,
+  "fields": {
+    "menu_item": 40,
+    "name": "Served Chilled with Ice",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 71,
+  "fields": {
+    "menu_item": 41,
+    "name": "Chilled with Lemon Slice",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 72,
+  "fields": {
+    "menu_item": 41,
+    "name": "Room Temperature",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 73,
+  "fields": {
+    "menu_item": 42,
+    "name": "Frosted Beer Glass",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 74,
+  "fields": {
+    "menu_item": 43,
+    "name": "Frosted Beer Glass",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 75,
+  "fields": {
+    "menu_item": 44,
+    "name": "Red Syrah / Cabernet",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.addon",
+  "pk": 76,
+  "fields": {
+    "menu_item": 44,
+    "name": "Crisp White Sauvignon",
+    "price_etb": "0.00"
+  }
+},
+{
+  "model": "menu.cafesettings",
+  "pk": 1,
+  "fields": {
+    "cafe_name": "Buna Hub",
+    "tagline": "Artisanal Reserve",
+    "description": "An Ethiopian coffee house in Piassa — ceremony buna, slow teas, and a kitchen that stays open late.",
+    "primary_phone": "+251900123456",
+    "contact_email": "selam@bunahub.et",
+    "opening_hours": "1:00 – 3:00",
+    "ceremony_time": "8:00 (ከቀኑ 8:00)",
+    "updated_at": "2026-10-17T12:03:40.115Z"
+  }
+},
+{
+  "model": "menu.cafelocation",
+  "pk": 1,
+  "fields": {
+    "name": "Piassa",
+    "address": "Gulele Road 14, Piassa",
+    "city": "Addis Ababa",
+    "phone": "+251900123456",
+    "email": "selam@bunahub.et",
+    "opening_hours": "1:00 – 3:00",
+    "is_primary": true,
+    "is_active": true,
+    "display_order": 1,
+    "created_at": "2026-10-17T13:53:26.882Z",
+    "updated_at": "2026-10-17T12:02:28.218Z"
+  }
+},
+{
+  "model": "orders.deliveryzone",
+  "pk": 1,
+  "fields": {
+    "name": "Bole & Atlas",
+    "delivery_fee_etb": "100.00",
+    "is_active": true
+  }
+},
+{
+  "model": "orders.deliveryzone",
+  "pk": 2,
+  "fields": {
+    "name": "Kazanchis & Kirkos",
+    "delivery_fee_etb": "120.00",
+    "is_active": true
+  }
+},
+{
+  "model": "orders.deliveryzone",
+  "pk": 3,
+  "fields": {
+    "name": "Piazza & Arat Kilo",
+    "delivery_fee_etb": "150.00",
+    "is_active": true
+  }
+},
+{
+  "model": "orders.deliveryzone",
+  "pk": 4,
+  "fields": {
+    "name": "Old Airport & Bisrate Gabriel",
+    "delivery_fee_etb": "130.00",
+    "is_active": true
+  }
+},
+{
+  "model": "orders.deliveryzone",
+  "pk": 5,
+  "fields": {
+    "name": "CMC & Gerji",
+    "delivery_fee_etb": "180.00",
+    "is_active": true
+  }
+},
+{
+  "model": "orders.restaurantsettings",
+  "pk": 1,
+  "fields": {
+    "is_open": true,
+    "auto_schedule": false,
+    "opening_hours": "7:00 AM – 11:00 PM",
+    "default_prep_minutes": 20,
+    "contact_phone": "+251911223344",
+    "contact_email": "support@artisanalreserve.com",
+    "address": "Bole Road, opposite Friendship City Center, Addis Ababa"
+  }
+},
+{
+  "model": "api.knowledgebase",
+  "pk": 1,
+  "fields": {
+    "title": "Geisha & Floral Micro-Lots Guide",
+    "category": "Origin & Science",
+    "content": "Panama Geisha and Ethiopian Geisha varieties cultivated above 1,900 MASL produce intoxicating floral aromatics of jasmine, bergamot, peach, and guava. Best brewed using pour-over V60 or Chemex at 92-94°C with soft water (50-70 ppm) to accentuate volatile floral oils.",
+    "tags": "geisha, ethiopia, panama, jasmine, pour over, v60, light roast, brew",
+    "created_at": "2026-10-25T15:32:58.188Z"
+  }
+},
+{
+  "model": "api.knowledgebase",
+  "pk": 2,
+  "fields": {
+    "title": "Cold Extraction & Dutch Tower Method",
+    "category": "Brew Science",
+    "content": "Kyoto Dutch cold drip extraction uses ice-cold water dripping drop-by-drop over 12-18 hours. This slow oxidation prevents tannin bitterness while concentrating heavy cocoa esters, whiskey oak notes, and a velvety syrupy mouthfeel.",
+    "tags": "cold drip, kyoto, cold brew, dutch drip, dark roast, ice, dutch, brew",
+    "created_at": "2026-10-25T15:32:58.188Z"
+  }
+},
+{
+  "model": "api.knowledgebase",
+  "pk": 3,
+  "fields": {
+    "title": "Artisanal Pastry Pairing Science",
+    "category": "Pairing",
+    "content": "Butter croissants pair impeccably with high-acidity washed Geishas. Rich chocolate pastries like tiramisu and cocoa truffles balance deep volcanic dark roasts like Sumatra Blue Batak and Roasted Hazelnut Truffle Mocha.",
+    "tags": "pairing, bakery, croissant, tiramisu, chocolate, breakfast, food",
+    "created_at": "2026-10-25T15:32:58.188Z"
+  }
+},
+{
+  "model": "api.knowledgebase",
+  "pk": 4,
+  "fields": {
+    "title": "Ethiopian Traditional Jebena Buna Ceremony",
+    "category": "Heritage",
+    "content": "Traditional Ethiopian Buna is prepared using clay jebena pots. Green beans are freshly washed, roasted over open charcoal coals, ground fine by hand, and brewed three times (Abol, Tona, Baraka) accompanied by burning frankincense and popped corn.",
+    "tags": "jebena, buna, ceremony, abol, ethiopian tradition, roasting, clay pot",
+    "created_at": "2026-10-25T15:32:58.188Z"
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$0kceKAb1IRlYP4KkI4F035$O5p18g9fUuUQH/TuQ540Nk421c0LEJguVkbRHRF3CZU=",
+    "last_login": "2026-10-22T18:11:49.426Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "System",
+    "last_name": "Admin",
+    "email": "admin@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-10-03T11:29:54.011Z",
+    "phone": "+251911000001",
+    "role": "ADMIN",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$K6wAAYdsWnsI2v3qjymbY4$AGwci8C0hAelpXSDKRY5EPdggwYqn5/d1KoWviqRVH4=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "manager",
+    "first_name": "Hotel",
+    "last_name": "Manager",
+    "email": "manager@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-10-03T11:29:55.313Z",
+    "phone": "+251911000002",
+    "role": "MANAGER",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 3,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$hMcstr_--BbmqnIHgdaFbQ$dPtmXdXWykDFjR/QTI9khLMy++3XLtwVSrbI0G/rqOc=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "customer",
+    "first_name": "Abebe",
+    "last_name": "Bikila",
+    "email": "customer@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-10-03T11:29:56.939Z",
+    "phone": "+251911000003",
+    "role": "CUSTOMER",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 6,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$t4cfvFAcKRkK6nxnmpVgt6$oogT/JNIaOQ+90ZllMFBj3pi0MgqbRoej5XZG6aTL7o=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "tile",
+    "first_name": "Tilahun",
+    "last_name": "Seifu",
+    "email": "tilahun@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-10-06T09:25:27.158Z",
+    "phone": "+251923456789",
+    "role": "CUSTOMER",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 9,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$THunUSmKBeuSNkY8DJUvNe$OUcnJ7AP5LNeSxUen+JGm7lZGfa/HtEo8lUcRAVXI+g=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "Eyu",
+    "first_name": "Eyuel",
+    "last_name": "Ashenafi",
+    "email": "eashenafi82@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-10-20T06:07:15.513Z",
+    "phone": "+251900000000",
+    "role": "CUSTOMER",
+    "groups": [],
+    "user_permissions": []
+  }
+}
 ]

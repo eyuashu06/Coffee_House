@@ -811,6 +811,8 @@ export const categoryTranslations: Record<string, string> = {
   'Fast Food Favourites': 'ፈጣን ምግቦች',
   'Fast Food': 'ፈጣን ምግቦች',
   'Bakery & Pastry': 'ኬክና ኬክ ነክ ምግቦች',
+  'Cold Drinks & Beverages': 'ለስላሳና ሌሎች መጠጦች',
+  'Beverages & Drinks': 'ለስላሳና ሌሎች መጠጦች',
 };
 
 
@@ -861,6 +863,15 @@ export const itemTranslations: Record<string, string> = {
   'Croissant au Beurre': 'ክሩዋሳን',
   'Fresh Croissant': 'ፍሬሽ ክሩዋሳን',
   'Tiramisu Slice': 'ቲራሚሱ',
+  // Cold Drinks, Water & Alcohol
+  'Coca-Cola Classic': 'ኮካ ኮላ',
+  'Fanta Orange': 'ፋንታ ብርቱካን',
+  'Sprite Crisp Lemon-Lime': 'ስፕራይት',
+  'Ambo Mineral Water (Ambo Wuha)': 'አምቦ ውሃ',
+  'Bottled Pure Spring Water': 'የታሸገ የተፈጥሮ ውሃ',
+  'St. George Premium Beer': 'ቅዱስ ጊዮርጊስ ቢራ',
+  'Habesha Cold Gold Beer': 'ሐበሻ ቢራ',
+  'Rift Valley Reserve House Wine': 'ሪፍት ቫሊ ወይን',
 };
 
 
@@ -868,6 +879,14 @@ export const variantTranslations: Record<string, string> = {
   '250ml': '250 ሚሊ',
   '300ml': '300 ሚሊ',
   '400ml Large': '400 ሚሊ ትልቅ',
+  '330ml Can': '330 ሚሊ ቆርቆሮ',
+  '500ml Bottle': '500 ሚሊ ጠርሙስ',
+  '330ml Glass Bottle': '330 ሚሊ ጠርሙስ',
+  '1 Litre Bottle': '1 ሊትር ጠርሙስ',
+  '330ml Chilled Bottle': '330 ሚሊ ቀዝቃዛ ጠርሙስ',
+  'Bucket of 3 Bottles': '3 ጠርሙስ በበረዶ ባልዲ',
+  'By the Glass (150ml)': 'በብርጭቆ (150 ሚሊ)',
+  'Full Bottle (750ml)': 'ሙሉ ጠርሙስ (750 ሚሊ)',
   '500ml': '500 ሚሊ',
   '600ml Pot': '600 ሚሊ',
   '600ml': '600 ሚሊ',
