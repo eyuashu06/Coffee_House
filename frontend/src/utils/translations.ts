@@ -1165,5 +1165,9 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Save details for next time?': 'መረጃዎን ለቀጣይ ማስቀመጥ ይፈልጋሉ?',
   'Create a free account with your phone number to track this order, save your delivery addresses, and never type your details again.': 'ይህን ትዕዛዝ ለመከታተል፣ አድራሻዎችን ለማስቀመጥ እና ዳግም ላለመጻፍ በነጻ ይመዝገቡ።',
   'Create Free Account': 'በነጻ ይመዝገቡ',
+  'Confirming Payment...': 'ክፍያውን በማረጋገጥ ላይ...',
+  'Thank you! Your payment for Order': 'እናመሰግናለን! ለትዕዛዝ ቁጥር',
+  'was successful and the kitchen is preparing it.': 'ክፍያው ተሳክቷል፤ ወጥ ቤታችን እያዘጋጀው ነው።',
+  'could not be completed.': 'ሊጠናቀቅ አልቻለም።',
 };
 

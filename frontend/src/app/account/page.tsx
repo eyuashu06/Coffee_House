@@ -13,6 +13,7 @@ import ProfileDropdown from '../../components/ProfileDropdown';
 import { useLanguage } from '../../context/LanguageContext';
 import { apiFetch } from '../../lib/api';
 import EthiopianPhoneInput from '../../components/EthiopianPhoneInput';
+import AuthModal from '../../components/AuthModal';
 import { formatEthiopianTime } from '../../utils/ethiopianTime';
 import { TextSize, getSavedTextSize, applyTextSize } from '../../utils/textSize';
 
@@ -199,6 +200,8 @@ export default function AccountPage() {
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
+  const [guestPayment, setGuestPayment] = useState<any>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Display Text Size State
   const [currentTextSize, setCurrentTextSize] = useState<TextSize>('normal');
@@ -356,14 +359,13 @@ export default function AccountPage() {
         if (res.ok) {
           const data = await res.json();
           const payment = data.payment;
+          setGuestPayment(payment);
           fetchOrders(true);
 
           if (payment?.status && payment.status !== 'PENDING') {
             settledPaymentsRef.current.add(txRef);
             announcePaymentResult(payment);
             setIsConfirmingPayment(false);
-            // Drop the query string so a refresh doesn't re-check a settled payment
-            window.history.replaceState({}, '', window.location.pathname);
             return;
           }
           setBanner({ type: 'info', message: t('Confirming your payment with the gateway…') });
@@ -420,6 +422,16 @@ export default function AccountPage() {
       window.removeEventListener('notification-navigate', syncAccountFromUrl);
     };
   }, [syncAccountFromUrl]);
+
+  // Immediately verify payment if tx_ref is in URL (handles both guests and logged-in users returning from Chapa)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const txRef = params.get('tx_ref') || params.get('trx_ref');
+    if (txRef) {
+      verifyPendingPayment();
+    }
+  }, [verifyPendingPayment]);
 
   // Safety net: any order whose payment is still settling gets re-checked too, so a
   // customer who closed the Chapa tab still sees the confirmation when they come back.
@@ -598,11 +610,16 @@ export default function AccountPage() {
     }
   };
 
+  const isGuestPaymentReturn = typeof window !== 'undefined' && (
+    new URLSearchParams(window.location.search).has('tx_ref') ||
+    new URLSearchParams(window.location.search).has('trx_ref')
+  );
+
   useEffect(() => {
-    if (!loading && !user && !sessionExpired) {
+    if (!loading && !user && !sessionExpired && !isGuestPaymentReturn) {
       window.location.href = '/?welcome=1';
     }
-  }, [loading, user, sessionExpired]);
+  }, [loading, user, sessionExpired, isGuestPaymentReturn]);
 
   if (loading) {
     return (
@@ -623,6 +640,84 @@ export default function AccountPage() {
         <Link href="/?auth=login" className="h-10 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold flex items-center hover:brightness-110 transition-colors">
           {t('Sign in again')}
         </Link>
+      </div>
+    );
+  }
+
+  // Guest customer returning from Chapa online payment: show confirmation and offer account creation
+  if (!user && isGuestPaymentReturn) {
+    const isPaid = guestPayment?.status === 'SUCCESS';
+    const isFailed = guestPayment?.status === 'FAILED' || guestPayment?.status === 'ABANDONED';
+    const orderNum = guestPayment?.order_number || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('order') || '' : '');
+
+    return (
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col items-center justify-center p-4 sm:p-6 font-body">
+        <div className="w-full max-w-md bg-surface-2 border border-[var(--border)] rounded-2xl shadow-2xl p-6 text-center space-y-4">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto border ${
+            isPaid
+              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+              : isFailed
+              ? 'bg-red-500/20 text-red-400 border-red-500/40'
+              : 'bg-amber-500/20 text-amber-400 border-amber-500/40 animate-pulse'
+          }`}>
+            <span className="material-symbols-outlined text-3xl">
+              {isPaid ? 'check_circle' : isFailed ? 'error' : 'hourglass_top'}
+            </span>
+          </div>
+
+          <h3 className="font-display text-2xl font-bold">
+            {isPaid ? t('Payment Confirmed!') : isFailed ? t('Payment Failed') : t('Confirming Payment...')}
+          </h3>
+
+          <p className="text-sm text-[var(--muted)] leading-relaxed">
+            {isPaid
+              ? `${t('Thank you! Your payment for Order')} #${orderNum} ${t('was successful and the kitchen is preparing it.')}`
+              : isFailed
+              ? `${t('Payment for Order')} #${orderNum} ${t('could not be completed.')} ${guestPayment?.failure_reason || ''}`
+              : t('Confirming your payment with the gateway…')}
+          </p>
+
+          {isPaid && (
+            <div className="p-3.5 rounded-xl bg-surface border border-[var(--accent)]/30 text-left space-y-2 mt-2">
+              <div className="flex items-center gap-2 text-[var(--accent)] font-bold text-xs">
+                <span className="material-symbols-outlined text-base">bookmark_add</span>
+                <span>{t('Save details for next time?')}</span>
+              </div>
+              <p className="text-[11px] text-[var(--muted)] leading-relaxed">
+                {t('Create a free account with your phone number to track this order, save your delivery addresses, and never type your details again.')}
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(true)}
+                className="w-full py-2 px-3 rounded-lg bg-[var(--accent)] hover:brightness-110 text-[var(--accent-contrast)] font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">person_add</span>
+                <span>{t('Create Free Account')}</span>
+              </button>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 pt-2">
+            <Link
+              href="/?welcome=1#menu"
+              className="py-2.5 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-xs uppercase tracking-wider shadow-md hover:brightness-110 text-center"
+            >
+              {t('Browse Menu')}
+            </Link>
+            <Link
+              href="/?welcome=1"
+              className="py-2 px-6 rounded-full border border-[var(--border)] text-[var(--accent)] font-semibold text-xs text-center hover:bg-[var(--accent-soft)] transition-all"
+            >
+              {t('Back to Home')}
+            </Link>
+          </div>
+        </div>
+
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          initialMode="REGISTER"
+        />
       </div>
     );
   }

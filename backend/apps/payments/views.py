@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import re
 import time
 from decimal import Decimal
@@ -95,24 +96,47 @@ def _chapa_email_rejected(response):
 
 def _initialize_chapa_transaction(*, email, amount, first_name, last_name, tx_ref,
                                  callback_url, return_url, customization, phone_number=None):
-    """Initialize a hosted-checkout transaction through the official Chapa SDK.
+    """Initialize a hosted-checkout transaction via Chapa REST API with SDK fallback."""
+    secret = getattr(settings, 'CHAPA_SECRET_KEY', '').strip()
+    api_url = (getattr(settings, 'CHAPA_API_URL', 'https://api.chapa.co/v1') or '').rstrip('/')
 
-    Only initialisation uses the SDK. Verification goes through
-    `apps.payments.gateway` because the SDK's verify path is broken against the
-    httpx version installed here.
-    """
-    return get_chapa_client().initialize(
-        email=email,
-        amount=amount,
-        first_name=first_name,
-        last_name=last_name,
-        tx_ref=tx_ref,
-        currency='ETB',
-        phone_number=phone_number or None,
-        callback_url=callback_url,
-        return_url=return_url,
-        customization=customization,
-    )
+    payload = {
+        'amount': str(amount),
+        'currency': 'ETB',
+        'email': email,
+        'first_name': first_name,
+        'last_name': last_name,
+        'tx_ref': tx_ref,
+        'callback_url': callback_url,
+        'return_url': return_url,
+    }
+    if phone_number:
+        payload['phone_number'] = phone_number
+    if customization:
+        payload['customization'] = customization
+
+    headers = {
+        'Authorization': f'Bearer {secret}',
+        'Content-Type': 'application/json',
+    }
+
+    try:
+        resp = httpx.post(f"{api_url}/transaction/initialize", json=payload, headers=headers, timeout=20.0)
+        return resp.json()
+    except Exception as exc:
+        logger.warning('Direct Chapa REST initialize failed: %s; falling back to SDK', exc)
+        return get_chapa_client().initialize(
+            email=email,
+            amount=amount,
+            first_name=first_name,
+            last_name=last_name,
+            tx_ref=tx_ref,
+            currency='ETB',
+            phone_number=phone_number or None,
+            callback_url=callback_url,
+            return_url=return_url,
+            customization=customization,
+        )
 
 
 def _can_manage_order(request, order):
