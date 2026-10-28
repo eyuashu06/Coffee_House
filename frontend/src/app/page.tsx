@@ -1085,6 +1085,9 @@ export default function Home() {
                                                             src={itemImg}
                                                             alt={tItem(item.name)}
                                                             loading="lazy"
+                                                            onError={(e) => {
+                                                                (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800';
+                                                            }}
                                                             className="w-full h-full object-cover"
                                                         />
                                                         {item.is_signature && (
@@ -1154,6 +1157,9 @@ export default function Home() {
                                                                 src={itemImg}
                                                                 alt={tItem(item.name)}
                                                                 loading="lazy"
+                                                                onError={(e) => {
+                                                                    (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800';
+                                                                }}
                                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                                                             />
                                                             {/* Signature Badge */}

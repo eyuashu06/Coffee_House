@@ -114,8 +114,11 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
         {/* Header image */}
         <div className="h-44 w-full relative shrink-0">
           <img
-            src={item.image_url || 'https://images.pexels.com/photos/37756986/pexel-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80'}
+            src={item.image_url || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800'}
             alt={item.name}
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800';
+            }}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#131313] via-transparent to-transparent" />

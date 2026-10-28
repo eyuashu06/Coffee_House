@@ -391,8 +391,11 @@ export default function CartDrawer({
               cartItems.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-surface-2/60 border border-[var(--border)]/50">
                   <img
-                    src={item.coffee.image_url}
+                    src={item.coffee.image_url || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800'}
                     alt={tItem(item.coffee.name)}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800';
+                    }}
                     className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">

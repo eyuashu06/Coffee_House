@@ -143,8 +143,12 @@ export default function MenuSection({ coffees, onAddToCart }: MenuSectionProps) 
                 {/* Image Container */}
                 <div className="relative w-full h-48 rounded-xl overflow-hidden mb-4 bg-surface-2">
                   <img
-                    src={item.image_url}
+                    src={item.image_url || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800'}
                     alt={item.name}
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800';
+                    }}
                     className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-deep)]/80 via-transparent to-transparent" />

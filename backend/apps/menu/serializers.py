@@ -65,6 +65,12 @@ class MenuItemSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         ret['price'] = str(instance.base_price_etb) if instance.base_price_etb is not None else '0.00'
+        # Ensure image_url is always populated for frontend components
+        image_display = instance.get_image_display()
+        if not ret.get('image_url') and image_display:
+            ret['image_url'] = image_display
+        if not ret.get('image_url'):
+            ret['image_url'] = 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800'
         return ret
 
     def create(self, validated_data):

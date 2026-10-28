@@ -2960,6 +2960,9 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                           <img
                             src={itemImg}
                             alt={item.name}
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800';
+                            }}
                             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                           />
                         ) : (
