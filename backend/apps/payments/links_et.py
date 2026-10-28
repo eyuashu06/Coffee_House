@@ -263,7 +263,7 @@ def verify_receipt(
     # Clean stripped receipt tags, e.g. "Receipt: filename.jpg (120KB)"
     if raw.startswith('Receipt:'):
         # Look for URL or reference within it if pasted
-        match = re.search(r'https?://\S+', raw)
+        match = re.search(r'https?://\S+|v[12]-[\w-]+', raw)
         if match:
             raw = match.group(0)
         else:
@@ -275,12 +275,29 @@ def verify_receipt(
                 'message_am': 'የተጫነው ሰነድ ምስል ማረጋገጫ ወይም የአስተዳዳሪ ፍተሻ ያስፈልገዋል።',
             }
 
+    # Clean quotes, brackets, and extra spaces
+    raw = raw.strip('\'" \t\n\r').replace('"', '').replace("'", "")
+
+    # Extract URL if surrounded by extra text
+    url_match = re.search(r'https?://[^\s"\'<>]+', raw)
+    if url_match:
+        raw = url_match.group(0)
+
+    # Normalize CBE mobile banking URLs and bare codes
+    # e.g. "v2-hfHCxNHQzq8MIgKx3LKC" -> "https://mbreciept.cbe.com.et/v2-hfHCxNHQzq8MIgKx3LKC"
+    if 'cbe.com.et' in raw:
+        if not raw.startswith(('http://', 'https://')):
+            raw = f"https://{raw}"
+        raw = raw.replace('mbreceipt.cbe.com.et', 'mbreciept.cbe.com.et')
+    elif re.match(r'^v[12]-[A-Za-z0-9_-]+$', raw):
+        raw = f"https://mbreciept.cbe.com.et/{raw}"
+
     payload: Dict[str, Any] = {'waitMs': 10000}
     if raw.startswith(('http://', 'https://')):
         payload['url'] = raw
     else:
         # If it looks like a Telebirr or general reference (alphanumeric 6-30 chars)
-        cleaned_ref = re.sub(r'[^A-Za-z0-9]', '', raw)
+        cleaned_ref = re.sub(r'[^A-Za-z0-9_-]', '', raw)
         if cleaned_ref:
             payload['reference'] = cleaned_ref
         else:

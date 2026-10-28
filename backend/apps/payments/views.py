@@ -317,16 +317,28 @@ class InitializePaymentView(APIView):
             # Attempt real-time bank verification via links.et if configured
             if is_links_et_configured():
                 from django.utils import timezone
-                if receipt_base64:
-                    verification_result = verify_receipt_image(
+                clean_ref = (transaction_reference or '').strip()
+                if clean_ref.startswith('Receipt:'):
+                    match = re.search(r'https?://\S+|v[12]-[\w-]+', clean_ref)
+                    clean_ref = match.group(0) if match else ''
+
+                # 1. Try URL / reference code verification first (fast & exact)
+                if clean_ref:
+                    verification_result = verify_receipt(
+                        clean_ref,
+                        expected_amount=order.total_amount_etb
+                    )
+
+                # 2. If not verified yet and image uploaded, attempt OCR verification
+                if (not verification_result or not verification_result.get('verified')) and receipt_base64:
+                    img_result = verify_receipt_image(
                         receipt_base64,
                         expected_amount=order.total_amount_etb
                     )
-                elif transaction_reference and not transaction_reference.startswith('Receipt:'):
-                    verification_result = verify_receipt(
-                        transaction_reference,
-                        expected_amount=order.total_amount_etb
-                    )
+                    if img_result and img_result.get('verified'):
+                        verification_result = img_result
+                    elif not verification_result:
+                        verification_result = img_result
 
             if verification_result and verification_result.get('verified'):
                 from django.utils import timezone

@@ -56,6 +56,7 @@ export default function PaymentModal({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('telebirr');
   const [phone, setPhone] = useState('+251911223344');
   const [transactionRef, setTransactionRef] = useState('');
+  const [proofMode, setProofMode] = useState<'FILE' | 'CODE'>('CODE');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [receiptBase64, setReceiptBase64] = useState<string | null>(null);
@@ -130,7 +131,9 @@ export default function PaymentModal({
     }
     const sizeKb = (file.size / 1024).toFixed(0);
     const cleanName = file.name.replace(/[^a-zA-Z0-9._\-]/g, '_');
-    setTransactionRef(`Receipt: ${cleanName} (${sizeKb}KB)`.slice(0, 140));
+    if (!transactionRef || transactionRef.startsWith('Receipt:')) {
+      setTransactionRef(`Receipt: ${cleanName} (${sizeKb}KB)`.slice(0, 140));
+    }
   };
 
   const handleReceiptFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,7 +145,9 @@ export default function PaymentModal({
     setReceiptFile(null);
     setReceiptPreview(null);
     setReceiptBase64(null);
-    setTransactionRef('');
+    if (transactionRef.startsWith('Receipt:')) {
+      setTransactionRef('');
+    }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -151,10 +156,18 @@ export default function PaymentModal({
     setIsSubmitting(true);
     setError(null);
 
-    // Validation: if manual digital method, an image or PDF file receipt is strictly required
+    // Flexible Validation: customer can provide EITHER a transaction code / link OR a receipt file
     const isManualDigital = ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(paymentMethod);
-    if (isManualDigital && !receiptFile && !phone.includes('900000000')) {
-      setError(t('Please upload your payment receipt (image or PDF file) before submitting.'));
+    const hasCode = transactionRef.trim().length >= 4 && !transactionRef.startsWith('Receipt:');
+    const hasFile = Boolean(receiptFile);
+    const isTest = phone.includes('900000000');
+
+    if (isManualDigital && !hasCode && !hasFile && !isTest) {
+      setError(
+        language === 'am'
+          ? 'እባክዎ የግብይቱን ኮድ/ሊንክ ያስገቡ ወይም የደረሰኝ ፋይል (ምስል/PDF) ይጫኑ።'
+          : t('Please enter the transaction reference / receipt link OR upload a receipt file.')
+      );
       setIsSubmitting(false);
       return;
     }
@@ -335,89 +348,155 @@ export default function PaymentModal({
                 </p>
               )}
 
-              {/* Transaction Receipt File Upload (Images or PDF Only) */}
-              <div className="pt-2 border-t border-[var(--border)]/60">
-                <label className="block text-xs font-semibold text-[var(--text)] mb-1.5 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <i className="ph ph-receipt text-[15px] text-[var(--accent)]"></i>
-                    <span>{t('Upload Payment Receipt (Image or PDF only)')}</span>
+              {/* Payment Proof: Choose between Code/Link OR File Upload */}
+              <div className="pt-2 border-t border-[var(--border)]/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[var(--text)] flex items-center gap-1.5">
+                    <i className="ph ph-shield-check text-[15px] text-[var(--accent)]"></i>
+                    <span>{language === 'am' ? 'የክፍያ ማረጋገጫ ዘዴ' : 'Payment Proof Method'}</span>
                     <span className="text-red-500">*</span>
                   </span>
-                  <span className="text-[10.5px] text-[var(--muted)] font-normal">
-                    {t('Files only, no numbers')}
-                  </span>
-                </label>
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
-                  className="hidden"
-                  onChange={handleReceiptFileChange}
-                />
+                  <div className="flex p-0.5 rounded-lg bg-surface-2 border border-[var(--border)] text-[11px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setProofMode('CODE')}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                        proofMode === 'CODE'
+                          ? 'bg-[var(--accent)] text-[var(--accent-contrast)] shadow-sm'
+                          : 'text-[var(--muted)] hover:text-[var(--text)]'
+                      }`}
+                    >
+                      <i className="ph ph-link-simple text-xs"></i>
+                      <span>{language === 'am' ? 'ኮድ / ሊንክ' : 'Code / Link'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProofMode('FILE')}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                        proofMode === 'FILE'
+                          ? 'bg-[var(--accent)] text-[var(--accent-contrast)] shadow-sm'
+                          : 'text-[var(--muted)] hover:text-[var(--text)]'
+                      }`}
+                    >
+                      <i className="ph ph-file-arrow-up text-xs"></i>
+                      <span>{language === 'am' ? 'ፋይል ጫን' : 'Upload File'}</span>
+                    </button>
+                  </div>
+                </div>
 
-                {!receiptFile ? (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const file = e.dataTransfer.files?.[0];
-                      if (file) processReceiptFile(file);
-                    }}
-                    className="border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] rounded-2xl p-4 text-center cursor-pointer transition-all bg-surface/50 hover:bg-[var(--accent-soft)]/20 group"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform shadow-sm">
-                      <i className="ph ph-file-arrow-up text-xl"></i>
+                {proofMode === 'CODE' ? (
+                  <div className="space-y-2 animate-fade-in">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[var(--muted)] mb-1">
+                        {paymentMethod === 'cbebirr'
+                          ? (language === 'am' ? 'የCBE ደረሰኝ ሊንክ ወይም ኮድ' : 'CBE Receipt Link or Transaction Code')
+                          : (language === 'am' ? 'የግብይት ቁጥር ወይም የደረሰኝ ሊንክ' : 'Transaction Reference or Receipt Link')}
+                      </label>
+                      <input
+                        type="text"
+                        value={transactionRef.startsWith('Receipt:') ? '' : transactionRef}
+                        onChange={(e) => setTransactionRef(e.target.value)}
+                        placeholder={
+                          paymentMethod === 'cbebirr'
+                            ? 'https://mbreciept.cbe.com.et/... ወይም v2-hfHCxNHQzq8MIgKx3LKC'
+                            : language === 'am'
+                            ? 'ለምሳሌ RA... ወይም https://...'
+                            : 'e.g. RA1234567 or receipt URL'
+                        }
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-surface border border-[var(--border)] text-[var(--text)] text-xs focus:border-[var(--accent)] focus:outline-none transition-colors font-mono"
+                      />
                     </div>
-                    <p className="text-[13px] font-bold text-[var(--text)]">
-                      {t('Upload Receipt (Image or PDF)')}
-                    </p>
-                    <p className="text-[11px] text-[var(--muted)] mt-0.5">
-                      {t('Screenshot of Telebirr, CBE Birr, Awash, or bank deposit slip')}
-                    </p>
-                    <div className="mt-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface border border-[var(--border)] text-[10.5px] font-semibold text-[var(--muted)]">
-                      <i className="ph ph-image text-[13px] text-[var(--accent)]"></i>
-                      <span>PNG, JPG, WEBP, PDF</span>
+                    <div className="p-2.5 rounded-xl bg-[var(--accent-soft)]/20 border border-[var(--accent)]/30 text-[11px] text-[var(--text)] leading-relaxed">
+                      {paymentMethod === 'cbebirr' ? (
+                        <span>
+                          💡 {language === 'am'
+                            ? 'ሙሉውን የCBE ደረሰኝ ሊንክ (https://mbreciept.cbe.com.et/...) ወይም ኮዱን ብቻ (ለምሳሌ v2-hfHCxNHQzq8MIgKx3LKC) እዚህ መለጠፍ ይችላሉ። በ links.et በቅጽበት ይረጋገጣል!'
+                            : 'Tip: You can paste the full CBE receipt link (https://mbreciept.cbe.com.et/...) or just the code (e.g. v2-hfHCxNHQzq8MIgKx3LKC) for instant verification via links.et!'}
+                        </span>
+                      ) : (
+                        <span>
+                          💡 {language === 'am'
+                            ? 'የተላከውን የማረጋገጫ ኮድ ወይም የደረሰኝ ሊንክ ያስገቡ። በ links.et በኩል በቅጽበት ይረጋገጣል።'
+                            : 'Enter the confirmation code or digital receipt URL for instant verification via links.et.'}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3 rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)]/25 flex items-center justify-between gap-3 animate-fade-in">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {receiptPreview === 'pdf' ? (
-                        <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 flex items-center justify-center shrink-0">
-                          <i className="ph ph-file-pdf text-2xl"></i>
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-[var(--border)] shrink-0 bg-surface shadow-sm">
-                          <img src={receiptPreview || ''} alt="Receipt preview" className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-[12.5px] font-bold text-[var(--text)] truncate">{receiptFile.name}</p>
-                        <p className="text-[10.5px] text-[var(--muted)] font-mono">
-                          {(receiptFile.size / 1024).toFixed(1)} KB · {receiptPreview === 'pdf' ? t('PDF Document') : t('Receipt Image')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
+                  <div className="space-y-2 animate-fade-in">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+                      className="hidden"
+                      onChange={handleReceiptFileChange}
+                    />
+
+                    {!receiptFile ? (
+                      <div
                         onClick={() => fileInputRef.current?.click()}
-                        className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-[var(--border)] bg-surface text-[var(--text)] hover:border-[var(--accent)] transition-colors cursor-pointer"
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) processReceiptFile(file);
+                        }}
+                        className="border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] rounded-2xl p-4 text-center cursor-pointer transition-all bg-surface/50 hover:bg-[var(--accent-soft)]/20 group"
                       >
-                        {t('Change')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleRemoveReceipt}
-                        className="w-7 h-7 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-colors cursor-pointer"
-                        title={t('Remove File')}
-                      >
-                        <i className="ph ph-trash text-sm"></i>
-                      </button>
-                    </div>
+                        <div className="w-10 h-10 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform shadow-sm">
+                          <i className="ph ph-file-arrow-up text-xl"></i>
+                        </div>
+                        <p className="text-[13px] font-bold text-[var(--text)]">
+                          {t('Upload Receipt (Image or PDF)')}
+                        </p>
+                        <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                          {t('Screenshot of Telebirr, CBE Birr, Awash, or bank deposit slip')}
+                        </p>
+                        <div className="mt-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface border border-[var(--border)] text-[10.5px] font-semibold text-[var(--muted)]">
+                          <i className="ph ph-image text-[13px] text-[var(--accent)]"></i>
+                          <span>PNG, JPG, WEBP, PDF</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)]/25 flex items-center justify-between gap-3 animate-fade-in">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {receiptPreview === 'pdf' ? (
+                            <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 flex items-center justify-center shrink-0">
+                              <i className="ph ph-file-pdf text-2xl"></i>
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl overflow-hidden border border-[var(--border)] shrink-0 bg-surface shadow-sm">
+                              <img src={receiptPreview || ''} alt="Receipt preview" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-[12.5px] font-bold text-[var(--text)] truncate">{receiptFile.name}</p>
+                            <p className="text-[10.5px] text-[var(--muted)] font-mono">
+                              {(receiptFile.size / 1024).toFixed(1)} KB · {receiptPreview === 'pdf' ? t('PDF Document') : t('Receipt Image')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-[var(--border)] bg-surface text-[var(--text)] hover:border-[var(--accent)] transition-colors cursor-pointer"
+                          >
+                            {t('Change')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemoveReceipt}
+                            className="w-7 h-7 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-colors cursor-pointer"
+                            title={t('Remove File')}
+                          >
+                            <i className="ph ph-trash text-sm"></i>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -514,8 +593,8 @@ export default function PaymentModal({
                   {paymentMethod === 'cash'
                     ? `${t('Place Cash Order')} (${birr} ${totalAmountEtb})`
                     : paymentMethod === 'card'
-                      ? `${t('Proceed to Chapa Payment')} (${birr} ${totalAmountEtb})`
-                      : `${t('Submit Transfer for Approval')} (${birr} ${totalAmountEtb})`}
+                      ? `${language === 'am' ? 'ክፍያ ፈፅመው ይዘዙ (ኦንላይን)' : 'Pay to Order (Online Card/Bank)'} (${birr} ${totalAmountEtb})`
+                      : `${language === 'am' ? 'ክፍያ ፈፅመው ይዘዙ (አረጋግጥ)' : 'Pay to Order (Verify Transfer)'} (${birr} ${totalAmountEtb})`}
                 </span>
                 <span className="material-symbols-outlined text-base">east</span>
               </>

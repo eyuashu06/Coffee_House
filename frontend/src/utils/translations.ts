@@ -379,6 +379,7 @@ export const translations: Record<string, string> = {
   'Try Again': 'እንደገና ሞክር',
   'Subtotal': 'ጠቅላላ ድምር',
   'Pay with Chapa': 'በቻፓ ይክፈሉ',
+  'Pay to Order': 'ክፍያ ፈፅመው ይዘዙ',
   'Processing Order...': 'ትዕዛዝዎ በመካሄድ ላይ ነው...',
   'Failed to place order.': 'ትዕዛዙን መላክ አልተቻለም።',
   'Network error. Please check your connection and try again.':

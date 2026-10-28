@@ -445,180 +445,188 @@ export default function CartDrawer({
                 </div>
               ))
             )}
+
+            {/* In-drawer Checkout Options: Contact info & Delivery options */}
+            {cartItems.length > 0 && !orderSuccess && (
+              <div className="pt-2 space-y-3.5 border-t border-[var(--border)]">
+                {/* Contact Information & Phone Verification */}
+                {!user ? (
+                  <div className="p-3.5 rounded-xl bg-surface border border-[var(--border)] space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-sm text-[var(--accent)]">phone_iphone</span>
+                        {t('Contact & Phone Verification')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMode('LOGIN');
+                          setIsAuthRequiredOpen(true);
+                        }}
+                        className="text-[11px] text-[var(--accent)] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-xs">login</span>
+                        <span>{t('Sign in to use saved details')}</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10.5px] font-semibold text-[var(--text)] mb-1">
+                          {t('Phone Number')} <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="tel"
+                          value={guestPhone}
+                          onChange={(e) => {
+                            setGuestPhone(e.target.value);
+                            if (phoneError) setPhoneError(null);
+                          }}
+                          placeholder="0911 234 567"
+                          className={`w-full px-3 py-2 rounded-xl bg-surface-2 border text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:outline-none transition-colors ${
+                            phoneError ? 'border-red-500 focus:border-red-500' : 'border-[var(--border)] focus:border-[var(--accent)]'
+                          }`}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10.5px] font-semibold text-[var(--text)] mb-1">
+                          {t('Your Name (Optional)')}
+                        </label>
+                        <input
+                          type="text"
+                          value={guestName}
+                          onChange={(e) => setGuestName(e.target.value)}
+                          placeholder={t('e.g. Abebe')}
+                          className="w-full px-3 py-2 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {phoneError && (
+                      <p className="text-[11px] text-red-400 font-medium flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs">error</span>
+                        {phoneError}
+                      </p>
+                    )}
+                    <p className="text-[10px] text-[var(--muted)] leading-tight">
+                      {t('We will contact this number for delivery and order updates. No account required.')}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-[var(--accent-soft)]/20 border border-[var(--accent)]/30 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-[var(--text)] min-w-0">
+                      <span className="material-symbols-outlined text-base text-[var(--accent)] shrink-0">verified_user</span>
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">
+                          {user.first_name || user.username} {user.phone ? `· ${user.phone}` : ''}
+                        </p>
+                        <p className="text-[10px] text-[var(--muted)]">{t('Using your saved account details')}</p>
+                      </div>
+                    </div>
+                    {!user.phone && (
+                      <div className="shrink-0 w-32">
+                        <input
+                          type="tel"
+                          value={guestPhone}
+                          onChange={(e) => {
+                            setGuestPhone(e.target.value);
+                            if (phoneError) setPhoneError(null);
+                          }}
+                          placeholder="0911..."
+                          className="w-full px-2 py-1 rounded-lg bg-surface border border-[var(--border)] text-xs text-[var(--text)]"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Fulfillment: delivery, pickup at the counter, or a table */}
+                <div className="space-y-2">
+                  <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold">
+                    {t('How would you like it?')}
+                  </span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { value: 'DELIVERY', label: t('Delivery'), icon: 'delivery_dining' },
+                      { value: 'PICKUP', label: t('Store Pickup'), icon: 'storefront' },
+                      { value: 'DINE_IN', label: t('Dine-In / Reserved Table'), icon: 'table_restaurant' },
+                    ] as { value: OrderType; label: string; icon: string }[]).map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setOrderType(option.value)}
+                        aria-pressed={orderType === option.value}
+                        className={`flex flex-col items-center gap-1 py-2 px-1.5 rounded-xl border text-[11px] font-semibold transition-all cursor-pointer ${
+                          orderType === option.value
+                            ? 'bg-[var(--accent)] text-[var(--accent-contrast)] border-[var(--accent)] shadow-sm'
+                            : 'bg-surface text-[var(--muted)] border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-base">{option.icon}</span>
+                        <span>{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {orderType === 'DELIVERY' && (
+                  <div className="p-3 rounded-xl bg-surface border border-[var(--border)] space-y-2.5 animate-fade-in">
+                    <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold">
+                      {t('Delivery zone')}
+                    </label>
+                    <select
+                      value={deliveryZoneId}
+                      onChange={(e) => setDeliveryZoneId(e.target.value ? Number(e.target.value) : '')}
+                      className="w-full px-3 py-2 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-xs focus:border-[var(--accent)] focus:outline-none"
+                    >
+                      <option value="">{t('Choose your zone...')}</option>
+                      {zones.map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {zone.name} — {birr} {Number(zone.delivery_fee_etb).toFixed(2)}
+                        </option>
+                      ))}
+                    </select>
+
+                    <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold mt-2">
+                      {t('Delivery address')}
+                    </label>
+                    <textarea
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      rows={2}
+                      placeholder={t('House, street, landmark...')}
+                      className="w-full px-3 py-2 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none resize-none"
+                    />
+                    {missingFulfillmentMessage && (
+                      <p className="text-[11px] text-amber-500 dark:text-amber-400 leading-relaxed font-medium">
+                        {missingFulfillmentMessage}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {orderType === 'DINE_IN' && (
+                  <div className="p-3 rounded-xl bg-surface border border-[var(--border)] space-y-2 animate-fade-in">
+                    <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold">
+                      {t('Table number or reservation code')}
+                    </label>
+                    <input
+                      type="text"
+                      value={tableNumber}
+                      onChange={(e) => setTableNumber(e.target.value)}
+                      placeholder={t('Table number or reservation code')}
+                      className="w-full px-3 py-2 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Footer Checkout */}
+          {/* Sticky Bottom Checkout Footer: Total & Pay to Order Button */}
           {cartItems.length > 0 && !orderSuccess && (
-            <div className="p-5 bg-surface-2 border-t border-[var(--border)] space-y-4">
-              {/* Contact Information & Phone Verification */}
-              {!user ? (
-                <div className="p-3.5 rounded-xl bg-surface-2 border border-[var(--border)] space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-sm text-[var(--accent)]">phone_iphone</span>
-                      {t('Contact & Phone Verification')}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthMode('LOGIN');
-                        setIsAuthRequiredOpen(true);
-                      }}
-                      className="text-[11px] text-[var(--accent)] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-xs">login</span>
-                      <span>{t('Sign in to use saved details')}</span>
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10.5px] font-semibold text-[var(--text)] mb-1">
-                        {t('Phone Number')} <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={guestPhone}
-                        onChange={(e) => {
-                          setGuestPhone(e.target.value);
-                          if (phoneError) setPhoneError(null);
-                        }}
-                        placeholder="0911 234 567"
-                        className={`w-full px-3 py-2 rounded-xl bg-surface border text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:outline-none transition-colors ${
-                          phoneError ? 'border-red-500 focus:border-red-500' : 'border-[var(--border)] focus:border-[var(--accent)]'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10.5px] font-semibold text-[var(--text)] mb-1">
-                        {t('Your Name (Optional)')}
-                      </label>
-                      <input
-                        type="text"
-                        value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
-                        placeholder={t('e.g. Abebe')}
-                        className="w-full px-3 py-2 rounded-xl bg-surface border border-[var(--border)] text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  {phoneError && (
-                    <p className="text-[11px] text-red-400 font-medium flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs">error</span>
-                      {phoneError}
-                    </p>
-                  )}
-                  <p className="text-[10px] text-[var(--muted)] leading-tight">
-                    {t('We will contact this number for delivery and order updates. No account required.')}
-                  </p>
-                </div>
-              ) : (
-                <div className="p-2.5 rounded-xl bg-[var(--accent-soft)]/20 border border-[var(--accent)]/30 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 text-[var(--text)] min-w-0">
-                    <span className="material-symbols-outlined text-base text-[var(--accent)] shrink-0">verified_user</span>
-                    <div className="min-w-0">
-                      <p className="font-semibold truncate">
-                        {user.first_name || user.username} {user.phone ? `· ${user.phone}` : ''}
-                      </p>
-                      <p className="text-[10px] text-[var(--muted)]">{t('Using your saved account details')}</p>
-                    </div>
-                  </div>
-                  {!user.phone && (
-                    <div className="shrink-0 w-32">
-                      <input
-                        type="tel"
-                        value={guestPhone}
-                        onChange={(e) => {
-                          setGuestPhone(e.target.value);
-                          if (phoneError) setPhoneError(null);
-                        }}
-                        placeholder="0911..."
-                        className="w-full px-2 py-1 rounded-lg bg-surface border border-[var(--border)] text-xs text-[var(--text)]"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Fulfillment: delivery, pickup at the counter, or a table */}
-              <div className="space-y-2">
-                <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold">
-                  {t('How would you like it?')}
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  {([
-                    { value: 'DELIVERY', label: t('Delivery'), icon: 'delivery_dining' },
-                    { value: 'PICKUP', label: t('Store Pickup'), icon: 'storefront' },
-                    { value: 'DINE_IN', label: t('Dine-In / Reserved Table'), icon: 'table_restaurant' },
-                  ] as { value: OrderType; label: string; icon: string }[]).map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setOrderType(option.value)}
-                      aria-pressed={orderType === option.value}
-                      className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border text-[11px] font-semibold transition-all ${
-                        orderType === option.value
-                          ? 'bg-[var(--accent)] text-[var(--accent-contrast)] border-[var(--accent)]'
-                          : ' bg-surface-2 text-[var(--muted)] border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-base">{option.icon}</span>
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {orderType === 'DELIVERY' && (
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold">
-                    {t('Delivery zone')}
-                  </label>
-                  <select
-                    value={deliveryZoneId}
-                    onChange={(e) => setDeliveryZoneId(e.target.value ? Number(e.target.value) : '')}
-                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:border-[var(--accent)] focus:outline-none"
-                  >
-                    <option value="">{t('Choose your zone...')}</option>
-                    {zones.map((zone) => (
-                      <option key={zone.id} value={zone.id}>
-                        {zone.name} — {birr} {Number(zone.delivery_fee_etb).toFixed(2)}
-                      </option>
-                    ))}
-                  </select>
-                  <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold mt-2">
-                    {t('Delivery address')}
-                  </label>
-                  <textarea
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    rows={2}
-                    placeholder={t('House, street, landmark...')}
-                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none resize-none"
-                  />
-                  {missingFulfillmentMessage && (
-                    <p className="text-[11px] text-[var(--gold)] leading-relaxed">{missingFulfillmentMessage}</p>
-                  )}
-                </div>
-              )}
-
-              {orderType === 'DINE_IN' && (
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold">
-                    {t('Table number or reservation code')}
-                  </label>
-                  <input
-                    type="text"
-                    value={tableNumber}
-                    onChange={(e) => setTableNumber(e.target.value)}
-                    placeholder={t('Table number or reservation code')}
-                    className="w-full px-3 py-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-1.5 text-sm">
+            <div className="p-4 sm:p-5 bg-surface-2/95 backdrop-blur-md border-t border-[var(--border)] shrink-0 space-y-3 shadow-[0_-8px_20px_rgba(0,0,0,0.15)] z-20">
+              <div className="space-y-1 text-xs">
                 <div className="flex items-center justify-between text-[var(--muted)]">
                   <span>{t('Subtotal')}:</span>
                   <span>{birr} {totalAmount.toFixed(2)}</span>
@@ -629,18 +637,18 @@ export default function CartDrawer({
                     <span>{birr} {deliveryFee.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between text-base font-bold">
+                <div className="flex items-center justify-between text-sm font-bold pt-1 border-t border-[var(--border)]/50">
                   <span className="text-[var(--text)]">{t('Total')}:</span>
-                  <span className="text-[var(--accent)] text-xl font-display">{birr} {orderTotal.toFixed(2)}</span>
+                  <span className="text-[var(--accent)] text-lg font-display">{birr} {orderTotal.toFixed(2)}</span>
                 </div>
               </div>
 
               <button
                 onClick={handleCheckoutClick}
                 disabled={isSubmitting || isClosedStore || !fulfillmentReady}
-                className="w-full py-3.5 px-6 rounded-full bg-[var(--accent)] hover:brightness-110 text-[var(--accent-contrast)] font-bold text-sm uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 px-6 rounded-full bg-[var(--accent)] hover:brightness-110 text-[var(--accent-contrast)] font-bold text-sm uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                <span>{isSubmitting ? t('Processing Order...') : t('Pay with Chapa')}</span>
+                <span>{isSubmitting ? t('Processing Order...') : (language === 'am' ? 'ክፍያ ፈፅመው ይዘዙ' : t('Pay to Order'))}</span>
                 <span className="material-symbols-outlined text-base">east</span>
               </button>
             </div>

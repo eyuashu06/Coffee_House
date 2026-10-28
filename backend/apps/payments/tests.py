@@ -1,6 +1,7 @@
 import json
 from decimal import Decimal
 from unittest import mock
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -707,6 +708,32 @@ class ManualPaymentAndApprovalTests(TestCase):
         payment = self.order.payments.first()
         self.assertEqual(payment.status, 'PENDING')
         self.assertEqual(payment.transaction_reference, 'CBE-FT-88990011')
+
+    @patch('apps.payments.views.verify_receipt')
+    def test_cbe_bare_transaction_code_is_verified_via_links_et(self, mock_verify):
+        self.client.force_authenticate(self.customer)
+        mock_verify.return_value = {
+            'ok': True,
+            'verified': True,
+            'provider': 'Commercial Bank of Ethiopia (CBE)',
+            'provider_key': 'cbe',
+            'amount_etb': '400.00',
+            'reference': 'FT263003P3GC',
+            'message': 'Verified at Commercial Bank of Ethiopia (CBE)',
+        }
+        res = self.client.post('/api/v1/payments/initialize/', {
+            'order_id': self.order.id,
+            'payment_method': 'cbebirr',
+            'phone_number': '+251911998877',
+            'transaction_reference': 'v2-hfHCxNHQzq8MIgKx3LKC',
+        })
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data.get('verified'))
+        mock_verify.assert_called_once()
+        called_arg = mock_verify.call_args[0][0]
+        self.assertEqual(called_arg, 'v2-hfHCxNHQzq8MIgKx3LKC')
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'PLACED')
 
     def test_manager_can_approve_payment_and_advance_order_to_placed(self):
         """Manager verifies account and approves payment, order moves to PLACED for chef."""
