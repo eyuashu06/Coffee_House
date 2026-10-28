@@ -40,7 +40,7 @@ def issue_tokens_for_user(user):
 
 def auth_cookie_kwargs():
     """Flags shared by every cookie this module sets."""
-    is_secure = bool(getattr(settings, 'COOKIE_SECURE', getattr(settings, 'SECURE_SSL', False)))
+    is_secure = bool(getattr(settings, 'SECURE_SSL', False) or getattr(settings, 'COOKIE_SECURE', False))
     samesite = 'None' if is_secure else 'Lax'
     return {
         'httponly': True,
@@ -361,3 +361,40 @@ class NotificationViewSet(viewsets.ModelViewSet):
         notification.is_read = True
         notification.save(update_fields=['is_read'])
         return Response({'status': 'ok'})
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PhoneLoginView(APIView):
+    """
+    Seamless phone login for customers.
+    Accepts phone number (and optional name). Creates or retrieves the customer
+    and logs them in with JWT cookies immediately. No email or password needed.
+    """
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'auth_login'
+
+    def post(self, request):
+        phone = (request.data.get('phone') or request.data.get('phone_number') or '').strip()
+        name = (request.data.get('name') or request.data.get('contact_name') or '').strip()
+        if not phone:
+            return Response({'error': 'Phone number is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from .services import get_or_create_customer_by_phone
+        user, created = get_or_create_customer_by_phone(phone, name=name)
+        if not user:
+            return Response({'error': 'Invalid phone number format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        refresh, access = issue_tokens_for_user(user)
+        res = Response({
+            'user': UserSerializer(user).data,
+            'tokens': {
+                'access': str(access),
+                'refresh': str(refresh),
+            },
+            'message': 'Signed in successfully.',
+            'is_new_user': created,
+        }, status=status.HTTP_200_OK)
+        return set_auth_cookies(res, refresh, access)
+

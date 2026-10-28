@@ -203,40 +203,61 @@ export default function NotificationsDropdown() {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-x-3 top-16 sm:inset-auto sm:absolute sm:right-0 sm:top-auto sm:mt-2 w-auto sm:w-96 max-h-[75vh] sm:max-h-[480px] overflow-y-auto bg-surface-2 border border-[var(--border)] rounded-[20px] shadow-2xl py-2 z-[100] animate-fade-in backdrop-blur-md">
-          {/* Header */}
-          <div className="px-4 py-2.5 border-b border-[var(--border)] flex justify-between items-center sticky top-0 bg-surface-2/95 backdrop-blur-sm z-10">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-[var(--text)] text-sm">{t('Notifications')}</span>
+        <>
+          {/* Mobile backdrop for easy dismissal */}
+          <div
+            className="fixed inset-0 bg-black/60 z-[9998] sm:hidden"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(false);
+            }}
+          />
+          <div className="fixed inset-x-2.5 top-16 sm:inset-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-96 max-h-[80vh] sm:max-h-[480px] overflow-y-auto bg-surface-2 border border-[var(--border)] rounded-2xl shadow-2xl py-2 z-[9999] animate-fade-in backdrop-blur-xl">
+            {/* Header */}
+            <div className="px-4 py-2.5 border-b border-[var(--border)] flex justify-between items-center sticky top-0 bg-surface-2/95 backdrop-blur-sm z-10">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[var(--text)] text-sm">{t('Notifications')}</span>
+                {unreadCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-500 border border-red-500/30 text-[10px] font-bold">
+                    {unreadCount} {t('unread')}
+                  </span>
+                )}
+              </div>
               {unreadCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-500 border border-red-500/30 text-[10px] font-bold">
-                  {unreadCount} {t('unread')}
-                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markAllAsRead();
+                  }}
+                  className="text-xs text-[var(--accent)] hover:underline font-semibold cursor-pointer"
+                >
+                  {t('Mark all read')}
+                </button>
               )}
             </div>
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  markAllAsRead();
-                }}
-                className="text-xs text-[var(--accent)] hover:underline font-semibold cursor-pointer"
-              >
-                {t('Mark all read')}
-              </button>
-            )}
-          </div>
 
-          <div className="flex flex-col divide-y divide-[var(--border)]">
-            {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center space-y-2">
-                <div className="w-10 h-10 rounded-full bg-surface border border-[var(--border)] flex items-center justify-center mx-auto text-[var(--muted)]">
-                  <i className="ph ph-bell-slash text-xl"></i>
+            <div className="flex flex-col divide-y divide-[var(--border)]">
+              {!user ? (
+                <div className="px-4 py-8 text-center space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-surface border border-[var(--border)] flex items-center justify-center mx-auto text-[var(--accent)]">
+                    <i className="ph ph-bell text-xl"></i>
+                  </div>
+                  <p className="text-[var(--text)] text-xs font-bold">{language === 'am' ? 'ማሳወቂያዎች' : 'Live Notifications'}</p>
+                  <p className="text-[var(--muted)] text-[11px] leading-relaxed max-w-[250px] mx-auto">
+                    {language === 'am'
+                      ? 'ትዕዛዝ ሲያዙ ወይም በስልክ ቁጥርዎ ሲገቡ የቀጥታ የሂደት ማሳወቂያዎች እዚህ ይደርሳሉ።'
+                      : 'Live order tracking and updates will appear here once you place an order.'}
+                  </p>
                 </div>
-                <p className="text-[var(--muted)] text-xs">{t('No notifications yet')}.</p>
-              </div>
-            ) : (
+              ) : notifications.length === 0 ? (
+                <div className="px-4 py-8 text-center space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-surface border border-[var(--border)] flex items-center justify-center mx-auto text-[var(--muted)]">
+                    <i className="ph ph-bell-slash text-xl"></i>
+                  </div>
+                  <p className="text-[var(--muted)] text-xs">{t('No notifications yet')}.</p>
+                </div>
+              ) : (
               notifications.map((notification) => {
                 const target = resolveNotificationTarget(notification, user?.role);
                 const orderCode = (`${notification.title} ${notification.message}`).match(/ORD-[\w-]+/i)?.[0];
@@ -326,7 +347,8 @@ export default function NotificationsDropdown() {
             )}
           </div>
         </div>
-      )}
-    </div>
-  );
+      </>
+    )}
+  </div>
+);
 }

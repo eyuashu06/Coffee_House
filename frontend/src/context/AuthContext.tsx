@@ -16,10 +16,12 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
+  setUser: (user: User | null) => void;
   loading: boolean;
   /** True once the server told us the session is no longer valid. */
   sessionExpired: boolean;
   login: (usernameOrEmail: string, password: string) => Promise<void>;
+  phoneLogin: (phone: string, name?: string) => Promise<User>;
   /** Call this when any API call answers 401 so polling can stop. */
   reportUnauthorized: () => void;
   register: (data: {
@@ -136,6 +138,24 @@ function formatAuthError(data: any, fallback: string): string {
     setUser(data.user);
   };
 
+  const phoneLogin = async (phone: string, name?: string): Promise<User> => {
+    const res = await fetch('/api/v1/auth/phone-login/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone, name }),
+    });
+
+    const data = await parseResponseData(res);
+    if (!res.ok) {
+      throw new Error(formatAuthError(data, 'Phone sign-in failed. Please check your phone number.'));
+    }
+
+    setSessionExpired(false);
+    setUser(data.user);
+    return data.user;
+  };
+
   const register = async (reqData: {
     username: string;
     email: string;
@@ -180,7 +200,18 @@ function formatAuthError(data: any, fallback: string): string {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, sessionExpired, reportUnauthorized, login, register, logout, checkAuth }}
+      value={{
+        user,
+        setUser,
+        loading,
+        sessionExpired,
+        reportUnauthorized,
+        login,
+        phoneLogin,
+        register,
+        logout,
+        checkAuth,
+      }}
     >
       {children}
     </AuthContext.Provider>

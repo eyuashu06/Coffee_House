@@ -39,15 +39,19 @@ export default function AuthModal({
   onSuccessCallback,
   postLoginRedirect = null,
 }: AuthModalProps) {
-  const { login, register } = useAuth();
+  const { login, phoneLogin, register } = useAuth();
   const { t, language } = useLanguage();
   const router = useRouter();
-  const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD'>(initialMode);
+  const [mode, setMode] = useState<'CUSTOMER_PHONE' | 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD'>(
+    initialMode === 'REGISTER' ? 'REGISTER' : 'CUSTOMER_PHONE'
+  );
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Form states
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -62,6 +66,18 @@ export default function AuthModal({
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
+  React.useEffect(() => {
+    if (isOpen) {
+      if (initialMode === 'REGISTER') {
+        setMode('REGISTER');
+      } else {
+        setMode('CUSTOMER_PHONE');
+      }
+      setError(null);
+      setSuccess(null);
+    }
+  }, [isOpen, initialMode]);
 
   if (!isOpen) return null;
 
@@ -99,6 +115,14 @@ export default function AuthModal({
     setError(null);
     setSuccess(null);
 
+    if (mode === 'CUSTOMER_PHONE') {
+      const cleanDigits = customerPhone.replace(/[\s\-\(\)\+]/g, '');
+      if (!cleanDigits || cleanDigits.length < 9) {
+        setError(language === 'am' ? 'እባክዎ ትክክለኛ ስልክ ቁጥር (ቢያንስ 9 አሃዝ) ያስገቡ።' : 'Please enter a valid phone number (at least 9 digits).');
+        return;
+      }
+    }
+
     if (mode === 'REGISTER') {
       const emailError = validateSignupEmail(email);
       if (emailError) {
@@ -118,7 +142,19 @@ export default function AuthModal({
     setIsSubmitting(true);
 
     try {
-      if (mode === 'LOGIN') {
+      if (mode === 'CUSTOMER_PHONE') {
+        const formattedPhone = formatPhone(customerPhone);
+        await phoneLogin(formattedPhone, customerName.trim() || undefined);
+        setSuccess(language === 'am' ? 'እንኳን ደህና መጡ! በተሳካ ሁኔታ ገብተዋል።' : 'Welcome! Signed in successfully.');
+        setTimeout(() => {
+          onClose();
+          if (postLoginRedirect) {
+            router.push(postLoginRedirect);
+          } else if (onSuccessCallback) {
+            onSuccessCallback();
+          }
+        }, 400);
+      } else if (mode === 'LOGIN') {
         await login(usernameOrEmail, password);
         setSuccess(t('Logged in successfully!'));
         setTimeout(() => {
@@ -247,10 +283,22 @@ export default function AuthModal({
         <div className="flex items-center justify-between pb-3.5 border-b border-[var(--border)]">
           <div className="flex items-center gap-2.5">
             <span className="material-symbols-outlined text-[var(--accent)] text-2xl">
-              {mode === 'LOGIN' ? 'login' : mode === 'REGISTER' ? 'person_add' : 'lock_reset'}
+              {mode === 'CUSTOMER_PHONE'
+                ? 'phone_iphone'
+                : mode === 'LOGIN'
+                ? 'badge'
+                : mode === 'REGISTER'
+                ? 'person_add'
+                : 'lock_reset'}
             </span>
             <h3 className="font-display text-lg sm:text-xl font-bold text-[var(--accent)]">
-              {mode === 'LOGIN' ? t('Welcome Back') : mode === 'REGISTER' ? t('Join Artisanal Reserve') : t('Reset Password')}
+              {mode === 'CUSTOMER_PHONE'
+                ? (language === 'am' ? 'የደንበኛ መግቢያ' : 'Customer Sign In')
+                : mode === 'LOGIN'
+                ? (language === 'am' ? 'የሰራተኞች መግቢያ' : 'Staff & Admin Login')
+                : mode === 'REGISTER'
+                ? t('Join Artisanal Reserve')
+                : t('Reset Password')}
             </h3>
           </div>
           <button
@@ -260,6 +308,36 @@ export default function AuthModal({
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
+
+        {/* Tab Switcher for Customer vs Staff */}
+        {(mode === 'CUSTOMER_PHONE' || mode === 'LOGIN') && (
+          <div className="grid grid-cols-2 p-1 bg-surface-2 rounded-xl border border-[var(--border)] mt-3.5">
+            <button
+              type="button"
+              onClick={() => { setError(null); setSuccess(null); setMode('CUSTOMER_PHONE'); }}
+              className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                mode === 'CUSTOMER_PHONE'
+                  ? 'bg-[var(--accent)] text-[var(--accent-contrast)] shadow-sm'
+                  : 'text-[var(--muted)] hover:text-[var(--text)]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">phone_iphone</span>
+              <span>{language === 'am' ? 'ደንበኛ (በስልክ)' : 'Customer (Phone)'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setError(null); setSuccess(null); setMode('LOGIN'); }}
+              className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                mode === 'LOGIN'
+                  ? 'bg-[var(--accent)] text-[var(--accent-contrast)] shadow-sm'
+                  : 'text-[var(--muted)] hover:text-[var(--text)]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">badge</span>
+              <span>{language === 'am' ? 'ሰራተኛ / አስተዳዳሪ' : 'Staff / Manager'}</span>
+            </button>
+          </div>
+        )}
 
         {/* Prompt Message Banner (e.g. for Order Checkout requirement) */}
         {promptMessage && (
@@ -286,6 +364,39 @@ export default function AuthModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
+          {mode === 'CUSTOMER_PHONE' && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
+                  {t('Phone Number')}
+                </label>
+                <EthiopianPhoneInput
+                  value={customerPhone}
+                  onChange={(val) => setCustomerPhone(val)}
+                  inputClassName="py-2.5"
+                />
+                <p className="text-[11px] text-[var(--muted)] mt-1.5 leading-relaxed">
+                  {language === 'am'
+                    ? 'በስልክ ቁጥርዎ ብቻ በቀላሉ ይግቡ። የይለፍ ቃል አያስፈልግም፤ ትዕዛዞችዎ እና መረጃዎ በራስ-ሰር ይቀመጣሉ።'
+                    : 'Sign in effortlessly using your phone number. No password needed; your past orders and preferences are preserved.'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
+                  {language === 'am' ? 'ሙሉ ስም (አማራጭ)' : 'Full Name (Optional)'}
+                </label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder={language === 'am' ? 'ለምሳሌ አበበ ካሳ' : 'e.g. Abebe Kassa'}
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[var(--accent)] transition-colors"
+                />
+              </div>
+            </>
+          )}
+
           {mode === 'LOGIN' && (
             <>
               <div>
@@ -560,8 +671,10 @@ export default function AuthModal({
             ) : (
               <>
                 <span>
-                  {mode === 'LOGIN'
-                    ? t('Sign In')
+                  {mode === 'CUSTOMER_PHONE'
+                    ? (language === 'am' ? 'ይግቡ / ይቀጥሉ' : 'Continue / Sign In')
+                    : mode === 'LOGIN'
+                    ? (language === 'am' ? 'የሰራተኛ መግቢያ' : 'Staff Sign In')
                     : mode === 'REGISTER'
                     ? t('Create Account')
                     : forgotStep === 'EMAIL'
@@ -607,26 +720,36 @@ export default function AuthModal({
 
         {/* Mode Footer Switch */}
         <div className="mt-5 pt-3.5 border-t border-[var(--border)] text-center text-xs text-[var(--muted)]">
-          {mode === 'LOGIN' ? (
+          {mode === 'REGISTER' ? (
             <p>
-              {t("Don't have an account? Sign Up")}{' '}
+              {language === 'am' ? 'የይለፍ ቃል የሌለው መግቢያ ይፈልጋሉ?' : 'Prefer passwordless sign in?'}{' '}
+              <button
+                type="button"
+                onClick={() => { setError(null); setSuccess(null); setMode('CUSTOMER_PHONE'); }}
+                className="text-[var(--accent)] font-semibold hover:underline ml-1"
+              >
+                {language === 'am' ? 'በስልክ ይግቡ' : 'Sign in with phone'}
+              </button>
+            </p>
+          ) : mode === 'FORGOT_PASSWORD' ? (
+            <p>
+              <button
+                type="button"
+                onClick={() => { setError(null); setSuccess(null); setMode('LOGIN'); setForgotStep('EMAIL'); }}
+                className="text-[var(--accent)] font-semibold hover:underline"
+              >
+                {language === 'am' ? '← ወደ ሰራተኞች መግቢያ ተመለስ' : '← Back to Staff Sign In'}
+              </button>
+            </p>
+          ) : (
+            <p>
+              {language === 'am' ? 'በባህላዊ ኢሜይል እና ይለፍ ቃል መመዝገብ ይፈልጋሉ?' : 'Want an account with email & password?'}{' '}
               <button
                 type="button"
                 onClick={() => { setError(null); setSuccess(null); setMode('REGISTER'); }}
                 className="text-[var(--accent)] font-semibold hover:underline ml-1"
               >
                 {t('Sign Up')}
-              </button>
-            </p>
-          ) : (
-            <p>
-              {t('Already have an account? Sign In')}{' '}
-              <button
-                type="button"
-                onClick={() => { setError(null); setSuccess(null); setMode('LOGIN'); }}
-                className="text-[var(--accent)] font-semibold hover:underline ml-1"
-              >
-                {t('Sign In')}
               </button>
             </p>
           )}

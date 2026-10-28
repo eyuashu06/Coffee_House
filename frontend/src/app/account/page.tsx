@@ -612,7 +612,8 @@ export default function AccountPage() {
 
   const isGuestPaymentReturn = typeof window !== 'undefined' && (
     new URLSearchParams(window.location.search).has('tx_ref') ||
-    new URLSearchParams(window.location.search).has('trx_ref')
+    new URLSearchParams(window.location.search).has('trx_ref') ||
+    new URLSearchParams(window.location.search).has('order')
   );
 
   useEffect(() => {

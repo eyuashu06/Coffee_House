@@ -10,6 +10,7 @@ from .views import (
     PasswordResetRequestView,
     PasswordResetConfirmView,
     NotificationViewSet,
+    PhoneLoginView,
 )
 
 class OptionalSlashRouter(DefaultRouter):
@@ -22,6 +23,8 @@ router.register(r'addresses', AddressViewSet, basename='address')
 router.register(r'auth/notifications', NotificationViewSet, basename='notification')
 
 urlpatterns = [
+    path('auth/phone-login/', PhoneLoginView.as_view(), name='auth-phone-login'),
+    path('auth/phone-login', PhoneLoginView.as_view(), name='auth-phone-login-noslash'),
     path('auth/register/', RegisterView.as_view(), name='auth-register'),
     path('auth/register', RegisterView.as_view(), name='auth-register-noslash'),
     path('auth/login/', LoginView.as_view(), name='auth-login'),

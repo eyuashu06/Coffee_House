@@ -422,3 +422,29 @@ class AuthCookieSecureFlagTests(TestCase):
         res = self.client.post('/api/v1/auth/refresh/')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertFalse(self._has_secure_flag(res, 'access_token'))
+
+
+class PhoneLoginTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_customer_can_sign_in_with_phone_number_only(self):
+        res = self.client.post('/api/v1/auth/phone-login/', {
+            'phone': '0911223344',
+            'name': 'Solomon Desta',
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('access_token', res.cookies)
+        self.assertIn('refresh_token', res.cookies)
+        self.assertEqual(res.data['user']['role'], 'CUSTOMER')
+        self.assertEqual(res.data['user']['first_name'], 'Solomon')
+        self.assertEqual(res.data['user']['last_name'], 'Desta')
+
+        # Returning sign-in with same phone preserves the user
+        res2 = self.client.post('/api/v1/auth/phone-login/', {
+            'phone': '+251911223344',
+        }, format='json')
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        self.assertEqual(res2.data['user']['id'], res.data['user']['id'])
+        self.assertEqual(res2.data['user']['first_name'], 'Solomon')
+

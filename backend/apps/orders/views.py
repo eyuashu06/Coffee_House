@@ -57,7 +57,25 @@ class OrderViewSet(viewsets.ModelViewSet):
                           'Our opening hours are ' + venue.opening_hours},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-        return super().create(request, *args, **kwargs)
+        response = super().create(request, *args, **kwargs)
+        if response.status_code == status.HTTP_201_CREATED and response.data:
+            order_id = response.data.get('id')
+            if order_id:
+                try:
+                    order = Order.objects.select_related('customer').get(pk=order_id)
+                    if order.customer:
+                        from apps.accounts.views import issue_tokens_for_user, set_auth_cookies
+                        from apps.accounts.serializers import UserSerializer
+                        refresh, access = issue_tokens_for_user(order.customer)
+                        response.data['user'] = UserSerializer(order.customer).data
+                        response.data['tokens'] = {
+                            'access': str(access),
+                            'refresh': str(refresh),
+                        }
+                        return set_auth_cookies(response, refresh, access)
+                except Order.DoesNotExist:
+                    pass
+        return response
 
     def get_queryset(self):
         user = self.request.user

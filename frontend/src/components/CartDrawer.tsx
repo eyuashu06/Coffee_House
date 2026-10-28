@@ -75,7 +75,7 @@ export default function CartDrawer({
   onRemoveItem,
   onClearCart,
 }: CartDrawerProps) {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { t, tItem, language } = useLanguage();
   const birr = language === 'am' ? 'ብር' : 'ETB';
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -193,6 +193,9 @@ export default function CartDrawer({
 
       if (res.ok) {
         const orderData = await res.json();
+        if (orderData.user) {
+          setUser(orderData.user);
+        }
         setActiveOrder({
           id: orderData.id,
           orderNumber: orderData.order_number || `ORD-${orderData.id}`,

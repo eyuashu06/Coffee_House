@@ -759,7 +759,7 @@ export default function Home() {
                             </button>
                             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                 <ThemeToggle className="flex h-9 w-9 shrink-0 cursor-pointer" />
-                                {user && <NotificationsDropdown />}
+                                <NotificationsDropdown />
                                 <ProfileDropdown
                                     onOpenSignIn={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
                                     onOpenSignUp={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }}

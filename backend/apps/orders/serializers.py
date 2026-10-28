@@ -222,6 +222,15 @@ class OrderSerializer(serializers.ModelSerializer):
                 )
             if not validated_data.get('contact_phone'):
                 validated_data['contact_phone'] = request.user.phone or '+251911000000'
+        else:
+            # Seamless customer onboarding by phone: save customer profile without forcing password/email
+            phone = (validated_data.get('contact_phone') or '').strip()
+            name = (validated_data.get('contact_name') or '').strip()
+            if phone:
+                from apps.accounts.services import get_or_create_customer_by_phone
+                cust_user, _ = get_or_create_customer_by_phone(phone, name=name)
+                if cust_user:
+                    validated_data['customer'] = cust_user
 
         # Fallback defaults
         if not validated_data.get('contact_name'):
