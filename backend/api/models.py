@@ -114,35 +114,37 @@ from django.contrib.auth import get_user_model
 
 @receiver(post_save, sender=CoffeeItem)
 def create_new_menu_item_notification(sender, instance, created, **kwargs):
-    if created:
-        User = get_user_model()
-        from apps.accounts.models import Notification
-        
-        users = User.objects.filter(role='CUSTOMER')
-        notifications = [
-            Notification(
-                user=user,
-                title="New Item",
-                message=f"{instance.name} is now available"
-            ) for user in users
-        ]
-        if notifications:
-            Notification.objects.bulk_create(notifications)
+    if kwargs.get('raw', False) or not created:
+        return
+    User = get_user_model()
+    from apps.accounts.models import Notification
+    
+    users = User.objects.filter(role='CUSTOMER')
+    notifications = [
+        Notification(
+            user=user,
+            title="New Item",
+            message=f"{instance.name} is now available"
+        ) for user in users
+    ]
+    if notifications:
+        Notification.objects.bulk_create(notifications)
 
 @receiver(post_save, sender=TableReservation)
 def create_table_reservation_notification(sender, instance, created, **kwargs):
-    if created:
-        User = get_user_model()
-        from apps.accounts.models import Notification
-        
-        managers_and_admins = User.objects.filter(role__in=['MANAGER', 'ADMIN'])
-        notifications = [
-            Notification(
-                user=user,
-                title=f"Table: {instance.name}",
-                message=f"{instance.party_size} guests · {instance.date_time.strftime('%b %d, %H:%M')}",
-                link="/manager"
-            ) for user in managers_and_admins
-        ]
-        if notifications:
-            Notification.objects.bulk_create(notifications)
+    if kwargs.get('raw', False) or not created:
+        return
+    User = get_user_model()
+    from apps.accounts.models import Notification
+    
+    managers_and_admins = User.objects.filter(role__in=['MANAGER', 'ADMIN'])
+    notifications = [
+        Notification(
+            user=user,
+            title=f"Table: {instance.name}",
+            message=f"{instance.party_size} guests · {instance.date_time.strftime('%b %d, %H:%M')}",
+            link="/manager"
+        ) for user in managers_and_admins
+    ]
+    if notifications:
+        Notification.objects.bulk_create(notifications)
