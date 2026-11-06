@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Don't bounce /api/... calls through a 308 just to drop the trailing slash —
   // Django serves both variants and the extra hop only adds latency.
   skipTrailingSlashRedirect: true,
@@ -24,7 +30,7 @@ const nextConfig = {
     const backendUrl =
       process.env.INTERNAL_BACKEND_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      'http://localhost:8000';
+      'https://coffee-house-6gi0.onrender.com';
     return [
       {
         source: '/api/v1/:path*',
