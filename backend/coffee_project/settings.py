@@ -39,7 +39,14 @@ def _env_flag(name, default='false'):
 DEBUG = _env_flag('DEBUG', 'true')
 
 #: The site is behind HTTPS end to end.
-IS_PRODUCTION_RENDER = bool(os.environ.get('RENDER') or os.environ.get('RENDER_EXTERNAL_HOSTNAME'))
+IS_PRODUCTION_RENDER = bool(
+    os.environ.get('RENDER')
+    or os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+    or os.environ.get('RENDER_EXTERNAL_URL')
+    or os.environ.get('RENDER_SERVICE_ID')
+    or os.environ.get('RENDER_INSTANCE_ID')
+    or os.environ.get('PORT') == '10000'
+)
 SECURE_SSL = _env_flag('SECURE_SSL')
 
 if SECURE_SSL:
@@ -193,7 +200,20 @@ DEFAULT_NEON_DATABASE_URL = (
 )
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
-if not DATABASE_URL and (IS_PRODUCTION_RENDER or not os.environ.get('MYSQL_HOST')):
+
+# Guarantee Neon PostgreSQL in production (Render) and prevent accidental localhost/MySQL fallbacks:
+# If DATABASE_URL is unset, or has placeholder localhost/MySQL values, or we're on Render without an explicit postgres URL:
+_is_placeholder_or_unreachable_mysql = (
+    not DATABASE_URL
+    or 'localhost' in DATABASE_URL
+    or '127.0.0.1' in DATABASE_URL
+    or 'coffee_user' in DATABASE_URL
+    or DATABASE_URL.startswith('mysql://')
+)
+
+if (IS_PRODUCTION_RENDER or _is_placeholder_or_unreachable_mysql) and not (
+    DATABASE_URL and DATABASE_URL.startswith(('postgres://', 'postgresql://')) and 'localhost' not in DATABASE_URL
+):
     DATABASE_URL = DEFAULT_NEON_DATABASE_URL
 
 use_sqlite_forced = os.environ.get('USE_SQLITE', 'false').lower() == 'true'
@@ -260,8 +280,30 @@ else:
             conn.close()
         except Exception as _e:
             import sys
-            print(f"[settings.py] Warning: Could not connect to MySQL at {_db_host}:{_db_port} ({_e}). Falling back to SQLite.", file=sys.stderr)
-            use_sqlite = True
+            if IS_PRODUCTION_RENDER or DEFAULT_NEON_DATABASE_URL:
+                print(f"[settings.py] Notice: MySQL not reachable at {_db_host}:{_db_port}. Switching to Neon PostgreSQL.", file=sys.stderr)
+                _parsed = urlparse(DEFAULT_NEON_DATABASE_URL)
+                _db_name = _parsed.path.lstrip('/')
+                if '?' in _db_name:
+                    _db_name = _db_name.split('?')[0]
+                DATABASES = {
+                    'default': {
+                        'ENGINE': 'django.db.backends.postgresql',
+                        'NAME': _db_name,
+                        'USER': unquote(_parsed.username or ''),
+                        'PASSWORD': unquote(_parsed.password or ''),
+                        'HOST': _parsed.hostname or '',
+                        'PORT': str(_parsed.port or 5432),
+                        'CONN_MAX_AGE': 0,
+                        'DISABLE_SERVER_SIDE_CURSORS': '-pooler' in (_parsed.hostname or ''),
+                        'OPTIONS': {'sslmode': 'require'},
+                    }
+                }
+                _is_postgres = True
+                use_sqlite = False
+            else:
+                print(f"[settings.py] Warning: Could not connect to MySQL at {_db_host}:{_db_port} ({_e}). Falling back to SQLite.", file=sys.stderr)
+                use_sqlite = True
 
         if use_sqlite:
             data_dir = os.environ.get('DATA_DIR', '').strip()
