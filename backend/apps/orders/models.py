@@ -197,6 +197,8 @@ from apps.accounts.models import Notification, User
 
 @receiver(post_save, sender=OrderStatusHistory)
 def create_order_status_notification(sender, instance, created, **kwargs):
+    if kwargs.get('raw', False):
+        return
     if not created:
         return
 
