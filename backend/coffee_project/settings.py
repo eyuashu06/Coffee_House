@@ -187,7 +187,15 @@ WSGI_APPLICATION = 'coffee_project.wsgi.application'
 # 3. MySQL via DATABASE_URL or individual MYSQL_* environment variables.
 #    In local environments, if MySQL is unreachable or credentials fail (e.g.
 #    Access Denied 1045), it gracefully falls back to SQLite (`db.sqlite3`).
+DEFAULT_NEON_DATABASE_URL = (
+    "postgresql://neondb_owner:npg_kms5rDNTEpA0@"
+    "ep-empty-sunset-bajsngb2-pooler.c-8.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+)
+
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
+if not DATABASE_URL and (IS_PRODUCTION_RENDER or not os.environ.get('MYSQL_HOST')):
+    DATABASE_URL = DEFAULT_NEON_DATABASE_URL
+
 use_sqlite_forced = os.environ.get('USE_SQLITE', 'false').lower() == 'true'
 
 if use_sqlite_forced:
