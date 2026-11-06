@@ -23,7 +23,8 @@ for _env_file in ENV_FILES:
                         _k, _v = _line.split('=', 1)
                         _k, _v = _k.strip(), _v.strip().strip("'\"")
                         if _k not in _loaded_keys:
-                            os.environ[_k] = _v
+                            if _k not in os.environ or not os.environ[_k].strip():
+                                os.environ[_k] = _v
                             _loaded_keys.add(_k)
         except OSError:
             pass
@@ -219,6 +220,8 @@ else:
                     'PASSWORD': unquote(_parsed.password or ''),
                     'HOST': _parsed.hostname or '',
                     'PORT': str(_parsed.port or 5432),
+                    'CONN_MAX_AGE': 0,
+                    'DISABLE_SERVER_SIDE_CURSORS': '-pooler' in (_parsed.hostname or ''),
                     'OPTIONS': _options,
                 }
             }
