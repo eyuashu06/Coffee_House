@@ -128,6 +128,7 @@ function Kicker({ children }: { children: React.ReactNode }) {
 export default function Home() {
     const router = useRouter();
     const { user, loading: authLoading, logout } = useAuth();
+    const isStaff = user?.role === 'ADMIN' || user?.role === 'MANAGER';
     const { t, language, tCategory, tItem, tItemDescription, locale } = useLanguage();
     const { settings: cafeSettings, locations: cafeLocations, primaryLocation } = useCafe();
     const [items, setItems] = useState<MenuItem[]>([]);
@@ -898,6 +899,22 @@ export default function Home() {
                             <div className="mt-7 flex flex-wrap items-center gap-3">
                                 <a href="#menu" className="h-12 px-7 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[15px] sm:text-[16px] font-semibold flex items-center gap-2 hover:brightness-110 transition-all shadow-[var(--shadow)]">{t('View the Menu')} <i className="ph ph-arrow-down text-[15px]"></i></a>
                                 <Link href="/account" className="h-12 px-7 rounded-full border border-[var(--border)] text-[15px] sm:text-[16px] flex items-center hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">{t('Order Buna')}</Link>
+                                {isStaff ? (
+                                    <Link href="/manager" className="h-12 px-6 rounded-full bg-[var(--accent-soft)] border-2 border-[var(--accent)] text-[var(--accent)] font-bold text-[15px] sm:text-[16px] flex items-center gap-2 hover:bg-[var(--accent)] hover:text-[var(--accent-contrast)] transition-all shadow-sm">
+                                        <i className="ph ph-gauge text-[18px]"></i>
+                                        <span>{t('Admin / Manager Dashboard')}</span>
+                                        <i className="ph ph-arrow-right text-[15px]"></i>
+                                    </Link>
+                                ) : !user ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
+                                        className="h-12 px-6 rounded-full border border-[var(--border)] bg-surface text-[15px] sm:text-[16px] font-semibold flex items-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                                    >
+                                        <i className="ph ph-sign-in text-[17px]"></i>
+                                        <span>{t('Sign In / Sign Up')}</span>
+                                    </button>
+                                ) : null}
                             </div>
                             <Link href="/account" className="mt-5 inline-flex items-center gap-1.5 text-[14.5px] text-[var(--muted)] hover:text-[var(--accent)] transition-colors">{t('Track your order')} <i className="ph ph-arrow-right text-[13px]"></i></Link>
                         </div>
@@ -929,10 +946,26 @@ export default function Home() {
                             <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-scroll"></i></span>
                             <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Story')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t("from Kaldi's hills")}</span></span>
                         </a>
-                        <Link href="/account" className="col-span-2 sm:col-span-1 lg:col-span-1 h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
-                            <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-map-pin"></i></span>
-                            <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Track')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('order status')}</span></span>
-                        </Link>
+                        {isStaff ? (
+                            <Link href="/manager" className="col-span-2 sm:col-span-1 lg:col-span-1 h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] flex items-center gap-3 px-4 hover:brightness-110 transition-all font-semibold">
+                                <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-gauge"></i></span>
+                                <span><span className="block text-[14px] sm:text-[15px] font-bold leading-tight">{t('Dashboard')}</span><span className="block text-[12px] sm:text-[12.5px] opacity-80">{t('admin & orders')}</span></span>
+                            </Link>
+                        ) : !user ? (
+                            <button
+                                type="button"
+                                onClick={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
+                                className="col-span-2 sm:col-span-1 lg:col-span-1 h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors text-left cursor-pointer"
+                            >
+                                <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-user-circle"></i></span>
+                                <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Sign In / Join')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('orders & profile')}</span></span>
+                            </button>
+                        ) : (
+                            <Link href="/account" className="col-span-2 sm:col-span-1 lg:col-span-1 h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
+                                <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-map-pin"></i></span>
+                                <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Track')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('order status')}</span></span>
+                            </Link>
+                        )}
                     </div>
                 </section>
 

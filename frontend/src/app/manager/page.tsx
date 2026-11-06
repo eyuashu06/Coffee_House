@@ -178,6 +178,14 @@ interface Analytics {
   monthly_revenue: number;
   daily_orders_count: number;
   monthly_orders_count: number;
+  total_revenue?: number;
+  total_payments_revenue?: number;
+  total_orders_count?: number;
+  total_payments_count?: number;
+  last_30_days_revenue?: number;
+  last_30_days_orders_count?: number;
+  display_monthly_revenue?: number;
+  monthly_series?: { day: string; revenue: number; orders: number }[];
   average_order_value?: number;
   live_orders_count?: number;
   in_kitchen_count?: number;
@@ -187,7 +195,16 @@ interface Analytics {
 }
 
 const EMPTY_ANALYTICS: Analytics = {
-  daily_revenue: 0, monthly_revenue: 0, daily_orders_count: 0, monthly_orders_count: 0,
+  daily_revenue: 0,
+  monthly_revenue: 0,
+  daily_orders_count: 0,
+  monthly_orders_count: 0,
+  total_revenue: 0,
+  total_payments_revenue: 0,
+  total_orders_count: 0,
+  total_payments_count: 0,
+  last_30_days_revenue: 0,
+  last_30_days_orders_count: 0,
 };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -487,9 +504,10 @@ export default function ManagerDashboard() {
 
   // Reports state
   const [reportData, setReportData] = useState<RevenueReport | null>(null);
-  const [reportRange, setReportRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [reportRange, setReportRange] = useState<'7d' | '30d' | '90d' | 'all'>('all');
   const [reportOrderType, setReportOrderType] = useState<string>('ALL');
   const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [dashboardChartPeriod, setDashboardChartPeriod] = useState<'7d' | '30d'>('30d');
 
   const fetchReport = useCallback(async () => {
     setIsLoadingReport(true);
@@ -1494,26 +1512,37 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-surface-2 border border-[var(--border)] p-6 rounded-[18px] relative overflow-hidden">
-                <div className="absolute -right-4 -bottom-4 text-[120px] text-[var(--accent)] opacity-15"><i className="ph ph-trend-up"></i></div>
-                <h3 className="text-[var(--muted)] font-bold text-[13px] uppercase tracking-wider mb-2">{t("Today's Revenue")}</h3>
-                <div className="text-[42px] text-[var(--accent)]">
-                  <MoneyCell value={analytics.daily_revenue} />
+                <div className="absolute -right-4 -bottom-4 text-[120px] text-[var(--accent)] opacity-15"><i className="ph ph-vault"></i></div>
+                <h3 className="text-[var(--muted)] font-bold text-[13px] uppercase tracking-wider mb-2">{t('Total Recorded Revenue')}</h3>
+                <div className="text-[40px] text-[var(--accent)] font-bold leading-none">
+                  <MoneyCell value={analytics.total_revenue || analytics.total_payments_revenue || 0} />
                 </div>
-                <p className="text-[var(--muted)] text-[14.5px] mt-2">
-                  {t('from')} {analytics.daily_orders_count} {t('paid orders')} {t('today')}
+                <p className="text-[var(--muted)] text-[14px] mt-3">
+                  {analytics.total_orders_count ?? 0} {t('paid orders recorded')} · {analytics.total_payments_count ?? 0} {t('settled payments')}
                 </p>
               </div>
 
               <div className="bg-surface-2 border border-[var(--border)] p-6 rounded-[18px] relative overflow-hidden">
                 <div className="absolute -right-4 -bottom-4 text-[120px] text-[var(--accent)] opacity-15"><i className="ph ph-calendar-check"></i></div>
-                <h3 className="text-[var(--muted)] font-bold text-[13px] uppercase tracking-wider mb-2">{t('Monthly Revenue')}</h3>
-                <div className="text-[42px] text-[var(--accent)]">
-                  <MoneyCell value={analytics.monthly_revenue} />
+                <h3 className="text-[var(--muted)] font-bold text-[13px] uppercase tracking-wider mb-2">{t('30-Day Revenue')}</h3>
+                <div className="text-[40px] text-[var(--accent)] font-bold leading-none">
+                  <MoneyCell value={analytics.last_30_days_revenue ?? analytics.monthly_revenue} />
                 </div>
-                <p className="text-[var(--muted)] text-[14.5px] mt-2">
-                  {t('from')} {analytics.monthly_orders_count} {t('paid orders')} {t('this month')}
+                <p className="text-[var(--muted)] text-[14px] mt-3">
+                  {t('from')} {analytics.last_30_days_orders_count ?? analytics.monthly_orders_count} {t('paid orders')} ({t('last 30 days')})
+                </p>
+              </div>
+
+              <div className="bg-surface-2 border border-[var(--border)] p-6 rounded-[18px] relative overflow-hidden">
+                <div className="absolute -right-4 -bottom-4 text-[120px] text-[var(--accent)] opacity-15"><i className="ph ph-trend-up"></i></div>
+                <h3 className="text-[var(--muted)] font-bold text-[13px] uppercase tracking-wider mb-2">{t("Today's Revenue")}</h3>
+                <div className="text-[40px] text-[var(--accent)] font-bold leading-none">
+                  <MoneyCell value={analytics.daily_revenue} />
+                </div>
+                <p className="text-[var(--muted)] text-[14px] mt-3">
+                  {t('from')} {analytics.daily_orders_count} {t('paid orders')} {t('today')}
                 </p>
               </div>
             </div>
@@ -1537,25 +1566,60 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* 7-DAY REVENUE */}
+              {/* REVENUE CHART WITH 7D / 30D SELECTOR */}
               <div className="lg:col-span-2 bg-surface-2 border border-[var(--border)] p-6 rounded-[18px]">
-                <h3 className="text-[var(--muted)] font-bold text-[13px] uppercase tracking-wider mb-4">{t('Last 7 Days Revenue')}</h3>
-                {(analytics.weekly || []).length === 0 ? (
-                  <p className="text-[var(--muted)] text-[14px]">{t('No revenue recorded yet.')}</p>
-                ) : (() => {
-                  const max = Math.max(...(analytics.weekly || []).map(d => d.revenue), 1);
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <h3 className="text-[var(--muted)] font-bold text-[13px] uppercase tracking-wider">
+                    {dashboardChartPeriod === '30d' ? t('Last 30 Days Revenue') : t('Last 7 Days Revenue')}
+                  </h3>
+                  <div className="flex items-center bg-surface border border-[var(--border)] rounded-[10px] p-0.5 text-[12px]">
+                    <button
+                      type="button"
+                      onClick={() => setDashboardChartPeriod('7d')}
+                      className={`px-2.5 py-1 rounded-[7px] font-semibold transition-colors cursor-pointer ${
+                        dashboardChartPeriod === '7d' ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--text)]'
+                      }`}
+                    >
+                      {t('7 Days')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDashboardChartPeriod('30d')}
+                      className={`px-2.5 py-1 rounded-[7px] font-semibold transition-colors cursor-pointer ${
+                        dashboardChartPeriod === '30d' ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--text)]'
+                      }`}
+                    >
+                      {t('30 Days')}
+                    </button>
+                  </div>
+                </div>
+                {(() => {
+                  const series = dashboardChartPeriod === '30d' && (analytics.monthly_series?.length ?? 0) > 0
+                    ? (analytics.monthly_series || [])
+                    : (analytics.weekly || []);
+                  const totalInSeries = series.reduce((sum, d) => sum + (d.revenue || 0), 0);
+
+                  if (series.length === 0 || totalInSeries === 0) {
+                    return <p className="text-[var(--muted)] text-[14px] py-10 text-center">{t('No revenue recorded for this period yet.')}</p>;
+                  }
+
+                  const max = Math.max(...series.map(d => d.revenue), 1);
                   return (
-                    <div className="flex items-end gap-3 h-[180px]">
-                      {(analytics.weekly || []).map(day => (
-                        <div key={day.day} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-                          <span className="text-[11px] text-[var(--muted)]">{day.revenue > 0 ? day.revenue.toFixed(0) : ''}</span>
+                    <div className="flex items-end gap-1.5 sm:gap-2 h-[180px] overflow-x-auto pb-1">
+                      {series.map(day => (
+                        <div key={day.day} className="flex-1 min-w-[20px] sm:min-w-[24px] flex flex-col items-center gap-1.5 h-full justify-end group">
+                          <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">
+                            {day.revenue > 0 ? day.revenue.toFixed(0) : ''}
+                          </span>
                           <div
                             title={`${day.day}: ${birr} ${day.revenue.toFixed(2)} · ${day.orders} ${t('orders')}`}
-                            className="w-full rounded-t-[8px] bg-gradient-to-t from-[var(--accent)] to-[var(--accent-soft)] transition-all duration-700"
+                            className="w-full rounded-t-[6px] sm:rounded-t-[8px] bg-gradient-to-t from-[var(--accent)] to-[var(--accent-soft)] group-hover:brightness-110 transition-all duration-300"
                             style={{ height: `${Math.max((day.revenue / max) * 100, day.revenue > 0 ? 6 : 2)}%` }}
                           />
-                          <span className="text-[10.5px] text-[var(--muted)]">
-                            {new Date(day.day).toLocaleDateString(locale, { weekday: 'short' })}
+                          <span className="text-[9.5px] sm:text-[10.5px] text-[var(--muted)] whitespace-nowrap">
+                            {dashboardChartPeriod === '30d'
+                              ? new Date(day.day).toLocaleDateString(locale, { day: 'numeric', month: 'numeric' })
+                              : new Date(day.day).toLocaleDateString(locale, { weekday: 'short' })}
                           </span>
                         </div>
                       ))}
@@ -3172,15 +3236,15 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
               <div className="flex flex-wrap items-center gap-3">
                 {/* Range Selector */}
                 <div className="flex items-center bg-surface-2 border border-[var(--border)] rounded-[12px] p-1 text-[13px]">
-                  {(['7d', '30d', '90d'] as const).map(rng => (
+                  {(['7d', '30d', '90d', 'all'] as const).map(rng => (
                     <button
                       key={rng}
                       onClick={() => setReportRange(rng)}
-                      className={`px-3 py-1.5 rounded-[8px] font-semibold transition-colors ${
+                      className={`px-3 py-1.5 rounded-[8px] font-semibold transition-colors cursor-pointer ${
                         reportRange === rng ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--text)]'
                       }`}
                     >
-                      {rng === '7d' ? t('Last 7 Days') : rng === '30d' ? t('Last 30 Days') : t('Last 90 Days')}
+                      {rng === 'all' ? t('All Time') : rng === '7d' ? t('Last 7 Days') : rng === '30d' ? t('Last 30 Days') : t('Last 90 Days')}
                     </button>
                   ))}
                 </div>

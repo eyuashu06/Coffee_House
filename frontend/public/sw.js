@@ -1,7 +1,7 @@
 // Service Worker for Artisanal Reserve Coffee PWA
 //
 // Bump this whenever a deploy changes the app.
-const CACHE_NAME = 'artisanal-coffee-cache-v4';
+const CACHE_NAME = 'artisanal-coffee-cache-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -82,26 +82,31 @@ self.addEventListener('fetch', (event) => {
         .then((response) => {
           if (response && response.ok) {
             const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('/', copy));
+            caches.open(CACHE_NAME).then((cache) => cache.put('/', copy)).catch(() => {});
           }
           return response;
         })
-        .catch(() => caches.match('/'))
+        .catch(() => caches.match('/').then((cached) => cached || new Response('Offline', { status: 503 })))
     );
     return;
   }
 
-  // Static assets (icons, manifest): cache first
+  // Static assets (icons, manifest): cache first, fallback to network
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
-      return fetch(request).then((response) => {
-        if (response && response.ok && response.type === 'basic') {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-        }
-        return response;
-      });
+      return fetch(request)
+        .then((response) => {
+          if (response && response.ok && response.type === 'basic') {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => {});
+          }
+          return response;
+        })
+        .catch(() => {
+          // Gracefully handle network fetch failures without throwing uncaught promise rejections
+          return new Response('', { status: 408, statusText: 'Request timed out or offline' });
+        });
     })
   );
 });

@@ -723,10 +723,49 @@ export default function AccountPage() {
     );
   }
 
-  if (!user) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col items-center justify-center p-6 text-center font-body">
+        <div className="max-w-md w-full bg-surface-2 border border-[var(--border)] rounded-[24px] p-8 shadow-xl space-y-5">
+          <div className="w-16 h-16 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center mx-auto text-3xl">
+            <i className="ph ph-user-circle"></i>
+          </div>
+          <h2 className="font-display text-2xl font-bold text-[var(--text)]">
+            {t('Sign in to view your account')}
+          </h2>
+          <p className="text-[14px] text-[var(--muted)] leading-relaxed">
+            {t('Track live orders, view table reservations, manage saved delivery addresses, and reorder your favorites.')}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <button
+              type="button"
+              onClick={() => setIsAuthModalOpen(true)}
+              className="h-11 px-6 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-[14px] flex items-center justify-center gap-2 hover:brightness-110 shadow-md cursor-pointer"
+            >
+              <i className="ph ph-sign-in text-lg"></i>
+              {t('Sign In / Register')}
+            </button>
+            <Link
+              href="/"
+              className="h-11 px-6 rounded-full border border-[var(--border)] text-[var(--text)] font-semibold text-[14px] flex items-center justify-center hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+            >
+              {t('Back to Home')}
+            </Link>
+          </div>
+        </div>
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          initialMode="LOGIN"
+        />
       </div>
     );
   }

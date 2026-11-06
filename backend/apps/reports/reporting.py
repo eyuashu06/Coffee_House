@@ -35,12 +35,12 @@ RANGE_CHOICES = {
     '7d': 7,
     '30d': 30,
     '90d': 90,
+    'all': 3650,
 }
 DEFAULT_RANGE = '30d'
 
-#: Refuse to build a report across more than this. A manager asking for "everything
-#: since 2024" would otherwise stream the whole order table into one CSV.
-MAX_RANGE_DAYS = 366
+#: Refuse to build a report across more than this (10 years for all-time reports).
+MAX_RANGE_DAYS = 3650
 
 #: Casting through Decimal keeps Sum() from promoting to float, so a report totals
 #: to the same figure as the invoice.

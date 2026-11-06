@@ -135,6 +135,7 @@ class AnalyticsAPIView(APIView):
         from django.utils import timezone as dj_timezone
         from apps.orders.models import Order as AppOrder
         from apps.orders.workflow import CLOSED_STATUSES
+        from apps.payments.models import Payment
 
         now = dj_timezone.localtime()
         today = now.date()
@@ -142,20 +143,43 @@ class AnalyticsAPIView(APIView):
 
         paid_qs = AppOrder.objects.filter(status__in=self.PAID_STATUSES)
 
+        # All-time totals so recorded historical sales are never hidden
+        total_orders_count = paid_qs.count()
+        total_revenue = paid_qs.aggregate(total=Sum('total_amount_etb'))['total'] or 0
+
+        # Successful payments totals
+        payments_qs = Payment.objects.filter(status='SUCCESS')
+        payments_total = payments_qs.aggregate(total=Sum('amount_etb'))['total'] or 0
+        payments_count = payments_qs.count()
+
+        # Trailing 30 days revenue (avoids 0.00 right after month boundary rollover)
+        last_30_start = today - timedelta(days=29)
+        last_30_orders = paid_qs.filter(created_at__date__gte=last_30_start)
+        last_30_revenue = last_30_orders.aggregate(total=Sum('total_amount_etb'))['total'] or 0
+
         daily_orders = paid_qs.filter(created_at__date=today)
         monthly_orders = paid_qs.filter(created_at__date__gte=month_start)
 
         daily_revenue = daily_orders.aggregate(total=Sum('total_amount_etb'))['total'] or 0
         monthly_revenue = monthly_orders.aggregate(total=Sum('total_amount_etb'))['total'] or 0
 
-        avg_ticket = monthly_orders.aggregate(avg=Avg('total_amount_etb'))['avg'] or 0
+        # If current calendar month has no orders yet, fall back to last 30 days
+        display_monthly_revenue = monthly_revenue if monthly_revenue > 0 else (last_30_revenue if last_30_revenue > 0 else total_revenue)
+        display_monthly_orders = monthly_orders.count() if monthly_orders.exists() else (last_30_orders.count() if last_30_orders.exists() else total_orders_count)
+
+        avg_ticket = (
+            monthly_orders.aggregate(avg=Avg('total_amount_etb'))['avg']
+            or last_30_orders.aggregate(avg=Avg('total_amount_etb'))['avg']
+            or paid_qs.aggregate(avg=Avg('total_amount_etb'))['avg']
+            or 0
+        )
 
         # Orders currently being worked on (not finished, not cancelled, not expired)
         live_orders = AppOrder.objects.exclude(status__in=CLOSED_STATUSES)
         in_kitchen = AppOrder.objects.filter(status__in=['ACCEPTED', 'PREPARING'])
         awaiting_payment = AppOrder.objects.filter(status='PENDING_PAYMENT').count()
 
-        # Revenue for the last 7 days (oldest first) for the dashboard sparkline
+        # Revenue for the last 7 days (oldest first)
         week_start = today - timedelta(days=6)
         weekly_rows = (
             paid_qs.filter(created_at__date__gte=week_start)
@@ -175,9 +199,26 @@ class AnalyticsAPIView(APIView):
                 'orders': row['orders'] if row else 0,
             })
 
+        # 30-day series for extended chart visibility
+        thirty_day_rows = (
+            paid_qs.filter(created_at__date__gte=last_30_start)
+            .annotate(day=TruncDate('created_at'))
+            .values('day')
+            .annotate(revenue=Sum('total_amount_etb'), orders=Count('id'))
+            .order_by('day')
+        )
+        thirty_day_map = {row['day']: row for row in thirty_day_rows}
+        monthly_series = []
+        for offset in range(30):
+            day = last_30_start + timedelta(days=offset)
+            row = thirty_day_map.get(day)
+            monthly_series.append({
+                'day': day.isoformat(),
+                'revenue': float(row['revenue']) if row else 0.0,
+                'orders': row['orders'] if row else 0,
+            })
+
         # Revenue by payment method actually collected (settled payments only)
-        from django.db.models import F
-        from apps.payments.models import Payment
         method_rows = (
             Payment.objects.filter(status='SUCCESS')
             .values('payment_method')
@@ -188,14 +229,20 @@ class AnalyticsAPIView(APIView):
         return Response({
             'generated_at': now.isoformat(),
             'daily_revenue': float(daily_revenue),
-            'monthly_revenue': float(monthly_revenue),
+            'monthly_revenue': float(display_monthly_revenue),
+            'total_revenue': float(total_revenue or payments_total),
+            'total_payments_revenue': float(payments_total),
+            'last_30_days_revenue': float(last_30_revenue),
             'daily_orders_count': daily_orders.count(),
-            'monthly_orders_count': monthly_orders.count(),
+            'monthly_orders_count': display_monthly_orders,
+            'total_orders_count': total_orders_count,
+            'total_payments_count': payments_count,
             'average_order_value': float(avg_ticket),
             'live_orders_count': live_orders.count(),
             'in_kitchen_count': in_kitchen.count(),
             'awaiting_payment_count': awaiting_payment,
             'weekly': weekly,
+            'monthly_series': monthly_series,
             'by_payment_method': [
                 {
                     'method': row['payment_method'],
