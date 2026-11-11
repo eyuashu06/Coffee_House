@@ -190,9 +190,9 @@ class OutOfScopeTests(AssistantTestBase):
 
 class SignInGateTests(AssistantTestBase):
     """
-    Reserving a table and ordering must happen for a signed-in customer. These
-    tests pin the boundary: nothing is written for a guest, and the customer is
-    told what to do about it.
+    Guests book tables and order without an account; only the destructive,
+    account-bound actions stay gated. These tests pin both halves of that
+    boundary.
     """
 
     RESERVATION_REQUESTS = [
@@ -206,30 +206,30 @@ class SignInGateTests(AssistantTestBase):
         'add a croissant to my order',
     ]
 
-    def test_guest_cannot_create_a_reservation(self):
-        before = TableReservation.objects.count()
-        r = self.ask('Reserve a table for 4 people tomorrow at 6 PM, my name is Eyuel',
-                     session_id='g1')
-        self.assertEqual(r['action']['action'], 'auth_required')
-        self.assertEqual(TableReservation.objects.count(), before)
-        self.assertFalse(TableReservation.objects.filter(name='Eyuel').exists())
+    def test_guest_can_create_a_reservation(self):
+        r = self.ask('Reserve a table for 4 people tomorrow at 6 PM, my name is Eyuel, '
+                     'phone 0911000003', session_id='g1')
+        self.assertEqual(r['action']['action'], 'reservation_created')
+        booking = TableReservation.objects.get(name='Eyuel')
+        self.assertIsNone(booking.user)
+        self.assertEqual(booking.party_size, 4)
 
-    def test_guest_is_asked_to_sign_in_or_sign_up(self):
+    def test_guest_is_not_asked_for_an_account(self):
         r = self.ask('I want to reserve a table', session_id='g2')
         en = r['answer_en'].lower()
-        self.assertIn('sign in', en)
-        self.assertIn('sign up', en)
+        self.assertNotIn('sign in', en)
+        self.assertNotIn('sign up', en)
         self.assertTrue(r['answer_am'])
 
     def test_the_gate_message_reads_naturally(self):
-        """Wording that broke the sentence was the first version of this."""
-        r = self.ask('I want to reserve a table', session_id='g2b')
+        """Cancelling still needs the owner's account, and says so gracefully."""
+        r = self.ask('cancel my reservation', session_id='g2b')
         en = r['answer_en']
-        self.assertIn('I can book you a table once you are signed in.', en)
+        self.assertIn('I can cancel that reservation once you are signed in.', en)
         # No stranded preposition or duplicated article from template assembly.
         for broken in ('I can a table', 'I can your ', 'I can to '):
             self.assertNotIn(broken, en)
-        self.assertIn('የጠረጴዛ ቦታ ለማስያዝ', r['answer_am'])
+        self.assertIn('ያንን የቦታ ማስያዣ ለመሰረዝ', r['answer_am'])
 
     def test_the_button_reason_is_a_phrase_not_a_sentence(self):
         r = self.ask('cancel my order', session_id='g2c')
@@ -238,14 +238,16 @@ class SignInGateTests(AssistantTestBase):
         self.assertEqual(action['reason_en'], 'Sign in to continue with cancelling an order.')
         self.assertTrue(action['reason_am'])
 
-    def test_the_guest_is_told_what_is_still_held_for_them(self):
+    def test_the_guest_booking_is_confirmed_back(self):
         """Both halves of the message are in the customer's own language."""
         self.ask('I want to reserve a table', session_id='g2d')
-        r = self.ask('tomorrow at 7 PM for 4 people, name is Hana', session_id='g2d')
+        r = self.ask('tomorrow at 7 PM for 4 people, name is Hana, phone 0911000003',
+                     session_id='g2d')
         for text in (r['answer_en'], r['answer_am']):
             self.assertIn('19:00', text)
             self.assertIn('4', text)
             self.assertIn('Hana', text)
+        self.assertEqual(r['action']['action'], 'reservation_created')
 
     def test_guest_cannot_cancel_someone_elses_reservation(self):
         """Name + phone was enough to cancel a booking before the gate existed."""
@@ -265,20 +267,24 @@ class SignInGateTests(AssistantTestBase):
         self.assertEqual(r['reservations'], [])
         self.assertEqual(r['action']['action'], 'auth_required')
 
-    def test_guest_cannot_place_an_order(self):
-        """
-        A guest may build an order - it costs them nothing and touches no account
-        - but confirming it requires sign-in, and nothing is written either way.
-        """
+    def test_guest_can_place_an_order_with_name_and_phone(self):
+        """No account: the name and phone number are what the cafe needs."""
         from apps.orders.models import Order
 
         before = Order.objects.count()
-        r = self.ask('I want to order a cappuccino', session_id='g5')
-        self.assertNotEqual(r['action']['action'], 'order_placed')
+        self.ask('I want to order a croissant', session_id='g5')
+        r = self.ask('pickup', session_id='g5')
+        self.assertEqual(r['action']['action'], 'collect_order_details')
+        self.assertIn('name', r['answer_en'].lower())
 
-        r = self.ask('yes, place it for pickup', session_id='g5')
-        self.assertEqual(r['action']['action'], 'auth_required')
-        self.assertEqual(Order.objects.count(), before)
+        self.ask('Hana', session_id='g5')
+        self.ask('0911000003', session_id='g5')
+        r = self.ask('yes', session_id='g5')
+        self.assertEqual(r['action']['action'], 'order_placed')
+        self.assertEqual(Order.objects.count(), before + 1)
+        order = Order.objects.latest('created_at')
+        self.assertEqual(order.contact_name, 'Hana')
+        self.assertEqual(order.contact_phone, '0911000003')
 
     def test_signed_in_customer_can_place_their_order(self):
         from apps.orders.models import Order
@@ -314,46 +320,41 @@ class SignInGateTests(AssistantTestBase):
                 r = self.ask(query, session_id='g9')
                 self.assertNotEqual(r['action']['action'], 'auth_required', query)
 
-    def test_guest_state_is_preserved_for_after_sign_in(self):
-        """The booking details a guest already gave must not be thrown away."""
+    def test_guest_booking_asks_only_for_the_missing_details(self):
+        """A partial booking asks for the gap, not for an account."""
         self.ask('I want to reserve a table', session_id='g10')
-        r = self.ask('tomorrow at 7 PM for 4 people, name is Hana', session_id='g10')
-        self.assertEqual(r['action']['action'], 'auth_required')
-        self.assertTrue(r['action']['preserve_state'])
-        self.assertEqual(r['action']['resume_intent'], 'reservation_create')
-        # The message acknowledges what they already gave us instead of
-        # restarting the form.
-        self.assertIn('4', r['answer_en'])
-        self.assertNotIn("don't have that information", r['answer_en'].lower())
+        r = self.ask('tomorrow at 7 PM for 4 people', session_id='g10')
+        self.assertEqual(r['action']['action'], 'collect_reservation_details')
+        self.assertIn('name', r['answer_en'].lower())
+        self.assertNotIn('sign in', r['answer_en'].lower())
+        self.assertIn('19:00', r['answer_en'])
 
-    def test_order_staged_before_sign_in_survives(self):
-        """What they chose is kept, so signing in does not lose the order."""
+    def test_guest_order_survives_partial_answers(self):
+        """A name or a phone number mid-order stays inside the order flow."""
         from apps.assistant.engine import get_session
 
         self.ask('I want to order a croissant', session_id='g11')
-        r = self.ask('yes, place it for pickup', session_id='g11')
-        self.assertEqual(r['action']['action'], 'auth_required')
+        self.ask('pickup', session_id='g11')
+        self.ask('Hana', session_id='g11')
 
         staged = get_session('g11').staged_order
         self.assertFalse(staged.is_empty())
         self.assertEqual(staged.summary()['lines'][0]['name'], 'Croissant au Beurre')
-
-        # And the order still places once they have an account.
-        user = self.customer('gate-resume')
-        r = self.ask('yes, place it for pickup', session_id='g11', user=user)
-        self.assertEqual(r['action']['action'], 'order_placed')
+        self.assertEqual(staged.contact_name, 'Hana')
 
     def test_private_tools_are_hidden_from_guests(self):
         from apps.assistant.agent import tool_declarations
 
         guest = {t['name'] for t in tool_declarations(include_private=False)}
         member = {t['name'] for t in tool_declarations(include_private=True)}
-        self.assertIn('create_reservation', member)
-        self.assertIn('place_order', member)
-        for name in ('create_reservation', 'find_reservations', 'cancel_reservation', 'my_orders'):
+        # Guests can book and order, so those tools are always offered.
+        for name in ('create_reservation', 'place_order', 'add_to_order'):
+            self.assertIn(name, guest)
+            self.assertIn(name, member)
+        # Reading someone's account history stays private.
+        for name in ('find_reservations', 'cancel_reservation', 'my_orders'):
             self.assertNotIn(name, guest)
-        # Ordering itself stays available so a guest can build an order first.
-        self.assertIn('add_to_order', guest)
+            self.assertIn(name, member)
 
 
 class AgentToolSafetyTests(AssistantTestBase):
@@ -369,18 +370,20 @@ class AgentToolSafetyTests(AssistantTestBase):
 
         self.ctx = ToolContext(user=None, staged=StagedOrder())
 
-    def test_guest_tools_refuse_account_actions(self):
+    def test_guest_tools_need_contact_details_not_an_account(self):
         from apps.assistant.agent import execute_tool
 
+        # Booking works for a guest once a phone number is supplied.
         result = execute_tool('create_reservation', {
-            'date': '2030-01-01', 'time': '18:00', 'guests': 2, 'name': 'Ghost'}, self.ctx)
-        self.assertFalse(result.get('created'))
-        self.assertEqual(result['error'], 'auth_required')
-        self.assertFalse(TableReservation.objects.filter(name='Ghost').exists())
+            'date': '2030-01-01', 'time': '18:00', 'guests': 2, 'name': 'Ghost',
+            'phone': '0911000003'}, self.ctx)
+        self.assertTrue(result.get('created'))
+        self.assertTrue(TableReservation.objects.filter(name='Ghost').exists())
 
+        # An order is refused until the name and phone are known.
         result = execute_tool('place_order', {'order_type': 'PICKUP'}, self.ctx)
         self.assertFalse(result.get('placed'))
-        self.assertEqual(result['error'], 'auth_required')
+        self.assertEqual(result['error'], 'missing_contact_name')
 
     def test_guest_my_orders_refuses(self):
         from apps.assistant.agent import execute_tool
@@ -488,12 +491,12 @@ class AgentLoopTests(AssistantTestBase):
         declarations = client.models.calls[0].config['tools'][0]['function_declarations']
         names = [d['name'] for d in declarations]
         self.assertIn('search_menu', names)
-        self.assertNotIn('create_reservation', names)
-        # Guests keep the tools that let them build an order; only placing it and
-        # anything account-bound is withheld.
+        # Guests can order and book too; only the account-history tools are withheld.
         self.assertIn('add_to_order', names)
-        self.assertNotIn('place_order', names)
+        self.assertIn('place_order', names)
+        self.assertIn('create_reservation', names)
         self.assertNotIn('my_orders', names)
+        self.assertNotIn('find_reservations', names)
 
     def test_guest_never_gets_the_private_tools(self):
         _, client = self.run_with_script([
@@ -501,9 +504,12 @@ class AgentLoopTests(AssistantTestBase):
         ], 'hello')
         config = client.models.calls[0].config
         declarations = config['tools'][0]['function_declarations']
-        self.assertNotIn('place_order', [d['name'] for d in declarations])
+        self.assertNotIn('my_orders', [d['name'] for d in declarations])
         self.assertIn('add_to_order', [d['name'] for d in declarations])
+        self.assertIn('place_order', [d['name'] for d in declarations])
         self.assertIn('is NOT signed in', config['system_instruction'])
+        # The guest is told to collect a name and phone number, not to sign in.
+        self.assertIn('Never ask', config['system_instruction'])
 
     def test_member_does_get_the_private_tools(self):
         user = self.customer('agent-member')
@@ -562,7 +568,9 @@ class AgentLoopTests(AssistantTestBase):
                      for part in turn.get('parts', [])
                      if isinstance(part, dict) and 'function_response' in part]
         self.assertTrue(any(r.get('error') == 'unknown_tool' for r in responses))
-        self.assertTrue(any(r.get('error') == 'auth_required' for r in responses))
+        # A guest placing an order without contact details is refused, and the
+        # refusal is passed back to the model as a tool result.
+        self.assertTrue(any(r.get('error') == 'missing_contact_name' for r in responses))
 
     def test_signed_in_guest_tools_can_place_a_real_order(self):
         from apps.orders.models import Order
@@ -829,7 +837,11 @@ class ReservationTests(AssistantTestBase):
     def test_collects_missing_details(self):
         r = self.book('I want to reserve a table', session_id='s1')
         self.assertEqual(r['action']['action'], 'collect_reservation_details')
-        self.assertIn('name', r['action']['missing'])
+        # The name comes from the signed-in profile, so only the date, time and
+        # party size are still needed.
+        self.assertIn('date', r['action']['missing'])
+        self.assertIn('time', r['action']['missing'])
+        self.assertIn('guests', r['action']['missing'])
 
     def test_full_reservation_is_created_and_confirmed(self):
         r = self.book(
@@ -1027,12 +1039,14 @@ class LegacyEndpointTests(AssistantTestBase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data['answer_en'])
 
-    def test_it_cannot_be_used_to_bypass_the_gate(self):
+    def test_it_books_for_a_guest_the_same_way(self):
         from api.models import TableReservation
 
-        response = self.ask('Reserve a table for 4 people tomorrow at 6 PM, my name is Sneaky')
-        self.assertEqual(response.data['action']['action'], 'auth_required')
-        self.assertFalse(TableReservation.objects.filter(name='Sneaky').exists())
+        response = self.ask('Reserve a table for 4 people tomorrow at 6 PM, my name is Sneaky, '
+                            'phone 0911000003')
+        self.assertEqual(response.data['action']['action'], 'reservation_created')
+        booking = TableReservation.objects.get(name='Sneaky')
+        self.assertIsNone(booking.user)
 
     def test_signed_in_customer_is_forwarded(self):
         user = self.customer('legacy-booker')
