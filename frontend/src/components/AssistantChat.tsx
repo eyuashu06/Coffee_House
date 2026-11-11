@@ -417,7 +417,14 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 {item.image_url && (
-                                  <img src={item.image_url} alt={tItem(item.name)} className="w-10 h-10 rounded-lg object-cover shrink-0 shadow-sm" />
+                                  <img
+                                    src={item.image_url}
+                                    alt={tItem(item.name)}
+                                    onError={(e) => {
+                                      (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800';
+                                    }}
+                                    className="w-10 h-10 rounded-lg object-cover shrink-0 shadow-sm"
+                                  />
                                 )}
                                 <div className="min-w-0 flex-1">
                                   <span className="block text-[12px] font-bold text-[var(--text)] truncate">{tItem(item.name)}</span>

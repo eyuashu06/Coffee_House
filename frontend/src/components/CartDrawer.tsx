@@ -84,9 +84,31 @@ export default function CartDrawer({
   const [isAuthRequiredOpen, setIsAuthRequiredOpen] = useState(false);
 
   const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
-  const [guestPhone, setGuestPhone] = useState('');
+  const [guestPhone, setGuestPhone] = useState('+251');
   const [guestName, setGuestName] = useState('');
   const [phoneError, setPhoneError] = useState<string | null>(null);
+
+  const normalizeEthiopianPhoneInput = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return '+251';
+    let digits = trimmed.replace(/[^\d+]/g, '');
+    // Keep a single leading + and digits only
+    if (digits.startsWith('+')) {
+      digits = '+' + digits.slice(1).replace(/\+/g, '');
+    } else {
+      digits = digits.replace(/\+/g, '');
+    }
+    if (digits.startsWith('0')) digits = digits.slice(1); // local 09... / 07...
+    if (digits.startsWith('251')) digits = `+${digits}`;
+    if (!digits.startsWith('+251')) {
+      const raw = digits.replace(/\D/g, '');
+      digits = `+251${raw}`;
+    }
+    const national = digits.slice(4).replace(/\D/g, '').slice(0, 9); // 9 digits after +251
+    return `+251${national}`;
+  };
+
+  const isValidEthiopianPhone = (value: string) => /^\+251[79]\d{8}$/.test(value.trim());
 
   // Fulfillment: how the customer wants the order, and the details that type needs.
   // The drawer used to hardcode DELIVERY with no address and no zone, so the courier
@@ -108,7 +130,9 @@ export default function CartDrawer({
     if (user) {
       const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
       if (!guestName && fullName) setGuestName(fullName);
-      if (!guestPhone && user.phone) setGuestPhone(user.phone);
+      if (user.phone && (!guestPhone || guestPhone === '+251')) {
+        setGuestPhone(normalizeEthiopianPhoneInput(user.phone));
+      }
     }
   }, [user]);
 
@@ -160,7 +184,8 @@ export default function CartDrawer({
     const contactName = user
       ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username
       : guestName.trim() || 'Valued Guest';
-    const contactPhone = (user?.phone || guestPhone).trim();
+    const rawPhone = (user?.phone || guestPhone).trim();
+    const contactPhone = rawPhone ? normalizeEthiopianPhoneInput(rawPhone) : rawPhone;
 
     const payload: Record<string, unknown> = {
       contact_name: contactName,
@@ -226,12 +251,14 @@ export default function CartDrawer({
     // A closed cafe cannot take the order, so do not open a payment modal for one.
     if (isClosedStore) return;
 
-    // Verify phone number (must be at least 9 valid digits to reach customer)
-    const phoneToVerify = (user?.phone || guestPhone).trim();
-    const cleanDigits = phoneToVerify.replace(/[\s\-\(\)\+]/g, '');
+    // Verify phone number (Ethiopian mobile: +251 followed by 9 or 7 and 8 digits)
+    const phoneToVerify = normalizeEthiopianPhoneInput(user?.phone || guestPhone);
+    if (user?.phone || guestPhone) {
+      setGuestPhone(phoneToVerify);
+    }
 
-    if (!cleanDigits || cleanDigits.length < 9) {
-      setPhoneError(t('Please enter a valid phone number (at least 9 digits) to verify and confirm your order.'));
+    if (!isValidEthiopianPhone(phoneToVerify)) {
+      setPhoneError(t('Enter a valid Ethiopian phone number starting with +2519 or +2517 (e.g. +251911234567).'));
       return;
     }
     setPhoneError(null);
@@ -482,10 +509,15 @@ export default function CartDrawer({
                           type="tel"
                           value={guestPhone}
                           onChange={(e) => {
-                            setGuestPhone(e.target.value);
+                            setGuestPhone(normalizeEthiopianPhoneInput(e.target.value));
                             if (phoneError) setPhoneError(null);
                           }}
-                          placeholder="0911 234 567"
+                          onFocus={() => {
+                            if (!guestPhone) setGuestPhone('+251');
+                          }}
+                          placeholder="+2519XXXXXXXX"
+                          maxLength={13}
+                          inputMode="tel"
                           className={`w-full px-3 py-2 rounded-xl bg-surface-2 border text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:outline-none transition-colors ${
                             phoneError ? 'border-red-500 focus:border-red-500' : 'border-[var(--border)] focus:border-[var(--accent)]'
                           }`}
@@ -527,15 +559,20 @@ export default function CartDrawer({
                       </div>
                     </div>
                     {!user.phone && (
-                      <div className="shrink-0 w-32">
+                      <div className="shrink-0 w-36">
                         <input
                           type="tel"
                           value={guestPhone}
                           onChange={(e) => {
-                            setGuestPhone(e.target.value);
+                            setGuestPhone(normalizeEthiopianPhoneInput(e.target.value));
                             if (phoneError) setPhoneError(null);
                           }}
-                          placeholder="0911..."
+                          onFocus={() => {
+                            if (!guestPhone) setGuestPhone('+251');
+                          }}
+                          placeholder="+2519XXXXXXXX"
+                          maxLength={13}
+                          inputMode="tel"
                           className="w-full px-2 py-1 rounded-lg bg-surface border border-[var(--border)] text-xs text-[var(--text)]"
                         />
                       </div>
@@ -559,14 +596,14 @@ export default function CartDrawer({
                         type="button"
                         onClick={() => setOrderType(option.value)}
                         aria-pressed={orderType === option.value}
-                        className={`flex flex-col items-center gap-1 py-2 px-1.5 rounded-xl border text-[11px] font-semibold transition-all cursor-pointer ${
+                        className={`flex flex-col items-center justify-start gap-1 min-h-[68px] py-2 px-1 rounded-xl border text-[10.5px] sm:text-[11px] font-semibold leading-tight text-center break-words transition-all cursor-pointer ${
                           orderType === option.value
                             ? 'bg-[var(--accent)] text-[var(--accent-contrast)] border-[var(--accent)] shadow-sm'
                             : 'bg-surface text-[var(--muted)] border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-base">{option.icon}</span>
-                        <span>{option.label}</span>
+                        <span className="material-symbols-outlined text-base shrink-0">{option.icon}</span>
+                        <span className="w-full whitespace-normal">{option.label}</span>
                       </button>
                     ))}
                   </div>

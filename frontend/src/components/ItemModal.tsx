@@ -114,7 +114,7 @@ export default function ItemModal({ isOpen, onClose, item, onAddToCart }: ItemMo
         {/* Header image */}
         <div className="h-44 w-full relative shrink-0">
           <img
-            src={item.image_url || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800'}
+            src={(item as any).image_display || item.image_url || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800'}
             alt={item.name}
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800';
