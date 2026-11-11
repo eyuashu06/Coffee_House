@@ -235,8 +235,11 @@ export const translations: Record<string, string> = {
   'All': 'ሁሉም',
   'All Offerings': 'ሁሉም',
   'No menu items found.': 'ምንም የሜኑ ዓይነት አልተገኘም።',
-  'Please ensure your Django backend is running on port 8000 so the menu can be loaded!':
-    'ሜኑው እንዲጫን የኋላ ሲስተም (Django) እየሠራ መሆኑን ያረጋግጡ!',
+  'The menu is empty right now. Please check back soon.': 'ሜኑው በአሁኑ ሰዓት ባዶ ነው። እባክዎ ቆይተው ይመልከቱ።',
+  'Loading menu': 'ሜኑው በመጫን ላይ...',
+  'We could not load the menu.': 'ሜኑውን ማምጣት አልተቻለም።',
+  'Check your connection and try again in a moment.': 'ግንኙነትዎን ያረጋግጡና ከጥቂት ቆይታ በኋላ እንደገና ይሞክሩ።',
+  'Try again': 'እንደገና ሞክር',
   'Add to Cart': 'ወደ ቅርጫት ጨምር',
   'Add to Order': 'ወደ ትዕዛዝ ጨምር',
   'Tap to customize': 'ዝርዝር ለማየት ይጫኑ',
@@ -286,6 +289,8 @@ export const translations: Record<string, string> = {
     'ቅድመ ክፍያ አያስፈልግም — ጠረጴዛዎን ለ20 ደቂቃ እንይዛለን።',
   'Your table is booked! We\'ll call you shortly to confirm.':
     'ጠረጴዛዎ ተይዟል! ለማረጋገጥ በቅርቡ እንደውላለን።',
+  'Keep this code to track your booking:':
+    'ይህን ኮድ ማስያዣዎን ለመከታተል ያስቀምጡ፦',
   'There was an error booking your table. Please try again.':
     'ቦታ በማስያዝ ላይ ስህተት ተከሰተ። እባክዎ እንደገና ይሞክሩ።',
   'Reservation time cannot be in the past. Please select an upcoming time.':
@@ -597,7 +602,6 @@ export const translations: Record<string, string> = {
   'placed and paid!': 'ተልኳልና ተከፍሏል!',
 
   // ── Manager Dashboard ─────────────────────────────────────────────────
-  'Dashboard': 'ዳሽቦርድ',
   'Live Orders': 'ቀጥታ ትዕዛዞች',
   'Menu Management': 'የሜኑ አስተዳደር',
   'View Customer Site': 'የደንበኛ ገጽ ይመልከቱ',
