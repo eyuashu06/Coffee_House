@@ -1,7 +1,14 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from apps.accounts.models import validate_ethiopian_phone
 from apps.menu.models import MenuItem
+from apps.orders.workflow import PAID_STATUSES
+
+
+def _order_status_model():
+    from apps.orders.models import OrderStatusHistory
+    return OrderStatusHistory
 
 class RestaurantSettings(models.Model):
     is_open = models.BooleanField(default=True, help_text='Master toggle to accept new orders')
@@ -133,7 +140,13 @@ class Order(models.Model):
     notes = models.TextField(blank=True)
     estimated_prep_minutes = models.PositiveIntegerField(
         default=20,
-        help_text='Filled from RestaurantSettings.default_prep_minutes when the order is placed',
+        help_text='Estimated kitchen prep time in minutes. Filled from the slowest item in the order when possible, falling back to RestaurantSettings.default_prep_minutes.',
+    )
+    step_started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text='When the current lifecycle step began. Set by the auto-advance management command and by the API when a status change is made.',
     )
     rejection_reason = models.TextField(blank=True)
     placed_at = models.DateTimeField(null=True, blank=True)
@@ -149,6 +162,10 @@ class Order(models.Model):
         return f"{self.order_number} - {self.get_status_display()} ({self.total_amount_etb} ETB)"
 
 class OrderItem(models.Model):
+    #: Django FK list views materialize menu_item as a dict-like PK mapping, so a
+    #: raw MenuItem never reaches the serializer's create(). The serializer resolves
+    #: the MenuItem itself and strips it out of the fields dict before creating the
+    #: row, matching that behaviour.
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     menu_item = models.ForeignKey(MenuItem, on_delete=models.SET_NULL, null=True, blank=True)
 
