@@ -88,7 +88,12 @@ export function LanguageProvider({
    */
   const t = useCallback(
     (key: string, fallback?: string): string => {
-      if (language === 'en') return key;
+      if (language === 'en') {
+        if (key === 'DELIVERY') return 'Delivery';
+        if (key === 'PICKUP') return 'Store Pickup';
+        if (key === 'DINE_IN' || key === 'DINE-IN') return 'Dine-In / Reserved Table';
+        return key;
+      }
       return translations[key] || fallback || key;
     },
     [language]
