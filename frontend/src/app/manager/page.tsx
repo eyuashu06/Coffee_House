@@ -11,6 +11,7 @@ import ProfileDropdown from '../../components/ProfileDropdown';
 import { apiFetch } from '../../lib/api';
 import { useLanguage } from '../../context/LanguageContext';
 import { formatEthiopianTime } from '../../utils/ethiopianTime';
+import { formatOrderType } from '../../utils/translations';
 
 import EthiopianPhoneInput from '../../components/EthiopianPhoneInput';
 import { useCafe, type CafeLocation } from '../../context/CafeContext';
@@ -1883,7 +1884,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                       </div>
                       
                       <div className="text-[14px] text-[var(--muted)] mb-4 space-y-1">
-                        <p><strong className="text-[var(--text)]">{t('Type:')}</strong> {t(order.order_type, order.order_type)} {order.table_number && `(${t('Table')} ${order.table_number})`}</p>
+                        <p><strong className="text-[var(--text)]">{t('Type:')}</strong> {formatOrderType(order.order_type, t)} {order.table_number && `(${t('Table')} ${order.table_number})`}</p>
                         <p><strong className="text-[var(--text)]">{t('Customer:')}</strong> {order.contact_name}</p>
                         <p><strong className="text-[var(--text)]">{t('Phone:')}</strong> {order.contact_phone ? <a href={`tel:${order.contact_phone}`} className="text-[var(--accent)] underline font-semibold ml-1">{order.contact_phone}</a> : t('N/A')}</p>
                         <p className="pt-1">
@@ -1977,7 +1978,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                   {t('Cash Payment Approval Required', 'የጥሬ ገንዘብ ክፍያ ማረጋገጫ')}
                                 </span>
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-800 dark:text-amber-300">
-                                  {t(order.order_type)}
+                                  {formatOrderType(order.order_type, t)}
                                 </span>
                               </div>
                               <p className="text-[12px] text-[var(--text)] leading-relaxed">
@@ -2351,7 +2352,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                     )}
                                     <span>·</span>
                                     <span className="font-medium text-[var(--text)] shrink-0">
-                                      {t(order.order_type)} {order.table_number ? `(${t('T-')}${order.table_number})` : ''}
+                                      {formatOrderType(order.order_type, t)} {order.table_number ? `(${t('T-')}${order.table_number})` : ''}
                                     </span>
                                   </div>
                                 </div>
@@ -2667,7 +2668,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                         <p><strong className="text-[var(--text)]">{t('Phone:')}</strong> {order.contact_phone || t('N/A')}</p>
                                         <p>
                                           <strong className="text-[var(--text)]">{t('Order Type:')}</strong>{' '}
-                                          <span className="font-semibold text-[var(--accent)]">{t(order.order_type)}</span>
+                                          <span className="font-semibold text-[var(--accent)]">{formatOrderType(order.order_type, t)}</span>
                                           {order.table_number && ` — ${t('Table')} ${order.table_number}`}
                                         </p>
                                         {order.delivery_address && (
@@ -2780,7 +2781,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                         </div>
                                         <p className="text-[11.5px] text-[var(--muted)] mt-0.5">
                                           {order.status === 'PENDING_PAYMENT' && order.latest_payment?.payment_method === 'cash'
-                                            ? `${t('Cash payment on')} ${t(order.order_type)} — ${t('collect')} ${order.total_amount_etb} ${birr} ${t('and approve below.')}`
+                                            ? `${t('Cash payment on')} ${formatOrderType(order.order_type, t)} — ${t('collect')} ${order.total_amount_etb} ${birr} ${t('and approve below.')}`
                                             : order.status === 'PENDING_PAYMENT'
                                               ? `${t('Customer submitted transfer reference')} "${order.latest_payment?.transaction_reference || order.latest_payment?.tx_ref}". ${t('Check balance or verify with links.et.')}`
                                               : order.status === 'PLACED'
@@ -3318,8 +3319,8 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                 >
                   <option value="ALL">{t('All Types')}</option>
                   <option value="DELIVERY">{t('Delivery')}</option>
-                  <option value="PICKUP">{t('Pickup')}</option>
-                  <option value="DINE_IN">{t('Dine-In')}</option>
+                  <option value="PICKUP">{t('Store Pickup')}</option>
+                  <option value="DINE_IN">{t('Dine-In / Reserved Table')}</option>
                 </select>
 
                 {/* CSV Export Button */}
@@ -3452,7 +3453,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                         {reportData.order_types.map((ot) => (
                           <div key={ot.order_type} className="space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span className="font-semibold text-[var(--text)]">{t(ot.label || ot.order_type)}</span>
+                              <span className="font-semibold text-[var(--text)]">{formatOrderType(ot.order_type, t)}</span>
                               <span className="text-[var(--muted)]">
                                 {ot.orders} {t('orders')} ({(ot.share * 100).toFixed(1)}%) • {ot.revenue.toFixed(2)} {birr}
                               </span>
