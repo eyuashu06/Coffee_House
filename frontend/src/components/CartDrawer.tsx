@@ -408,7 +408,17 @@ export default function CartDrawer({
                 <span className="material-symbols-outlined text-5xl text-[var(--accent)]/60">local_cafe</span>
                 <p className="text-sm">{t('Cart is Empty')}</p>
                 <button
-                  onClick={onClose}
+                  onClick={() => {
+                    onClose();
+                    if (typeof window !== 'undefined') {
+                      const el = document.getElementById('menu');
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      } else {
+                        window.location.href = '/#menu';
+                      }
+                    }
+                  }}
                   className="py-3 px-8 rounded-full border border-[var(--border)] text-[var(--muted)] font-bold text-xs uppercase tracking-wider hover:bg-outline-variant/10 transition-all"
                 >
                   {t('Browse Menu')}
@@ -593,7 +603,7 @@ export default function CartDrawer({
                   <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold">
                     {t('How would you like it?')}
                   </span>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {([
                       { value: 'DELIVERY', label: t('Delivery'), icon: 'delivery_dining' },
                       { value: 'PICKUP', label: t('Store Pickup'), icon: 'storefront' },
@@ -604,14 +614,14 @@ export default function CartDrawer({
                         type="button"
                         onClick={() => setOrderType(option.value)}
                         aria-pressed={orderType === option.value}
-                        className={`flex flex-col items-center justify-start gap-1 min-h-[68px] py-2 px-1 rounded-xl border text-[10.5px] sm:text-[11px] font-semibold leading-tight text-center break-words transition-all cursor-pointer ${
+                        className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-full border text-[10px] sm:text-[10.5px] font-semibold leading-tight text-center break-words transition-all cursor-pointer ${
                           orderType === option.value
                             ? 'bg-[var(--accent)] text-[var(--accent-contrast)] border-[var(--accent)] shadow-sm'
                             : 'bg-surface text-[var(--muted)] border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-base shrink-0">{option.icon}</span>
-                        <span className="w-full whitespace-normal">{option.label}</span>
+                        <span className="material-symbols-outlined text-sm shrink-0">{option.icon}</span>
+                        <span className="whitespace-normal">{option.label}</span>
                       </button>
                     ))}
                   </div>

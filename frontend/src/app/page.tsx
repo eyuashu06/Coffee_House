@@ -908,22 +908,13 @@ export default function Home() {
                             <div className="mt-7 flex flex-wrap items-center gap-3">
                                 <a href="#menu" className="h-12 px-7 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[15px] sm:text-[16px] font-semibold flex items-center gap-2 hover:brightness-110 transition-all shadow-[var(--shadow)]">{t('View the Menu')} <i className="ph ph-arrow-down text-[15px]"></i></a>
                                 <Link href="/account" className="h-12 px-7 rounded-full border border-[var(--border)] text-[15px] sm:text-[16px] flex items-center hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">{t('Order Buna')}</Link>
-                                {isStaff ? (
+                                {isStaff && (
                                     <Link href="/manager" className="h-12 px-6 rounded-full bg-[var(--accent-soft)] border-2 border-[var(--accent)] text-[var(--accent)] font-bold text-[15px] sm:text-[16px] flex items-center gap-2 hover:bg-[var(--accent)] hover:text-[var(--accent-contrast)] transition-all shadow-sm">
                                         <i className="ph ph-gauge text-[18px]"></i>
                                         <span>{t('Admin / Manager Dashboard')}</span>
                                         <i className="ph ph-arrow-right text-[15px]"></i>
                                     </Link>
-                                ) : !user ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
-                                        className="h-12 px-6 rounded-full border border-[var(--border)] bg-surface text-[15px] sm:text-[16px] font-semibold flex items-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors cursor-pointer"
-                                    >
-                                        <i className="ph ph-sign-in text-[17px]"></i>
-                                        <span>{t('Sign In / Sign Up')}</span>
-                                    </button>
-                                ) : null}
+                                )}
                             </div>
                             <Link href="/account" className="mt-5 inline-flex items-center gap-1.5 text-[14.5px] text-[var(--muted)] hover:text-[var(--accent)] transition-colors">{t('Track your order')} <i className="ph ph-arrow-right text-[13px]"></i></Link>
                         </div>
