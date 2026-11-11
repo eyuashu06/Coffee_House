@@ -178,7 +178,7 @@ export default function ProfileDropdown({
             aria-label={t('Sign In')}
           >
             <i className="ph ph-user text-[16px] sm:text-[17px]"></i>
-            <span>{t('Sign In')}</span>
+            <span className="hidden sm:inline">{t('Sign In')}</span>
           </button>
         ) : (
           <Link
@@ -188,7 +188,7 @@ export default function ProfileDropdown({
             aria-label={t('Sign In')}
           >
             <i className="ph ph-user text-[16px] sm:text-[17px]"></i>
-            <span>{t('Sign In')}</span>
+            <span className="hidden sm:inline">{t('Sign In')}</span>
           </Link>
         )}
 
@@ -196,7 +196,7 @@ export default function ProfileDropdown({
           <button
             type="button"
             onClick={onOpenSignUp}
-            className="flex h-9.5 px-3 sm:px-4 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold text-[13px] sm:text-[14px] items-center hover:brightness-110 transition-all shadow-sm cursor-pointer shrink-0"
+            className="hidden sm:flex h-9.5 px-3 sm:px-4 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold text-[13px] sm:text-[14px] items-center hover:brightness-110 transition-all shadow-sm cursor-pointer shrink-0"
           >
             {t('Sign Up')}
           </button>
@@ -232,7 +232,7 @@ export default function ProfileDropdown({
         {isStaff && !isManagerPage && (
           <Link
             href="/manager"
-            className="h-9.5 px-3 sm:px-3.5 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-[12.5px] sm:text-[13px] flex items-center gap-1.5 shadow-sm hover:brightness-110 transition-all shrink-0 cursor-pointer"
+            className="hidden md:flex h-9.5 px-3 sm:px-3.5 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-[12.5px] sm:text-[13px] items-center gap-1.5 shadow-sm hover:brightness-110 transition-all shrink-0 cursor-pointer"
             title={t('Manager / Admin Dashboard')}
           >
             <i className="ph ph-gauge text-[16px]"></i>
