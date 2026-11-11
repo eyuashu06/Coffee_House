@@ -199,10 +199,16 @@ class StagedOrder:
         self.order_type = raw.get('order_type') or ''
         self.address = raw.get('address') or ''
         self.notes = raw.get('notes') or ''
+        # Guests order without an account: the name and phone number they give
+        # in the chat are what the cafe needs to reach them about the order.
+        self.contact_name = raw.get('contact_name') or ''
+        self.contact_phone = raw.get('contact_phone') or ''
 
     def to_dict(self):
         return {'lines': self.lines, 'order_type': self.order_type,
-                'address': self.address, 'notes': self.notes}
+                'address': self.address, 'notes': self.notes,
+                'contact_name': self.contact_name,
+                'contact_phone': self.contact_phone}
 
     # -- line management -------------------------------------------------
 
@@ -405,8 +411,12 @@ def place_order(user, staged, order_type=None, address=None):
 
     Returns (order, error_code).
     """
+    # Only the contact details are required for a guest; an account is not.
     if not is_authenticated_user(user):
-        return None, 'auth_required'
+        if not (staged.contact_name or '').strip():
+            return None, 'missing_contact_name'
+        if not (staged.contact_phone or '').strip():
+            return None, 'missing_contact_phone'
 
     order_type = (order_type or staged.order_type or '').upper()
     address = address if address is not None else staged.address
@@ -435,8 +445,14 @@ def place_order(user, staged, order_type=None, address=None):
         'order_type': order_type,
         'delivery_address': address or '',
         'delivery_zone': zone.id if zone else None,
-        'contact_name': f"{user.first_name} {user.last_name}".strip() or user.username,
-        'contact_phone': user.phone or '+251911000000',
+        'contact_name': (
+            f"{user.first_name} {user.last_name}".strip() or user.username
+            if is_authenticated_user(user) else staged.contact_name.strip()
+        ),
+        'contact_phone': (
+            user.phone or '+251911000000'
+            if is_authenticated_user(user) else staged.contact_phone.strip()
+        ),
         'estimated_prep_minutes': venue.default_prep_minutes,
         'notes': staged.notes or '',
         'delivery_fee_etb': fee,
@@ -451,7 +467,8 @@ def place_order(user, staged, order_type=None, address=None):
         ],
     }
 
-    serializer = OrderSerializer(data=payload, context={'request': _UserRequest(user)})
+    request_stub = _UserRequest(user) if is_authenticated_user(user) else _GuestRequest()
+    serializer = OrderSerializer(data=payload, context={'request': request_stub})
     if not serializer.is_valid():
         logger.warning('Assistant order rejected by serializer: %s', serializer.errors)
         return None, 'invalid_order'
@@ -459,7 +476,9 @@ def place_order(user, staged, order_type=None, address=None):
 
     from apps.orders.models import OrderStatusHistory
     OrderStatusHistory.objects.create(
-        order=order, status=order.status, changed_by=user, notes='Order created from the assistant')
+        order=order, status=order.status,
+        changed_by=user if is_authenticated_user(user) else None,
+        notes='Order created from the assistant')
 
     return order, None
 
@@ -469,6 +488,16 @@ class _UserRequest:
 
     def __init__(self, user):
         self.user = user
+
+
+class _GuestRequest:
+    """Stand-in request for a guest order: the serializer then creates or reuses
+    the customer profile from the phone number the guest gave us."""
+
+    def __init__(self):
+        from django.contrib.auth.models import AnonymousUser
+
+        self.user = AnonymousUser()
 
 
 def is_authenticated_user(user):
