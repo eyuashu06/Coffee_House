@@ -3,6 +3,7 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useCafe } from '../context/CafeContext';
+import { formatOrderType } from '../utils/translations';
 
 interface OrderItem {
   id?: number;
@@ -69,7 +70,7 @@ export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
 ====================================
 ${t('Receipt Ref:')} ${ref}
 ${t('Date:')} ${new Date(order.created_at).toLocaleString(locale)}
-${t('Type:')} ${t(order.order_type) || (order.order_type === 'DELIVERY' ? 'Delivery' : order.order_type === 'DINE_IN' ? 'Dine-In / Reserved Table' : 'Store Pickup')} ${order.table_number ? `(${t('Table')} ${order.table_number})` : ''}
+${t('Type:')} ${formatOrderType(order.order_type, t)} ${order.table_number ? `(${t('Table')} ${order.table_number})` : ''}
 ${t('Customer:')} ${order.contact_name} (${order.contact_phone})
 ------------------------------------
 ${t('ITEMS:')}
@@ -131,7 +132,7 @@ ${t('Thank you for visiting')} ${cafeName}!
           </div>
 
           <div className="text-[11px] space-y-0.5 border-b border-dashed border-[var(--border)] pb-2">
-            <p>{t('Order Type:')} <span className="font-bold text-[var(--text)]">{t(order.order_type) || (order.order_type === 'DELIVERY' ? 'Delivery' : order.order_type === 'DINE_IN' ? 'Dine-In / Reserved Table' : 'Store Pickup')}</span> {order.table_number && `(${t('Table')} ${order.table_number})`}</p>
+            <p>{t('Order Type:')} <span className="font-bold text-[var(--text)]">{formatOrderType(order.order_type, t)}</span> {order.table_number && `(${t('Table')} ${order.table_number})`}</p>
             <p>{t('Customer:')} <span className="text-[var(--text)]">{order.contact_name}</span></p>
             <p>{t('Phone:')} <span className="text-[var(--text)]">{order.contact_phone}</span></p>
           </div>
