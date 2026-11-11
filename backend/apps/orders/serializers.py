@@ -66,7 +66,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True)
+    items = OrderItemSerializer(many=True, required=False)
+
     customer_username = serializers.CharField(source='customer.username', read_only=True)
     order_number = serializers.CharField(read_only=True)
     placed_at = serializers.DateTimeField(read_only=True)
@@ -224,11 +225,15 @@ class OrderSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        items_data = validated_data.pop('items', [])
+        # Raw line payloads drive prep/pricing (server-side). The nested serializer
+        # representation is read-only in effect here because we recompute all
+        # pricing fields ourselves.
+        items_data = list(self.initial_data.get('items') or [])
+        validated_data.pop('items', None)
         request = self.context.get('request')
 
         # Auto assign customer if authenticated via cookie or header JWT
-        if request and request.user and request.user.is_authenticated:
+        if request and getattr(request, 'user', None) and getattr(request.user, 'is_authenticated', False):
             validated_data['customer'] = request.user
             if not validated_data.get('contact_name'):
                 validated_data['contact_name'] = (
@@ -236,7 +241,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     or request.user.username
                 )
             if not validated_data.get('contact_phone'):
-                validated_data['contact_phone'] = request.user.phone or '+251911000000'
+                validated_data['contact_phone'] = getattr(request.user, 'phone', None) or '+251911000000'
         else:
             # Seamless customer onboarding by phone: save customer profile without forcing password/email
             phone = (validated_data.get('contact_phone') or '').strip()
@@ -258,8 +263,14 @@ class OrderSerializer(serializers.ModelSerializer):
         random_suffix = str(int(time.time() * 1000))[-4:]
         validated_data['order_number'] = f"ORD-{timestamp_part}-{random_suffix}"
 
-        # Promise a prep time from the venue's own setting, so every new order has one
+        # Promise a prep time from the lines actually in the order, so a food-heavy
+        # order is not promised the same wait as a drink-only one. If no line has its
+        # own prep time, fall back to the venue's setting so every order still has one
         # the customer can be shown instead of a model default nobody set.
+        if not validated_data.get('estimated_prep_minutes') and items_data:
+            prep_minutes = self._order_prep_minutes_from_lines(items_data)
+            if prep_minutes:
+                validated_data['estimated_prep_minutes'] = prep_minutes
         if not validated_data.get('estimated_prep_minutes'):
             validated_data['estimated_prep_minutes'] = (
                 RestaurantSettings.get_settings().default_prep_minutes
@@ -290,11 +301,41 @@ class OrderSerializer(serializers.ModelSerializer):
 
         for line in prepared_lines:
             fields = line['fields']
+            # The serializer's FK field must accept the raw MenuItem instance, which
+            # the default ModelSerializer only does when the FK is declared on the
+            # outer serializer. That is already true here: items = OrderItemSerializer
+            # declares menu_item as a field, so during create() DRF lets us pass the
+            # resolved MenuItem directly.
             order_item = OrderItem.objects.create(order=order, **fields)
+            order_item.refresh_from_db()
+
             for add_on in line['add_ons']:
                 OrderItemAddOn.objects.create(order_item=order_item, **add_on)
 
         return order
+
+    def _order_prep_minutes_from_lines(self, items_data):
+        """Slowest item prep time across the lines that have one set."""
+        from apps.menu.models import MenuItem
+
+        slowest = 0
+        for item_info in items_data:
+            menu_item_id = item_info.get('menu_item')
+            if not menu_item_id:
+                continue
+            menu_item = None
+            if isinstance(menu_item_id, MenuItem):
+                menu_item = menu_item_id
+            else:
+                try:
+                    menu_item = MenuItem.objects.only('prep_minutes').get(pk=menu_item_id)
+                except MenuItem.DoesNotExist:
+                    continue
+            if menu_item is None:
+                continue
+            if menu_item.prep_minutes:
+                slowest = max(slowest, menu_item.prep_minutes)
+        return slowest or None
 
     def _prepare_line(self, item_info):
         """
@@ -303,7 +344,17 @@ class OrderSerializer(serializers.ModelSerializer):
         """
         item_info = dict(item_info)
         add_ons_data = list(item_info.pop('add_ons', []) or [])
-        menu_item = item_info.get('menu_item')
+        menu_item_id = item_info.get('menu_item')
+        menu_item = None
+        if isinstance(menu_item_id, MenuItem):
+            menu_item = menu_item_id
+        elif menu_item_id is not None:
+            try:
+                menu_item = MenuItem.objects.select_related('category').prefetch_related('variants', 'add_ons').get(pk=menu_item_id)
+            except MenuItem.DoesNotExist:
+                menu_item = None
+
+        item_info['menu_item'] = menu_item
 
         base_price = Decimal('0')
         if menu_item:
