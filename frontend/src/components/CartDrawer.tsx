@@ -505,23 +505,27 @@ export default function CartDrawer({
                         <label className="block text-[10.5px] font-semibold text-[var(--text)] mb-1">
                           {t('Phone Number')} <span className="text-red-400">*</span>
                         </label>
-                        <input
-                          type="tel"
-                          value={guestPhone}
-                          onChange={(e) => {
-                            setGuestPhone(normalizeEthiopianPhoneInput(e.target.value));
-                            if (phoneError) setPhoneError(null);
-                          }}
-                          onFocus={() => {
-                            if (!guestPhone) setGuestPhone('+251');
-                          }}
-                          placeholder="+2519XXXXXXXX"
-                          maxLength={13}
-                          inputMode="tel"
-                          className={`w-full px-3 py-2 rounded-xl bg-surface-2 border text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:outline-none transition-colors ${
-                            phoneError ? 'border-red-500 focus:border-red-500' : 'border-[var(--border)] focus:border-[var(--accent)]'
-                          }`}
-                        />
+                        <div className={`flex items-center rounded-xl bg-surface-2 border overflow-hidden ${
+                          phoneError ? 'border-red-500' : 'border-[var(--border)] focus-within:border-[var(--accent)]'
+                        }`}>
+                          <span className="px-2 text-[11px] text-[var(--muted)] select-none shrink-0 border-r border-[var(--border)]">+251</span>
+                          <input
+                            type="tel"
+                            value={guestPhone.startsWith('+251') ? guestPhone.slice(4) : guestPhone.replace(/[^\d]/g, '')}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
+                              setGuestPhone(digits ? `+251${digits}` : '+251');
+                              if (phoneError) setPhoneError(null);
+                            }}
+                            onFocus={() => {
+                              if (!guestPhone || guestPhone === '+251') setGuestPhone('+251');
+                            }}
+                            placeholder="9XXXXXXXX"
+                            maxLength={9}
+                            inputMode="tel"
+                            className="w-full px-2.5 py-2 text-xs text-[var(--text)] placeholder:text-[var(--muted)] bg-transparent focus:outline-none"
+                          />
+                        </div>
                       </div>
                       <div>
                         <label className="block text-[10.5px] font-semibold text-[var(--text)] mb-1">
@@ -559,22 +563,26 @@ export default function CartDrawer({
                       </div>
                     </div>
                     {!user.phone && (
-                      <div className="shrink-0 w-36">
-                        <input
-                          type="tel"
-                          value={guestPhone}
-                          onChange={(e) => {
-                            setGuestPhone(normalizeEthiopianPhoneInput(e.target.value));
-                            if (phoneError) setPhoneError(null);
-                          }}
-                          onFocus={() => {
-                            if (!guestPhone) setGuestPhone('+251');
-                          }}
-                          placeholder="+2519XXXXXXXX"
-                          maxLength={13}
-                          inputMode="tel"
-                          className="w-full px-2 py-1 rounded-lg bg-surface border border-[var(--border)] text-xs text-[var(--text)]"
-                        />
+                      <div className="shrink-0 w-40">
+                        <div className="flex items-center rounded-lg bg-surface border border-[var(--border)] overflow-hidden">
+                          <span className="px-1.5 text-[10px] text-[var(--muted)] select-none shrink-0">+251</span>
+                          <input
+                            type="tel"
+                            value={guestPhone.startsWith('+251') ? guestPhone.slice(4) : guestPhone.replace(/[^\d]/g, '')}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
+                              setGuestPhone(digits ? `+251${digits}` : '+251');
+                              if (phoneError) setPhoneError(null);
+                            }}
+                            onFocus={() => {
+                              if (!guestPhone || guestPhone === '+251') setGuestPhone('+251');
+                            }}
+                            placeholder="9XXXXXXXX"
+                            maxLength={9}
+                            inputMode="tel"
+                            className="w-full px-1.5 py-1 text-xs text-[var(--text)] bg-transparent focus:outline-none"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -610,14 +618,14 @@ export default function CartDrawer({
                 </div>
 
                 {orderType === 'DELIVERY' && (
-                  <div className="p-3 rounded-xl bg-surface border border-[var(--border)] space-y-2.5 animate-fade-in">
-                    <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold">
+                  <div className="p-3 rounded-xl bg-surface border border-[var(--border)] space-y-2.5 animate-fade-in overflow-hidden">
+                    <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold leading-tight break-words">
                       {t('Delivery zone')}
                     </label>
                     <select
                       value={deliveryZoneId}
                       onChange={(e) => setDeliveryZoneId(e.target.value ? Number(e.target.value) : '')}
-                      className="w-full px-3 py-2 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-xs focus:border-[var(--accent)] focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-xs leading-tight focus:border-[var(--accent)] focus:outline-none break-words"
                     >
                       <option value="">{t('Choose your zone...')}</option>
                       {zones.map((zone) => (
@@ -627,7 +635,7 @@ export default function CartDrawer({
                       ))}
                     </select>
 
-                    <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold mt-2">
+                    <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold mt-2 leading-tight break-words">
                       {t('Delivery address')}
                     </label>
                     <textarea
@@ -635,10 +643,10 @@ export default function CartDrawer({
                       onChange={(e) => setDeliveryAddress(e.target.value)}
                       rows={2}
                       placeholder={t('House, street, landmark...')}
-                      className="w-full px-3 py-2 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none resize-none"
+                      className="w-full px-3 py-2 rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--text)] text-xs placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none resize-none break-words"
                     />
                     {missingFulfillmentMessage && (
-                      <p className="text-[11px] text-amber-500 dark:text-amber-400 leading-relaxed font-medium">
+                      <p className="text-[11px] text-amber-500 dark:text-amber-400 leading-relaxed font-medium break-words">
                         {missingFulfillmentMessage}
                       </p>
                     )}
