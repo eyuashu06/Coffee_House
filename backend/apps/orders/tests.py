@@ -331,6 +331,9 @@ class OrderCreationTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_prep_time_defaults_to_the_venue_setting(self):
+        # When no line has its own prep time, the venue's default is used.
+        self.item.prep_minutes = 0
+        self.item.save(update_fields=['prep_minutes'])
         venue = RestaurantSettings.get_settings()
         venue.default_prep_minutes = 35
         venue.save()
