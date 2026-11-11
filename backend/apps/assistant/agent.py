@@ -625,6 +625,12 @@ def run_agent(query, user=None, session=None, staged=None, language='en'):
         return None
 
     model = getattr(settings, 'ASSISTANT_MODEL', DEFAULT_MODEL)
+    # The caller (AssistantMessageView) may supply a hard deadline so a slow
+    # provider cannot hold a chat open past the frontend's 45 s wrapper.
+    request_timeout = min(int(getattr(settings, 'ASSISTANT_REQUEST_TIMEOUT_S', 30)), 30)
+    if request_timeout < 1:
+        request_timeout = 1
+
     timeout_ms = getattr(settings, 'ASSISTANT_LLM_TIMEOUT', 20) * 1000
     http_options = {'timeout': timeout_ms}
     history = list(getattr(session, 'history', []) or [])
@@ -668,16 +674,26 @@ def run_agent(query, user=None, session=None, staged=None, language='en'):
     for candidate_model in models_to_try:
         try:
             response = client.models.generate_content(
-                model=candidate_model, contents=contents, config=config)
+                model=candidate_model, contents=contents, config=config,
+                request_timeout=request_timeout)
             active_model = candidate_model
             break
+        except httpx.TimeoutException:
+            logger.warning('Assistant model %s timed out; retrying once', candidate_model)
+            try:
+                response = client.models.generate_content(
+                    model=candidate_model, contents=contents, config=config,
+                    request_timeout=request_timeout)
+                active_model = candidate_model
+                break
+            except Exception as retry_err:
+                logger.warning('Assistant model %s retry also failed: %s', candidate_model, retry_err)
         except Exception as e:
             logger.warning('Assistant model %s failed: %s; trying fallback', candidate_model, e)
 
     if response is None:
         logger.warning('All assistant models failed; falling back to deterministic engine')
         return None
-
     for _ in range(MAX_TOOL_ROUNDS):
         function_calls = list(getattr(response, 'function_calls', None) or [])
         if not function_calls:
