@@ -15,6 +15,7 @@ import { apiFetch } from '../../lib/api';
 import EthiopianPhoneInput from '../../components/EthiopianPhoneInput';
 import AuthModal from '../../components/AuthModal';
 import { formatEthiopianTime } from '../../utils/ethiopianTime';
+import { formatOrderType } from '../../utils/translations';
 import { TextSize, getSavedTextSize, applyTextSize } from '../../utils/textSize';
 
 interface OrderItem {
@@ -931,7 +932,7 @@ export default function AccountPage() {
                                   #{order.order_number}
                                 </span>
                                 <span className="text-[10.5px] sm:text-[11px] px-1.5 py-0.5 rounded-md bg-surface border border-[var(--border)] text-[var(--muted)] font-medium">
-                                  {t(order.order_type) || (order.order_type === 'DELIVERY' ? 'Delivery' : order.order_type === 'DINE_IN' ? 'Dine-In / Reserved Table' : 'Store Pickup')} {order.table_number ? `(${t('Table')} ${order.table_number})` : ''}
+                                  {formatOrderType(order.order_type, t)} {order.table_number ? `(${t('Table')} ${order.table_number})` : ''}
                                 </span>
                               </div>
                               <span className="inline-flex items-center gap-1 text-[11px] sm:text-[11.5px] text-[var(--muted)] mt-0.5">
@@ -1163,7 +1164,7 @@ export default function AccountPage() {
                                   #{order.order_number}
                                 </span>
                                 <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-surface border border-[var(--border)] text-[var(--muted)] font-medium">
-                                  {t(order.order_type) || (order.order_type === 'DELIVERY' ? 'Delivery' : order.order_type === 'DINE_IN' ? 'Dine-In / Reserved Table' : 'Store Pickup')}
+                                  {formatOrderType(order.order_type, t)}
                                 </span>
                               </div>
                               <span className="inline-flex items-center gap-1 text-[11px] sm:text-[11.5px] text-[var(--muted)] mt-0.5">
