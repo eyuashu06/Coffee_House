@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Icon font ──────────────────────────────────────────────────────────
+   Material Symbols is self-hosted (subset containing only the icon names
+   this site uses) so icons never fall back to their literal ligature text
+   such as "chevron_left" while a remote font is slow or blocked.          */
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+  src: url('/fonts/material-symbols.woff2') format('woff2');
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
 /* ── Theme palettes ─────────────────────────────────────────────────────
    Warm coffee tones on both sides — light mode is cream/porcelain, dark
    mode is espresso (never pure black). Components reference these through
