@@ -285,7 +285,11 @@ class TableReservationViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         from rest_framework import permissions
-        if self.action in ['list', 'availability']:
+        # Guests book tables too: the form asks for a name and a phone number,
+        # which is all the cafe needs to hold a table, so requiring an account
+        # before a booking is an unnecessary wall. Reading or changing a booking
+        # afterwards still needs the account that owns it (or its exact code).
+        if self.action in ['list', 'availability', 'create']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 
@@ -324,6 +328,17 @@ class TableReservationViewSet(viewsets.ModelViewSet):
 
         date_time = request.data.get('date_time')
         party_size = request.data.get('party_size')
+
+        # A guest has no profile to fall back on, so the name and phone number
+        # are the only way the cafe can reach them about the table.
+        if not request.user.is_authenticated:
+            missing = {}
+            if not str(request.data.get('name') or '').strip():
+                missing['name'] = ['Tell us the name for the booking.']
+            if not str(request.data.get('contact_phone') or '').strip():
+                missing['contact_phone'] = ['A phone number lets us confirm your table.']
+            if missing:
+                return DRFResponse(missing, status=drf_status.HTTP_400_BAD_REQUEST)
 
         try:
             party_size = int(party_size)
