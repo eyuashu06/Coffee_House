@@ -278,7 +278,7 @@ interface RevenueReport {
 }
 
 export default function ManagerDashboard() {
-  const { user, loading, logout, sessionExpired, reportUnauthorized } = useAuth();
+  const { user, loading, logout, sessionExpired, authError, checkAuth, reportUnauthorized } = useAuth();
   const { t, tItem, tCategory, tItemDescription, locale, language } = useLanguage();
   const birr = language === 'am' ? 'ብር' : 'ETB';
   const {
@@ -303,6 +303,10 @@ export default function ManagerDashboard() {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [isOpen, setIsOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [liveError, setLiveError] = useState(false);
+  const pollBusy = useRef(false);
+  const pollFailures = useRef(0);
+  const pollPausedUntil = useRef(0);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<Order | null>(null);
   const [rejectOrder, setRejectOrder] = useState<Order | null>(null);
@@ -541,56 +545,77 @@ export default function ManagerDashboard() {
     }
   }, [user, activeTab, fetchReport]);
 
+  /**
+   * One live-refresh round: orders, revenue and reservations.
+   *
+   * Guarded because three requests every 5 seconds is already a real load on the
+   * API: overlapping rounds are skipped, a hidden tab does not poll, and failures
+   * back off (5s → 10s → 20s → 40s, capped at a minute) instead of hammering a
+   * backend that is answering 502. That repeated hammering is what filled the
+   * console with hundreds of failed requests.
+   */
+  const pollLive = async () => {
+    if (pollBusy.current) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    if (Date.now() < pollPausedUntil.current) return;
+    pollBusy.current = true;
+    try {
+      const results = await Promise.all([fetchOrders(), fetchAnalytics(), fetchReservations()]);
+      const failed = results.some(ok => ok === false);
+      if (failed) {
+        pollFailures.current += 1;
+        const delay = Math.min(5000 * 2 ** (pollFailures.current - 1), 60000);
+        pollPausedUntil.current = Date.now() + delay;
+      } else {
+        pollFailures.current = 0;
+        pollPausedUntil.current = 0;
+      }
+      setLiveError(failed);
+    } finally {
+      pollBusy.current = false;
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
-    fetchOrders();
     fetchStoreStatus();
     fetchMenuItems();
     fetchCategories();
     fetchPaymentAccounts();
-    fetchAnalytics();
-    fetchReservations();
+    pollLive();
 
     // Poll every 5s so revenue/queue numbers stay live while the tab is open
-    const interval = setInterval(() => {
-      fetchOrders();
-      fetchAnalytics();
-      fetchReservations();
-    }, 5000);
+    const interval = setInterval(pollLive, 5000);
 
     // Catch up immediately when the manager comes back to the tab
-    const onFocus = () => {
-      fetchOrders();
-      fetchAnalytics();
-      fetchReservations();
-    };
-    window.addEventListener('focus', onFocus);
+    window.addEventListener('focus', pollLive);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('focus', pollLive);
     };
-    // Deliberately keyed on `user` alone. The three fetchers are plain functions,
+    // Deliberately keyed on `user` alone. The fetchers are plain functions,
     // recreated on every render, so listing them would tear down and rebuild the
     // 5s interval on every render - a request loop against the API.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (): Promise<boolean> => {
     try {
       const res = await apiFetch('/api/v1/orders/?page_size=200', {
         headers: { 'Cache-Control': 'no-cache' },
       });
       if (res.status === 401) {
         reportUnauthorized();
-        return;
+        return false;
       }
-      if (res.ok) {
-        const data = await res.json();
-        setOrders(Array.isArray(data) ? data : data.results || []);
-      }
+      if (!res.ok) return false;
+      const data = await res.json();
+      setOrders(Array.isArray(data) ? data : data.results || []);
+      return true;
     } catch (e) {
       console.error(e);
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -1000,36 +1025,38 @@ export default function ManagerDashboard() {
     setTimeout(() => setActionMsg(null), 3500);
   };
 
-  const fetchReservations = async () => {
+  const fetchReservations = async (): Promise<boolean> => {
     try {
       const res = await apiFetch('/api/v1/reservations/?page_size=100');
       if (res.status === 401) {
         reportUnauthorized();
-        return;
+        return false;
       }
-      if (res.ok) {
-        const data = await res.json();
-        setReservations(Array.isArray(data) ? data : data.results || []);
-      }
+      if (!res.ok) return false;
+      const data = await res.json();
+      setReservations(Array.isArray(data) ? data : data.results || []);
+      return true;
     } catch (e) {
       console.error(e);
+      return false;
     }
   };
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (): Promise<boolean> => {
     try {
       const res = await apiFetch('/api/v1/analytics/');
       if (res.status === 401) {
         reportUnauthorized();
-        return;
+        return false;
       }
-      if (res.ok) {
-        const data = await res.json();
-        setAnalytics({ ...EMPTY_ANALYTICS, ...data });
-        setLastSync(new Date());
-      }
+      if (!res.ok) return false;
+      const data = await res.json();
+      setAnalytics({ ...EMPTY_ANALYTICS, ...data });
+      setLastSync(new Date());
+      return true;
     } catch (e) {
       console.error(e);
+      return false;
     }
   };
 
@@ -1286,10 +1313,28 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
   };
 
   useEffect(() => {
-    if (!loading && !user && !sessionExpired) {
+    // Not when the server is unreachable: the session may be perfectly valid and
+    // bouncing the manager to the sign-in form only hides the real problem.
+    if (!loading && !user && !sessionExpired && !authError) {
       window.location.href = '/?auth=login&redirect=/manager';
     }
-  }, [loading, user, sessionExpired]);
+  }, [loading, user, sessionExpired, authError]);
+
+  if (authError && !user) {
+    return (
+      <div className="min-h-screen bg-surface text-[var(--text)] font-body flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <span className="material-symbols-outlined text-5xl text-amber-400">cloud_off</span>
+        <h2 className="font-display text-[26px] font-bold">{t('Server not responding')}</h2>
+        <p className="text-[var(--muted)] text-[15px] max-w-md">{t(authError)}</p>
+        <button
+          onClick={() => checkAuth()}
+          className="h-10 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold hover:brightness-110 transition-colors"
+        >
+          {t('Try again')}
+        </button>
+      </div>
+    );
+  }
 
   if (loading || (isLoading && user)) {
     return (
@@ -1501,6 +1546,22 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
           </div>
         )}
 
+        {liveError && (
+          <div className="mb-6 p-4 rounded-[14px] bg-amber-500/10 border border-amber-500/40 text-amber-700 dark:text-amber-300 flex flex-wrap items-center gap-3 animate-fade-in">
+            <i className="ph ph-cloud-slash text-xl"></i>
+            <span className="text-[15px] flex-1 min-w-[200px]">
+              {t('The server is not answering, so live orders and revenue are paused. Retrying automatically.')}
+            </span>
+            <button
+              type="button"
+              onClick={() => { pollFailures.current = 0; pollPausedUntil.current = 0; pollLive(); }}
+              className="h-9 px-4 rounded-full bg-amber-500/20 border border-amber-500/40 font-semibold text-[13px] hover:bg-amber-500/30 transition-colors"
+            >
+              {t('Retry now')}
+            </button>
+          </div>
+        )}
+
         {/* DASHBOARD TAB */}
         {activeTab === 'dashboard' && (
           <div className="animate-fade-in space-y-6">
@@ -1508,7 +1569,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
               <h2 className="font-display text-[24px] text-[var(--text)]">{t('Analytics Overview')}</h2>
               <span className="flex items-center gap-2 text-[12.5px] text-[var(--muted)]">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                {t('Live')}{lastSync ? ` · ${lastSync.toLocaleTimeString(locale)}` : ''}
+                {liveError ? t('Offline — retrying') : t('Live')}{lastSync && !liveError ? ` · ${lastSync.toLocaleTimeString(locale)}` : ''}
               </span>
             </div>
 

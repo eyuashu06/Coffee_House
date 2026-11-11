@@ -12,6 +12,7 @@ from apps.menu.models import Category, MenuItem
 from apps.orders.expiry import EXPIRY_REASON, expire_unpaid_orders
 from apps.orders.models import DeliveryZone, Order, OrderItem, OrderStatusHistory, RestaurantSettings
 from apps.orders.workflow import ALLOWED_TRANSITIONS, InvalidTransition, can_transition
+from apps.payments.models import Payment
 
 User = get_user_model()
 
@@ -405,6 +406,78 @@ class OrderSearchTests(TestCase):
         self.client.force_authenticate(user=None)
         res = self.client.get('/api/v1/orders/?search=ORD-SEARCH')
         self.assertNotEqual(res.status_code, status.HTTP_200_OK)
+
+
+class OrderListPayloadTests(TestCase):
+    """
+    The manager dashboard polls the order list every few seconds.
+
+    It used to inline every order's base64 receipt image and issue one extra query
+    per order for the latest payment, so a 200-order poll could answer with tens of
+    megabytes of JSON in hundreds of queries - enough for the host to reset the
+    connection, which is exactly what the browser was reporting.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.manager = User.objects.create_user(
+            username='payloadmgr', email='payload@coffeereceipts.com',
+            phone='+251911777000', password='Password123!', role='MANAGER',
+        )
+        self.customer = User.objects.create_user(
+            username='payloadcust', email='payloadcust@coffeereceipts.com',
+            phone='+251911777111', password='Password123!', role='CUSTOMER',
+        )
+        self.orders = []
+        for index in range(10):
+            order = Order.objects.create(
+                order_number=f'ORD-PAYLOAD-{index}', customer=self.customer,
+                contact_name='Payload Test', contact_phone='+251911777222',
+                subtotal_etb=Decimal('100.00'), total_amount_etb=Decimal('100.00'),
+                status='PLACED',
+            )
+            Payment.objects.create(
+                order=order, tx_ref=f'payload-tx-{index}', amount_etb=Decimal('100.00'),
+                status='SUCCESS', payment_method='card', receipt_type='image',
+                receipt_data='data:image/png;base64,' + ('A' * 5000),
+            )
+            self.orders.append(order)
+
+    def test_order_list_does_not_inline_receipt_images(self):
+        self.client.force_authenticate(self.manager)
+        res = self.client.get('/api/v1/orders/?page_size=200')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        rows = res.data['results']
+        self.assertEqual(len(rows), 10)
+        for row in rows:
+            payment = row['latest_payment']
+            self.assertIsNone(payment['receipt_data'])
+            self.assertTrue(payment['has_receipt'])
+            self.assertTrue(payment['receipt_url'].endswith(f"/orders/{row['id']}/receipt/"))
+
+    def test_order_list_does_not_query_per_order(self):
+        self.client.force_authenticate(self.manager)
+        # Pagination count, the orders, their items and one payments prefetch.
+        with self.assertNumQueries(4):
+            res = self.client.get('/api/v1/orders/?page_size=200')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+    def test_receipt_bytes_are_served_on_demand(self):
+        self.client.force_authenticate(self.manager)
+        res = self.client.get(f'/api/v1/orders/{self.orders[0].id}/receipt/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res['Content-Type'], 'image/png')
+        self.assertEqual(len(res.content), 3750)  # 5000 base64 chars decoded
+
+    def test_receipt_of_someone_elses_order_is_not_found(self):
+        other = User.objects.create_user(
+            username='payloadother', email='payloadother@coffeereceipts.com',
+            phone='+251911777333', password='Password123!', role='CUSTOMER',
+        )
+        self.client.force_authenticate(other)
+        res = self.client.get(f'/api/v1/orders/{self.orders[0].id}/receipt/')
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class ExpireUnpaidOrderTests(TestCase):

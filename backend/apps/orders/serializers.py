@@ -111,7 +111,11 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_latest_payment(self, order):
         """Latest payment attempt, so the customer and staff can track approval/payment."""
-        payment = order.payments.order_by('-created_at').first()
+        # `order.payments.all()` reads the viewset's prefetch cache. Asking the
+        # manager for `.order_by('-created_at').first()` instead meant a fresh query
+        # per order, so a 200-order poll cost 200 extra round trips every 5 s.
+        payments = list(order.payments.all())
+        payment = max(payments, key=lambda p: p.created_at) if payments else None
         if not payment:
             return None
 
@@ -124,6 +128,16 @@ class OrderSerializer(serializers.ModelSerializer):
                     bank_verification = parsed
             except Exception:
                 pass
+
+        # Receipt images live inline as base64 data URLs in `receipt_data`. Shipping
+        # them with every order made the manager's 5-second poll answer with
+        # megabytes of JSON - enough for the host to reset the connection or time
+        # the worker out. The data stays in the database and is served one order at
+        # a time by the `receipt` action on OrderViewSet.
+        inline_receipt = bool(payment.receipt_data) and not payment.receipt_file
+        receipt_link = payment.receipt_url if payment.receipt_file else (
+            f'/api/v1/orders/{order.pk}/receipt/' if inline_receipt else None
+        )
 
         return {
             'id': payment.id,
@@ -141,8 +155,9 @@ class OrderSerializer(serializers.ModelSerializer):
             'verified_at': payment.verified_at,
             'gateway_status': payment.gateway_status,
             'bank_verification': bank_verification,
-            'receipt_url': payment.receipt_url,
-            'receipt_data': payment.receipt_data,
+            'receipt_url': receipt_link,
+            'has_receipt': bool(payment.receipt_file or payment.receipt_data),
+            'receipt_data': None,
             'receipt_type': payment.receipt_type or ('pdf' if (payment.receipt_file and payment.receipt_file.name.endswith('.pdf')) or (payment.receipt_data and 'application/pdf' in payment.receipt_data) else 'image'),
         }
 

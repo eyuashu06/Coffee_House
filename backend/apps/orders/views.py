@@ -1,8 +1,12 @@
+import base64
+
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db import models
+from django.db.models import Prefetch
+from django.http import FileResponse, HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -13,6 +17,7 @@ from .serializers import (
     DeliveryZoneSerializer,
     RestaurantSettingsSerializer,
 )
+from apps.payments.models import Payment
 from .workflow import assert_transition, InvalidTransition
 from apps.accounts.permissions import IsManager, IsOwnerOrManager
 from apps.core.throttling import ScopedThrottle
@@ -87,7 +92,17 @@ class OrderViewSet(viewsets.ModelViewSet):
             if user.is_manager_or_admin()
             else Order.objects.filter(customer=user)
         )
-        queryset = queryset.prefetch_related('items__add_ons', 'payments').order_by('-created_at')
+        # Ordered so the serializer can pick "latest payment" from the cache rather
+        # than issuing one query per order.
+        payment_prefetch = Prefetch(
+            'payments',
+            queryset=Payment.objects.select_related('approved_by').order_by('-created_at'),
+        )
+        queryset = (
+            queryset.prefetch_related('items__add_ons', payment_prefetch)
+            .select_related('customer')
+            .order_by('-created_at')
+        )
 
         # The footer's order tracker looks an order up by its code, and the manager
         # panel will want the same. Scoped to whatever get_queryset() already allows,
@@ -115,6 +130,42 @@ class OrderViewSet(viewsets.ModelViewSet):
             changed_by=self.request.user if self.request.user.is_authenticated else None,
             notes='Order created'
         )
+
+    @action(detail=True, methods=['get'])
+    def receipt(self, request, pk=None):
+        """
+        The uploaded receipt for this order, one order at a time.
+
+        Receipts are stored as base64 data URLs. Inlining them in the order list
+        made every manager poll answer with megabytes of JSON, so the list only
+        carries `/api/v1/orders/<id>/receipt/` and the bytes are fetched here when
+        someone actually opens the receipt. get_object() reuses get_queryset(), so
+        a customer cannot read another customer's receipt.
+        """
+        order = self.get_object()
+        payments = list(order.payments.all())
+        payment = next((p for p in payments if p.receipt_file or p.receipt_data), None)
+        if not payment:
+            return Response({'error': 'No receipt has been uploaded for this order.'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if payment.receipt_file:
+            content_type = 'application/pdf' if payment.receipt_file.name.lower().endswith('.pdf') else 'image/jpeg'
+            return FileResponse(payment.receipt_file.open('rb'), content_type=content_type)
+
+        data = (payment.receipt_data or '').strip()
+        if data.startswith('data:'):
+            header, _, payload = data.partition(',')
+            mime = header[5:].split(';')[0] or 'image/jpeg'
+            try:
+                return HttpResponse(base64.b64decode(payload), content_type=mime)
+            except (ValueError, TypeError):
+                return Response({'error': 'The stored receipt could not be read.'},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if data.startswith('http'):
+            return HttpResponseRedirect(data)
+        return Response({'error': 'No receipt has been uploaded for this order.'},
+                        status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):

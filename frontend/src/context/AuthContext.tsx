@@ -20,6 +20,12 @@ interface AuthContextType {
   loading: boolean;
   /** True once the server told us the session is no longer valid. */
   sessionExpired: boolean;
+  /**
+   * Set when the backend could not be reached at all (cold start, 502, offline).
+   * This is NOT a signed-out session: the cookies may be perfectly valid, so the
+   * UI must offer a retry instead of bouncing the user to the sign-in form.
+   */
+  authError: string | null;
   login: (usernameOrEmail: string, password: string) => Promise<void>;
   phoneLogin: (phone: string, name?: string) => Promise<User>;
   /** Call this when any API call answers 401 so polling can stop. */
@@ -54,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [sessionExpired, setSessionExpired] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const reportUnauthorized = useCallback(() => {
     setSessionExpired(true);
@@ -61,28 +68,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const checkAuth = async () => {
+    setLoading(true);
+    // A host that has gone to sleep answers 502 for a while after a sign-in. Being
+    // logged out because of that made the dashboard look broken: give the backend
+    // a few seconds to wake up before deciding anything about the session.
+    const MAX_ATTEMPTS = 4;
     try {
-      // apiFetch transparently refreshes an expired access cookie and replays the
-      // request, so a returning visitor with a stale access token but a live
-      // refresh token is restored instead of being logged out.
-      const res = await apiFetch('/api/v1/auth/me/', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (res.ok) {
-        const userData = await parseResponseData(res);
-        if (userData.authenticated === false) {
-          setSessionExpired(false);
-          setUser(null);
-        } else {
-          setSessionExpired(false);
-          setUser(userData);
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+        let transient = false;
+        try {
+          // apiFetch transparently refreshes an expired access cookie and replays the
+          // request, so a returning visitor with a stale access token but a live
+          // refresh token is restored instead of being logged out.
+          const res = await apiFetch('/api/v1/auth/me/', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            timeoutMs: 15_000,
+          });
+          if (res.ok) {
+            const userData = await parseResponseData(res);
+            setAuthError(null);
+            setSessionExpired(false);
+            setUser(userData.authenticated === false ? null : userData);
+            return;
+          }
+          if (res.status < 500) {
+            // A real answer: the caller is not signed in.
+            setAuthError(null);
+            setUser(null);
+            return;
+          }
+          transient = true;
+        } catch {
+          transient = true;
         }
-      } else {
-        setUser(null);
+
+        if (!transient) return;
+        if (attempt < MAX_ATTEMPTS - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        }
       }
-    } catch (err) {
-      setUser(null);
+      // Every attempt was a 5xx/network failure. Keep any user we already had and
+      // let the page show a retryable "server unreachable" state.
+      setAuthError('We could not reach the server. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -135,6 +163,7 @@ function formatAuthError(data: any, fallback: string): string {
     }
 
     setSessionExpired(false);
+    setAuthError(null);
     setUser(data.user);
   };
 
@@ -205,6 +234,7 @@ function formatAuthError(data: any, fallback: string): string {
         setUser,
         loading,
         sessionExpired,
+        authError,
         reportUnauthorized,
         login,
         phoneLogin,

@@ -536,6 +536,12 @@ export const translations: Record<string, string> = {
   'Your Account': 'መለያዎ',
   'Hello': 'ሰላም',
   'Session expired': 'የቆይታ ጊዜዎ አልፏል',
+  'Server not responding': 'አገልጋዩ ምላሽ አይሰጥም',
+  'Offline — retrying': 'ከመስመር ውጭ — እንደገና በመሞከር ላይ',
+  'Retry now': 'አሁን እንደገና ይሞክሩ',
+  'The server is not answering, so live orders and revenue are paused. Retrying automatically.': 'አገልጋዩ ምላሽ አይሰጥም፣ ስለሆነም ቀጥታ ትዕዛዞችና ገቢ ለጊዜው ቆሟል። በራስ-ሰር እንደገና ይሞከራል።',
+  'We could not refresh your orders. Retrying automatically.': 'ትዕዛዞችዎን ማደስ አልቻልንም። በራስ-ሰር እንደገና ይሞከራል።',
+  'We could not reach the server. Please check your connection and try again.': 'አገልጋዩን ማግኘት አልቻልንም። እባክዎ ግንኙነትዎን ያረጋግጡና እንደገና ይሞክሩ።',
   'Sign in again': 'እንደገና ይግቡ',
   'Sign In Required': 'መግባት ያስፈልጋል',
   'Please sign in to view your orders and manage your profile.':

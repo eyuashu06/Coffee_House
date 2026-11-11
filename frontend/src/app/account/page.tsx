@@ -167,7 +167,7 @@ interface Banner {
 }
 
 export default function AccountPage() {
-  const { user, loading, checkAuth, logout, sessionExpired, reportUnauthorized } = useAuth();
+  const { user, loading, checkAuth, logout, sessionExpired, authError, reportUnauthorized } = useAuth();
   const { t, tItem, locale, language } = useLanguage();
   const birr = language === 'am' ? 'ብር' : 'ETB';
   const [activeTab, setActiveTab] = useState<'orders' | 'reservations' | 'addresses' | 'profile'>('orders');
@@ -176,6 +176,7 @@ export default function AccountPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  const [liveError, setLiveError] = useState(false);
   const [isLoadingReservations, setIsLoadingReservations] = useState(false);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<Order | null>(null);
   const [banner, setBanner] = useState<Banner | null>(null);
@@ -220,7 +221,7 @@ export default function AccountPage() {
     applyTextSize(sz);
   };
 
-  const fetchOrders = useCallback(async (silent = false) => {
+  const fetchOrders = useCallback(async (silent = false): Promise<boolean> => {
     if (!silent) setIsLoadingOrders(true);
     try {
       const res = await apiFetch('/api/v1/orders/?page_size=200', {
@@ -228,16 +229,17 @@ export default function AccountPage() {
       });
       if (res.status === 401) {
         reportUnauthorized();
-        return;
+        return false;
       }
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : (data.results || []);
-        ordersRef.current = list;
-        setOrders(list);
-      }
+      if (!res.ok) return false;
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : (data.results || []);
+      ordersRef.current = list;
+      setOrders(list);
+      return true;
     } catch (e) {
       console.error('Failed to fetch orders:', e);
+      return false;
     } finally {
       if (!silent) setIsLoadingOrders(false);
     }
@@ -502,10 +504,31 @@ export default function AccountPage() {
     }
   };
 
-  // Poll order statuses so the customer sees kitchen/delivery updates live
+  // Poll order statuses so the customer sees kitchen/delivery updates live.
+  // Paused while the tab is hidden, skipped while a poll is still in flight, and
+  // backed off after failures so a struggling backend is not hit every 10 seconds.
   useEffect(() => {
     if (!user) return;
-    const interval = setInterval(() => fetchOrders(true), 10000);
+    let failures = 0;
+    let pausedUntil = 0;
+    let busy = false;
+
+    const tick = async () => {
+      if (busy) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
+      if (Date.now() < pausedUntil) return;
+      busy = true;
+      try {
+        const ok = await fetchOrders(true);
+        failures = ok ? 0 : failures + 1;
+        pausedUntil = ok ? 0 : Date.now() + Math.min(20000 * 2 ** (failures - 1), 120000);
+        setLiveError(!ok);
+      } finally {
+        busy = false;
+      }
+    };
+
+    const interval = setInterval(tick, 10000);
     return () => {
       clearInterval(interval);
       if (paymentTimerRef.current) window.clearTimeout(paymentTimerRef.current);
@@ -617,10 +640,27 @@ export default function AccountPage() {
   );
 
   useEffect(() => {
-    if (!loading && !user && !sessionExpired && !isGuestPaymentReturn) {
+    // Don't treat an unreachable backend as "signed out".
+    if (!loading && !user && !sessionExpired && !authError && !isGuestPaymentReturn) {
       window.location.href = '/?welcome=1';
     }
-  }, [loading, user, sessionExpired, isGuestPaymentReturn]);
+  }, [loading, user, sessionExpired, authError, isGuestPaymentReturn]);
+
+  if (authError && !user) {
+    return (
+      <div className="min-h-screen bg-surface text-[var(--text)] font-body flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <span className="material-symbols-outlined text-5xl text-amber-400">cloud_off</span>
+        <h2 className="font-display text-[26px] font-bold">{t('Server not responding')}</h2>
+        <p className="text-[var(--muted)] text-[15px] max-w-md">{t(authError)}</p>
+        <button
+          onClick={() => checkAuth()}
+          className="h-10 px-6 rounded-full bg-[#f7b5be] text-[#4e232b] font-semibold hover:brightness-110 transition-colors"
+        >
+          {t('Try again')}
+        </button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -812,6 +852,22 @@ export default function AccountPage() {
           <i className={`ph ${banner.type === 'success' ? 'ph-check-circle' : banner.type === 'error' ? 'ph-warning-circle' : 'ph-info'} text-xl mt-0.5`}></i>
           <span className="text-[15px]">{banner.message}</span>
           <button onClick={() => setBanner(null)} className="ml-auto hover:opacity-70"><i className="ph ph-x"></i></button>
+        </div>
+      )}
+
+      {liveError && (
+        <div className="mx-4 mt-6 p-4 rounded-[14px] flex flex-wrap items-center gap-3 border bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300">
+          <i className="ph ph-cloud-slash text-xl"></i>
+          <span className="text-[15px] flex-1 min-w-[180px]">
+            {t('We could not refresh your orders. Retrying automatically.')}
+          </span>
+          <button
+            type="button"
+            onClick={async () => { setLiveError(!(await fetchOrders(true))); }}
+            className="h-9 px-4 rounded-full bg-amber-500/20 border border-amber-500/40 font-semibold text-[13px] hover:bg-amber-500/30 transition-colors"
+          >
+            {t('Retry now')}
+          </button>
         </div>
       )}
 
