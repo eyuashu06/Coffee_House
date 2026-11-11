@@ -150,10 +150,23 @@ class ReservationAvailabilityTests(TestCase):
             )
             self.assertTrue(ok, f'{suggestion} was suggested but is not free')
 
-    def test_anonymous_caller_cannot_book(self):
+    def test_anonymous_caller_can_book_with_name_and_phone(self):
+        """No account needed: the name and phone number are enough."""
         self.client.force_authenticate(user=None)
         res = self.client.post('/api/v1/reservations/', self._payload(), format='json')
-        self.assertIn(res.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(res.data.get('order_code'))
+        booking = TableReservation.objects.get()
+        self.assertIsNone(booking.user)
+        self.assertEqual(booking.name, 'Liya Bekele')
+        self.assertEqual(booking.contact_phone, '+251911000888')
+
+    def test_anonymous_booking_without_a_phone_is_rejected(self):
+        self.client.force_authenticate(user=None)
+        payload = self._payload()
+        payload.pop('contact_phone', None)
+        res = self.client.post('/api/v1/reservations/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(TableReservation.objects.exists())
 
 
