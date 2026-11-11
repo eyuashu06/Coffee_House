@@ -45,7 +45,12 @@ export default function RootLayout({
             the dated Old Standard TT / Crimson Text serifs. */}
         {/* eslint-disable-next-line @next/next/google-font-display */}
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet" />
-        <link href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css" rel="stylesheet" />
+        {/* Phosphor icons are self-hosted so a slow CDN cannot leave the header
+            showing empty buttons (or icon names as raw text). It stays a plain
+            <link> to /fonts/phosphor.css rather than a bundled import so the
+            icon rules do not land in the render-blocking app stylesheet. */}
+        {/* eslint-disable-next-line @next/next/no-css-tags */}
+        <link rel="stylesheet" href="/fonts/phosphor.css" />
         {/* Apply the saved theme before first paint so a dark-mode user never sees a
             cream flash (and a light-mode user never sees espresso). */}
         <script
@@ -53,12 +58,6 @@ export default function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='light'){document.documentElement.classList.remove('dark');}else{document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}try{var sz=localStorage.getItem('preferred_text_size');if(sz){document.documentElement.setAttribute('data-text-size',sz);}}catch(e){}try{if(typeof window!=='undefined'&&(location.hostname==='localhost'||location.hostname==='127.0.0.1')){if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){for(var r of regs){r.unregister();}});}if('caches' in window){caches.keys().then(function(keys){for(var k of keys){caches.delete(k);}});}}}catch(e){}})();`,
           }}
         />
-        {/* display=block is what Material Symbols asks for on an icon font: with the
-            default, the ligature name renders as literal text ("local_cafe") until
-            the font loads. The lint rule only knows swap/optional, both of which
-            reintroduce that flash. */}
-        {/* eslint-disable-next-line @next/next/google-font-display */}
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
       </head>
       <body className="font-body min-h-screen flex flex-col selection:bg-[var(--accent-soft)] selection:text-[var(--text)] transition-colors duration-300">
         <LanguageProvider initialLanguage={language}>
