@@ -139,6 +139,11 @@ ASSISTANT_USE_LLM = os.environ.get('ASSISTANT_USE_LLM', 'False').lower() in ('1'
 ASSISTANT_MODEL = os.environ.get('ASSISTANT_MODEL', 'gemini-3.5-flash-lite')
 #: Requests to the model are capped so a slow provider cannot hold a chat open.
 ASSISTANT_LLM_TIMEOUT = int(os.environ.get('ASSISTANT_LLM_TIMEOUT', '20'))
+#: Absolute cap on a single assistant request, so a slow or overloaded provider
+#: cannot hold a chat open indefinitely. The frontend wrapper is longer (45 s) so
+#: this acts as the backend deadline; when it is hit the assistant falls back to the
+#: deterministic engine rather than stalling the conversation.
+ASSISTANT_REQUEST_TIMEOUT_S = int(os.environ.get('ASSISTANT_REQUEST_TIMEOUT_S', '30'))
 
 # Reservation rules used by the assistant's availability check
 ASSISTANT_RESERVATION_TABLES = int(os.environ.get('ASSISTANT_RESERVATION_TABLES', '4'))
