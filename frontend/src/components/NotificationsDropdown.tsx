@@ -65,7 +65,7 @@ export function resolveNotificationTarget(notification: Notification, userRole?:
 
 export default function NotificationsDropdown() {
   const { user } = useAuth();
-  const { t, locale } = useLanguage();
+  const { t, locale, language } = useLanguage();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
