@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
-from .models import Address, validate_ethiopian_phone
+from .models import Address, normalize_ethiopian_phone, validate_ethiopian_phone
 from .validators import validate_deliverable_email
 
 User = get_user_model()
@@ -51,7 +51,6 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_phone(self, value):
         if not value:
             return ''
-        from .models import normalize_ethiopian_phone, validate_ethiopian_phone
         norm = normalize_ethiopian_phone(value)
         validate_ethiopian_phone(norm)
         return norm
