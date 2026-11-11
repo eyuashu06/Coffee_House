@@ -17,9 +17,9 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(MenuItem)
 class MenuItemAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'base_price_etb', 'is_available', 'is_signature', 'created_at')
+    list_display = ('name', 'category', 'base_price_etb', 'prep_minutes', 'is_available', 'is_signature', 'created_at')
     list_filter = ('category', 'is_available', 'is_signature')
-    list_editable = ('base_price_etb', 'is_available', 'is_signature')
+    list_editable = ('base_price_etb', 'prep_minutes', 'is_available', 'is_signature')
     search_fields = ('name', 'description')
     prepopulated_fields = {'slug': ('name',)}
     inlines = [ItemVariantInline, AddOnInline]
