@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import CartDrawer, { CartItem } from '../components/CartDrawer';
 import AuthModal from '../components/AuthModal';
@@ -132,6 +132,10 @@ export default function Home() {
     const { t, language, tCategory, tItem, tItemDescription, locale } = useLanguage();
     const { settings: cafeSettings, locations: cafeLocations, primaryLocation } = useCafe();
     const [items, setItems] = useState<MenuItem[]>([]);
+    // A cold API (the backend sleeps when idle in production) can take a while to
+    // answer. Tracking the request state lets the menu show a skeleton and offer a
+    // retry instead of claiming the menu is empty.
+    const [menuStatus, setMenuStatus] = useState<'loading' | 'ready' | 'error'>('loading');
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -143,6 +147,9 @@ export default function Home() {
     const [menuSearch, setMenuSearch] = useState('');
     const [bookingData, setBookingData] = useState({ name: '', date_time: '', party_size: 2, contact_phone: '' });
     const [bookingStatus, setBookingStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
+    // Code of the booking just made, so a guest can keep it and track the table
+    // without an account.
+    const [bookingCode, setBookingCode] = useState<string | null>(null);
     const [bookingError, setBookingError] = useState<string | null>(null);
     const [minDateTime, setMinDateTime] = useState('');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -364,6 +371,7 @@ export default function Home() {
         isSubmittingReservationRef.current = true;
         setBookingStatus('LOADING');
         setBookingError(null);
+        setBookingCode(null);
         try {
             const res = await apiFetch('/api/v1/reservations/', {
                 method: 'POST',
@@ -373,6 +381,12 @@ export default function Home() {
             if (res.ok) {
                 setBookingStatus('SUCCESS');
                 clearPendingReservation();
+                try {
+                    const created = await res.json();
+                    setBookingCode(typeof created?.order_code === 'string' ? created.order_code : null);
+                } catch {
+                    setBookingCode(null);
+                }
                 const userName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username : '';
                 setBookingData({
                     name: userName,
@@ -380,7 +394,7 @@ export default function Home() {
                     party_size: 2,
                     contact_phone: user?.phone || '',
                 });
-                setTimeout(() => setBookingStatus('IDLE'), 6000);
+                setTimeout(() => setBookingStatus('IDLE'), 20000);
                 setTimeout(() => {
                     const el = document.getElementById('booking-form') || document.getElementById('visit');
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -462,18 +476,25 @@ export default function Home() {
             return;
         }
 
-        // 2. If guest (not signed in), save form state with autoSubmit and prompt to sign in/up
-        if (!user) {
-            savePendingReservation({ ...bookingData, autoSubmit: true });
-            setAuthPromptMessage(t('Sign in or create an account to complete your table reservation.'));
-            setInitialAuthMode('LOGIN');
-            setIsAuthModalOpen(true);
-            return;
-        }
-
-        // 3. User is signed in, execute reservation directly
+        // 2. No account needed: the name and phone number on the form are all the
+        // cafe needs to hold the table, so guests book exactly like customers.
         await executeReservation(bookingData);
     };
+
+    const fetchMenu = useCallback(async () => {
+        setMenuStatus('loading');
+        try {
+            const res = await fetch('/api/v1/menu/items/?page_size=200');
+            if (!res.ok) throw new Error(`Menu request failed (${res.status})`);
+            const data = await res.json();
+            const list: MenuItem[] = Array.isArray(data) ? data : data.results || [];
+            setItems(list.filter(item => item.is_available !== false));
+            setMenuStatus('ready');
+        } catch (e) {
+            console.error(e);
+            setMenuStatus('error');
+        }
+    }, []);
 
     useEffect(() => {
         // Starts from today at current time onwards, not tomorrow
@@ -493,22 +514,10 @@ export default function Home() {
             }));
         }
 
-        async function fetchMenu() {
-            try {
-                const res = await fetch('/api/v1/menu/items/?page_size=200');
-                if (res.ok) {
-                    const data = await res.json();
-                    const list: MenuItem[] = Array.isArray(data) ? data : data.results || [];
-                    setItems(list.filter(item => item.is_available !== false));
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
         fetchMenu();
 
         return () => clearInterval(timer);
-    }, []);
+    }, [fetchMenu]);
 
     useEffect(() => {
         if (!user) return;
@@ -1084,12 +1093,35 @@ export default function Home() {
                                 </div>
                             </div>
 
-                            {filteredItems.length === 0 ? (
+                            {menuStatus === 'loading' && items.length === 0 ? (
+                                <div aria-busy="true" aria-label={t('Loading menu')} className="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
+                                    {Array.from({ length: 8 }).map((_, index) => (
+                                        <div key={index} className="rounded-[20px] bg-[var(--surface)] border border-[var(--border)] p-4 animate-pulse">
+                                            <div className="w-full aspect-[16/10] rounded-[14px] bg-[var(--surface-2)]" />
+                                            <div className="mt-3 h-4 w-2/3 rounded-full bg-[var(--surface-2)]" />
+                                            <div className="mt-2 h-3 w-full rounded-full bg-[var(--surface-2)]" />
+                                            <div className="mt-4 h-9 w-full rounded-full bg-[var(--surface-2)]" />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : menuStatus === 'error' && items.length === 0 ? (
+                                <div className="text-center text-[var(--muted)] py-14 col-span-full">
+                                    <i className="ph ph-warning-circle text-[36px] text-[var(--muted)]/60 mb-2"></i>
+                                    <p className="text-[20px] font-display text-[var(--text)]">{t('We could not load the menu.')}</p>
+                                    <p className="mt-2 text-[14.5px]">{t('Check your connection and try again in a moment.')}</p>
+                                    <button
+                                        onClick={() => { void fetchMenu(); }}
+                                        className="mt-4 px-5 py-2 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[13.5px] font-semibold hover:brightness-110 transition-all"
+                                    >
+                                        {t('Try again')}
+                                    </button>
+                                </div>
+                            ) : filteredItems.length === 0 ? (
                                 <div className="text-center text-[var(--muted)] py-14 col-span-full">
                                     <i className="ph ph-magnifying-glass text-[36px] text-[var(--muted)]/60 mb-2"></i>
                                     <p className="text-[20px] font-display text-[var(--text)]">{t('No menu items found.')}</p>
                                     <p className="mt-2 text-[14.5px]">
-                                        {menuSearch ? t('Try clearing your search query or choosing another category.') : t('Please ensure your Django backend is running on port 8000 so the menu can be loaded!')}
+                                        {menuSearch ? t('Try clearing your search query or choosing another category.') : t('The menu is empty right now. Please check back soon.')}
                                     </p>
                                     {menuSearch && (
                                         <button
@@ -1103,7 +1135,8 @@ export default function Home() {
                             ) : (
                                 <>
                                     {/* ================= MOBILE SETUP (< sm) ================= */}
-                                    <div className="mt-8 sm:hidden flex flex-col gap-3 pb-8">
+                                    {/* pb-24 keeps the last card clear of the floating chat button */}
+                                    <div className="mt-8 sm:hidden flex flex-col gap-3 pb-24">
                                         {filteredItems.map((item) => {
                                             const itemImg = (item as any).image_display || item.image_url || 'https://images.pexels.com/photos/37756986/pexels-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80';
                                             return (
@@ -1125,7 +1158,7 @@ export default function Home() {
                                                         />
                                                         {item.is_signature && (
                                                             <div className="absolute top-1.5 left-1.5 bg-amber-500 text-white rounded-full p-1 shadow-sm">
-                                                                <i className="ph ph-star-fill text-[9.5px]"></i>
+                                                                <i className="ph ph-star text-[9.5px]"></i>
                                                             </div>
                                                         )}
                                                     </div>
@@ -1199,7 +1232,7 @@ export default function Home() {
                                                             {item.is_signature && (
                                                                 <div className="absolute top-2.5 left-2.5">
                                                                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-black/70 text-amber-300 backdrop-blur-md border border-amber-400/30 flex items-center gap-1 shadow-sm">
-                                                                        <i className="ph ph-star-fill text-[10px] text-amber-400"></i>
+                                                                        <i className="ph ph-star text-[10px] text-amber-400"></i>
                                                                         <span>{t('Signature')}</span>
                                                                     </span>
                                                                 </div>
@@ -1378,11 +1411,21 @@ export default function Home() {
                                             <div className="sm:col-span-2 flex flex-col gap-3 pt-1">
                                                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                                                     <button id="bk-btn" type="submit" disabled={bookingStatus === 'LOADING'} className="h-12 px-8 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[16px] font-semibold hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                                                        {bookingStatus === 'LOADING' ? t('Booking your table...') : user ? t('Book a table') : t('Sign in to book')}
+                                                        {bookingStatus === 'LOADING' ? t('Booking your table...') : t('Book a table')}
                                                     </button>
                                                     <p id="bk-note" className="text-[13.5px] italic text-[var(--muted)]">{t('No deposit — we hold your table for 20 minutes.')}</p>
                                                 </div>
-                                                {bookingStatus === 'SUCCESS' && <p className="text-[var(--accent)] font-semibold text-sm">{t('Your table is booked! We\'ll call you shortly to confirm.')}</p>}
+                                                {bookingStatus === 'SUCCESS' && (
+                                                    <p className="text-[var(--accent)] font-semibold text-sm">
+                                                        {t('Your table is booked! We\'ll call you shortly to confirm.')}
+                                                        {bookingCode && (
+                                                            <span className="block text-[var(--muted)] font-normal mt-1">
+                                                                {t('Keep this code to track your booking:')}{' '}
+                                                                <span className="font-mono font-bold text-[var(--text)]">{bookingCode}</span>
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                )}
                                                 {bookingStatus === 'ERROR' && (
                                                     <p className="text-red-500 dark:text-red-400 text-sm">
                                                         {bookingError ?? t('There was an error booking your table. Please try again.')}
