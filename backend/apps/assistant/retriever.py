@@ -588,8 +588,11 @@ def _extract_date_and_time(text):
             r'(?<!\d)(\d{1,2})\s*(?:at\s+|in\s+(?:the\s+)?|on\s+)?(am|pm|morning|afternoon|evening|night|noon|midday|ጠዋት|ከሰዓት|ማታ|ሌሊት)(?![a-z])', lowered)
         lt_lone = re.search(
             r'(?<!\d)(\d{1,2})\s*(?:at\s+|on\s+)?(?:lt|local\s*time)\b', lowered)
+        # The unit has to be captured: the branch below reads group(2) to know
+        # whether "ከ6 ሰዓት" means morning or night. Without the capture it raised
+        # IndexError and the whole turn came back as a generic failure.
         preposition = re.search(
-            r'ከ\s*(?<!\d)(\d{1,2})\s*(?:ሰዓት|ማታ|ጠዋት|ሌሊት)(?![a-z])', lowered)
+            r'ከ\s*(?<!\d)(\d{1,2})\s*(ሰዓት|ማታ|ጠዋት|ሌሊት)(?![a-z])', lowered)
         unit_first = re.search(
             r'(?<!\d)(ከሰዓት|ሰዓት|ማታ|ጠዋት|ሌሊት)\s*(?:ከ\s*|በ\s*)?(\d{1,2})(?!\d)', lowered)
 
@@ -684,7 +687,10 @@ def _extract_guests(text):
 def _extract_name(text):
     """A reservation name is usually the short phrase after 'name is' / 'ስም'."""
     patterns = [
-        r'(?:my name is|name is|name[:\s]+|under the name of|under the name|under|named)\s+([A-Za-z][A-Za-z\s\-\.]{1,30})',
+        # `name` must be its own alternative: spelling it as `name[:\s]+\s+`
+        # made the class eat the only space in "name Hana" and then demand a
+        # second one, so the most natural way to give a name never matched.
+        r'(?:my name is|name is|under the name of|under the name|under|named|name)[:\s]+([A-Za-z][A-Za-z\s\-\.]{1,30})',
         r'ስም(?:\s*ነው|\s*:\s*|\s+)\s*([^\s,.]{2,30})',
         r'ስሜ\s*([^\s,.]{2,30})',
     ]
