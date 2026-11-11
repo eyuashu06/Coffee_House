@@ -29,7 +29,7 @@ MAX_QUANTITY_PER_LINE = 20
 ORDER_TYPES = {
     'DELIVERY': 'Delivery',
     'PICKUP': 'Store Pickup',
-    'DINE_IN': 'Dine-In (Table Service)',
+    'DINE_IN': 'Dine-In / Reserved Table',
 }
 
 
