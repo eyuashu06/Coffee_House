@@ -15,6 +15,9 @@ class Category(models.Model):
         return self.name
 
 class MenuItem(models.Model):
+    #: Read in _prepare_line and _order_prep_minutes_from_lines via instance
+    #: attributes, not a serializer PK field.
+
     name = models.CharField(max_length=150)
     slug = models.SlugField(unique=True)
     description = models.TextField()
@@ -24,6 +27,10 @@ class MenuItem(models.Model):
     image_url = models.URLField(max_length=500, blank=True, help_text='External image link fallback')
     is_available = models.BooleanField(default=True)
     is_signature = models.BooleanField(default=False)
+    prep_minutes = models.PositiveIntegerField(
+        default=20,
+        help_text='Estimated kitchen prep time in minutes for this item. Drinks and food can have different values; the order prep time is the slowest item in the order.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
