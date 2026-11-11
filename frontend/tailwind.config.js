@@ -11,6 +11,13 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // Non-default steps the UI already refers to (header controls, card grids).
+      // Without them Tailwind emits nothing, which collapsed buttons and let
+      // icon labels overlap on small screens.
+      spacing: {
+        '4.5': '1.125rem',
+        '9.5': '2.375rem',
+      },
       colors: {
         "on-secondary-fixed": "#2c1600", 
         "inverse-primary": "#835058", 
