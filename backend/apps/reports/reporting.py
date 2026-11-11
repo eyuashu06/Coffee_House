@@ -23,12 +23,24 @@ Money rules, deliberately strict:
 
 from datetime import timedelta
 
+from decimal import Decimal
+from django.db import models
 from django.db.models import Count, DecimalField, Sum
 from django.db.models.functions import Cast, TruncDate, TruncHour
 from django.utils import timezone
 
-from apps.orders.models import Order, OrderItem
 from apps.orders.workflow import CLOSED_STATUSES, PAID_STATUSES
+
+
+def _order_model():
+    from apps.orders.models import Order
+    return Order
+
+
+def _order_item_model():
+    from apps.orders.models import OrderItem
+    return OrderItem
+
 
 #: Named ranges the dashboard offers, in days.
 RANGE_CHOICES = {
@@ -53,6 +65,41 @@ _MONEY = DecimalField(max_digits=12, decimal_places=2)
 CAFE_TZ = timezone.get_current_timezone()
 
 
+#: Minutes each lifecycle step should take before the auto-advance command moves on.
+#: These are defaults for the local dev/staging cron; the same values live on
+#: RestaurantSettings for per-venue config (when that is wired up).
+ORDER_STEP_DURATIONS = {
+    'PLACED': ('ACCEPTED', 2),
+    'ACCEPTED': ('PREPARING', 10),
+    'PREPARING': ('READY', 15),
+}
+
+
+def advance_order(order, now=None, durations=None):
+    """Move `order` to the next step if enough time has passed.
+
+    Returns (changed, new_status_or_None).
+    """
+    if now is None:
+        now = timezone.localtime()
+    durations = durations or ORDER_STEP_DURATIONS
+    current = order.status
+    if current not in durations:
+        return False, None
+    next_status, required_minutes = durations[current]
+    started = order.step_started_at
+    if started is None:
+        return False, None
+    if now - started < timezone.timedelta(minutes=required_minutes):
+        return False, None
+    from apps.orders.workflow import assert_transition
+    try:
+        assert_transition(current, next_status)
+    except Exception:
+        return False, None
+    return True, next_status
+
+
 def resolve_range(name):
     """Named range to a day count, falling back to the default for anything unknown."""
     return RANGE_CHOICES.get((name or '').strip().lower(), RANGE_CHOICES[DEFAULT_RANGE])
@@ -75,7 +122,7 @@ def range_start(days, now=None):
 
 def paid_orders_in_range(days, order_type=None, now=None):
     """The queryset every report here is built on."""
-    queryset = Order.objects.filter(
+    queryset = _order_model().objects.filter(
         status__in=PAID_STATUSES,
         created_at__gte=range_start(days, now=now),
     )
@@ -144,7 +191,7 @@ def top_items(days=30, order_type=None, limit=10, now=None):
     a month that included it. Lines whose snapshot name is blank are ignored.
     """
     items = (
-        OrderItem.objects
+        _order_item_model().objects
         .filter(
             order__in=paid_orders_in_range(days, order_type, now=now),
             item_name__gt='',
@@ -225,7 +272,7 @@ def order_type_split(days=30, now=None):
     total_orders = sum(row['orders'] for row in totals.values()) or 0
 
     split = []
-    for code, label in Order.ORDER_TYPES:
+    for code, label in _order_model().ORDER_TYPES:
         row = totals.get(code)
         orders = row['orders'] if row else 0
         split.append({
@@ -247,8 +294,8 @@ def unpaid_summary(now=None):
     much did we lose to abandoned checkouts?" are different questions.
     """
     now = now or timezone.localtime()
-    open_unpaid = Order.objects.filter(status='PENDING_PAYMENT')
-    expired = Order.objects.filter(
+    open_unpaid = _order_model().objects.filter(status='PENDING_PAYMENT')
+    expired = _order_model().objects.filter(
         status='EXPIRED',
         created_at__gte=range_start(30, now=now),
     )
