@@ -6,6 +6,8 @@ exclusively from retrieved database facts. When a fact is missing, the assistant
 says so instead of guessing.
 """
 
+import re
+
 from django.utils import timezone
 
 from . import reservations as reservation_service
@@ -251,17 +253,17 @@ def _availability(category_slug, items):
 
 def _order_help(venue):
     en = (f"How to order:\n"
-          f"1. Sign in to your account.\n"
-          f"2. Choose items from the menu and add them to your cart.\n"
+          f"1. Add what you want from the menu to your cart.\n"
+          f"2. At checkout give your name and phone number - no account needed.\n"
           f"3. Press 'Pay with Chapa' and complete payment, or choose Cash on Delivery.\n"
-          f"4. Track your order status from 'My Orders' in your account.\n"
+          f"4. Keep the order code we give you to track it, or ask me to check it.\n"
           f"Delivery and pickup are both available while we are open "
           f"({venue.opening_hours}).")
     am = (f"እንዴት ማዘዝ እንደሚቻል፦\n"
-          f"1. በመለያዎ ይግቡ።\n"
-          f"2. ከሜኑአችን የሚፈልጉትን መርጠው ወደ ግዢ ቅርጫት ያስገቡ።\n"
+          f"1. ከሜኑአችን የሚፈልጉትን መርጠው ወደ ግዢ ቅርጫት ያስገቡ።\n"
+          f"2. ሲያዙ ስምዎንና ስልክ ቁጥርዎን ይስጡ - መለያ መክፈት አያስፈልግም።\n"
           f"3. 'በ Chapa ክፈል' የሚለውን በመጫን ክፍያ ይፈጽሙ ወይም ሲረከቡ መክፈልን ይምረጡ።\n"
-          f"4. የትዕዛዝዎን ሁኔታ በመለያዎ ውስጥ 'የእኔ ትዕዛዞች' በሚለው ገጽ ይከታተሉ።\n"
+          f"4. ትዕዛዝዎን ለመከታተል የሚሰጥዎትን የትዕዛዝ ኮድ ያስቀምጡ ወይም እንድመረምርልዎ ይጠይቁኝ።\n"
           f"ማድረስ እና በመደብር መረከብ በመክፈቻ ሰዓታት ({venue.opening_hours}) ይገኛሉ።")
     return bilingual(en, am), []
 
@@ -824,17 +826,31 @@ def handle_order_intent(intent, text, staged, user=None):
             am = "የት እንዲደርስዎ ይፈልጋሉ? እባክዎን አድራሻውን ይስጡኝ።"
             return bilingual(en, am), [], {'action': 'collect_order_details'}
 
+        # A guest can order here too. No account is needed - the name and phone
+        # number are what the cafe needs to reach them, and the order serializer
+        # reuses or creates the customer profile from that phone number.
+        if not ordering_service.is_authenticated_user(user):
+            from .retriever import _extract_name, _extract_phone
+
+            if not staged.contact_name:
+                # We just asked for the name, so a short reply like "Hana" is
+                # the name itself - it carries no "name is" marker to match.
+                staged.contact_name = _extract_name(text) or _bare_name(text)
+            if not staged.contact_phone and _extract_phone(text):
+                staged.contact_phone = _extract_phone(text)
+
+            if not staged.contact_name:
+                en = "What name should I put on the order?"
+                am = "በትዕዛዙ ላይ ምን ስም ልፀፃፍ?"
+                return bilingual(en, am), [], {'action': 'collect_order_details'}
+
+            if not staged.contact_phone:
+                en = ("Which phone number should we call if there is a question about "
+                      "the order?")
+                am = "ስለ ትዕዛዙ ጥያቄ ካለ በየትኛው የስልክ ቁጥር እንደውል?"
+                return bilingual(en, am), [], {'action': 'collect_order_details'}
+
         if not staged.is_empty() and _customer_confirmed(text):
-            if not ordering_service.is_authenticated_user(user):
-                # The customer built the order and is happy with it; only the
-                # account is missing. Everything they chose is kept.
-                from .auth_gate import sign_in_action, sign_in_answer
-
-                return (sign_in_answer('order_create',
-                                       resume_hint=_order_resume_hint(summary)),
-                        [],
-                        sign_in_action('order_create', pending_intent='order_create'))
-
             order, error = ordering_service.place_order(
                 user, staged, order_type=staged.order_type, address=staged.address)
             if order is None:
@@ -849,6 +865,11 @@ def handle_order_intent(intent, text, staged, user=None):
                                           "የመክፈቻ ሰዓታችን ሲደርስ በደስታ እናስተናግዳለን።"),
                     'empty_order': ("There is nothing in the order yet.",
                                     "በትዕዛዙ ውስጥ ምንም ነገር የለም።"),
+                    'missing_contact_name': ("What name should I put on the order?",
+                                             "በትዕዛዙ ላይ ምን ስም ልፀፃፍ?"),
+                    'missing_contact_phone': ("Which phone number should we call about "
+                                              "the order?",
+                                              "ስለ ትዕዛዙ በየትኛው የስልክ ቁጥር እንደውል?"),
                 }.get(error, ("I could not place that order just now. Please try again, or call the "
                               "Coffee House.",
                               "ይህን ትዕዛዝ አሁን መስጠት አልተቻለም። "
@@ -951,6 +972,35 @@ def _strip_fulfilment_words(text):
 
 _CONFIRM_WORDS = ('yes', 'confirm', 'place it', 'place order', 'that\'s all', "that's all",
                   'go ahead', 'done', 'አዎ', 'እሺ', 'ተረጋግጧል', 'አረጋግጥ')
+
+
+#: Words that are a reply to the flow, not somebody's name.
+_NAME_STOPWORDS = {
+    'yes', 'no', 'ok', 'okay', 'pickup', 'pick', 'up', 'delivery', 'deliver',
+    'dine', 'dinein', 'dine-in', 'table', 'confirm', 'cancel', 'thanks', 'thank',
+    'you', 'order', 'please', 'hello', 'hi', 'hey', 'አዎ', 'አይ', 'እሺ', 'አመሰግናለሁ',
+}
+
+
+def _bare_name(text):
+    """
+    Read a name from a bare reply.
+
+    Once the assistant has asked "what name should I put on the order?", the
+    answer is usually just the name - "Hana", "Abel Tadesse" - with no "name is"
+    marker for the extractor to key on.
+    """
+    candidate = (text or '').strip().strip('.,')
+    if not (2 <= len(candidate) <= 60):
+        return ''
+    if not re.fullmatch(r"[A-Za-z\u1200-\u137F][A-Za-z\u1200-\u137F .'\-]{1,59}", candidate):
+        return ''
+    words = candidate.split()
+    if len(words) > 4:
+        return ''
+    if any(word.lower().strip('.') in _NAME_STOPWORDS for word in words):
+        return ''
+    return candidate
 
 
 def _order_resume_hint(summary):
