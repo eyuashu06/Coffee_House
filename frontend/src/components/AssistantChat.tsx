@@ -72,6 +72,51 @@ const GENERIC_ERROR = {
   am: 'ይቅርታ፣ ያንን መረጃ አሁን ማግኘት አልቻልኩም። እባክዎን ትንሽ ቆይተው እንደገና ይሞክሩ።',
 };
 
+/** How long to wait for one attempt before giving up on it. */
+const REQUEST_TIMEOUT_MS = 45000;
+/** After this long the reply is probably a cold backend, so say so. */
+const SLOW_HINT_MS = 6000;
+
+/**
+ * One assistant turn, with a timeout and a single retry.
+ *
+ * The API runs on a free host that sleeps when idle, so the first request after
+ * a quiet spell can take 30+ seconds - or fail outright while the instance
+ * boots. One automatic retry turns that into a slightly slow reply instead of a
+ * red error bubble the customer has to press "Retry" on.
+ */
+async function askAssistant(query: string, sessionId: string): Promise<Response> {
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const res = await apiFetch('/api/v1/assistant/message/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, session_id: sessionId }),
+        signal: controller.signal,
+      });
+      // A 502/503/504 is the proxy failing to reach a sleeping backend, which is
+      // worth one more try; a real 4xx is not.
+      if ([502, 503, 504].includes(res.status) && attempt === 0) {
+        lastError = new Error(`upstream ${res.status}`);
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastError = err;
+    } finally {
+      clearTimeout(timer);
+    }
+    // Small pause: the backend needs a moment to finish waking up.
+    if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('assistant request failed');
+}
+
 /**
  * What to say once the customer has signed in, to pick the interrupted
  * conversation back up. The backend still holds what they already told us, so
@@ -115,6 +160,7 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
   const [isLoading, setIsLoading] = useState(false);
   const [quickActions, setQuickActions] = useState<QuickAction[]>(FALLBACK_QUICK_ACTIONS);
   const [lastFailed, setLastFailed] = useState<string | null>(null);
+  const [isSlow, setIsSlow] = useState(false);
   const [unread, setUnread] = useState(0);
   const [addedItemId, setAddedItemId] = useState<number | null>(null);
 
@@ -179,16 +225,14 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
     if (!isOpen) setUnread(0);
 
     setIsLoading(true);
+    setIsSlow(false);
+    const slowTimer = setTimeout(() => setIsSlow(true), SLOW_HINT_MS);
     try {
       // apiFetch, not raw fetch: an expired access cookie is refreshed and the
       // request replayed. Otherwise a signed-in customer silently drops back to
       // a guest mid-conversation and the assistant starts asking them to sign in
       // while they are already signed in.
-      const res = await apiFetch('/api/v1/assistant/message/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, session_id: sessionIdRef.current }),
-      });
+      const res = await askAssistant(query, sessionIdRef.current);
 
       if (!res.ok) throw new Error('request failed');
 
@@ -223,6 +267,8 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
         { id: nextId(), from: 'assistant', error: true, en: GENERIC_ERROR.en, am: GENERIC_ERROR.am },
       ]);
     } finally {
+      clearTimeout(slowTimer);
+      setIsSlow(false);
       setIsLoading(false);
     }
   }, [isLoading, isOpen]);
@@ -391,7 +437,7 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
                                       : 'bg-[var(--accent)] text-[var(--accent-contrast)] hover:brightness-110'
                                   }`}
                                 >
-                                  <i className={`ph ${isJustAdded ? 'ph-check-bold' : 'ph-shopping-bag'} text-sm`}></i>
+                                  <i className={`ph ${isJustAdded ? 'ph-check' : 'ph-shopping-bag'} text-sm`}></i>
                                   <span>{isJustAdded ? (language === 'am' ? 'ተጨምሯል! ✓' : 'Added! ✓') : (language === 'am' ? 'ወደ ቅርጫት ጨምር' : 'Add to Cart')}</span>
                                 </button>
                               )}
@@ -468,9 +514,15 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
             ))}
 
             {isLoading && (
-              <div className="flex items-center gap-2 text-[var(--muted)] text-xs bg-surface border border-[var(--border)] rounded-xl px-3 py-2 w-max">
-                <i className="ph ph-circle-notch animate-spin"></i>
-                {language === 'am' ? 'መረጃ በመፈለግ ላይ…' : 'Checking the menu…'}
+              <div className="flex items-center gap-2 text-[var(--muted)] text-xs bg-surface border border-[var(--border)] rounded-xl px-3 py-2 max-w-full">
+                <i className="ph ph-circle-notch animate-spin shrink-0"></i>
+                <span>
+                  {isSlow
+                    ? (language === 'am'
+                        ? 'ረዳቱ እየተነሳ ነው፣ እባክዎ ጥቂት ሰከንዶች ይጠብቁ…'
+                        : 'Waking the assistant up — this can take a few seconds…')
+                    : (language === 'am' ? 'መረጃ በመፈለግ ላይ…' : 'Checking the menu…')}
+                </span>
               </div>
             )}
           </div>
