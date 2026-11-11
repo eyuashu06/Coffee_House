@@ -97,7 +97,7 @@ class Order(models.Model):
     ORDER_TYPES = (
         ('DELIVERY', 'Delivery'),
         ('PICKUP', 'Store Pickup'),
-        ('DINE_IN', 'Dine-In (Table Service)'),
+        ('DINE_IN', 'Dine-In / Reserved Table'),
     )
 
     STATUS_CHOICES = (
