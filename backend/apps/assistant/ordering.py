@@ -453,7 +453,7 @@ def place_order(user, staged, order_type=None, address=None):
             user.phone or '+251911000000'
             if is_authenticated_user(user) else staged.contact_phone.strip()
         ),
-        'estimated_prep_minutes': venue.default_prep_minutes,
+        'estimated_prep_minutes': _order_prep_minutes_from_lines(priced, venue),
         'notes': staged.notes or '',
         'delivery_fee_etb': fee,
         'items': [
@@ -531,3 +531,18 @@ def my_orders(user, limit=5):
         return []
     qs = Order.objects.filter(customer=user).prefetch_related('items')
     return [serialize_order(order) for order in qs[:limit]]
+
+
+def _order_prep_minutes_from_lines(priced_lines, venue):
+    """Slowest item prep time across the order, falling back to the venue default."""
+    slowest = 0
+    for line in priced_lines:
+        item = line.get('menu_item')
+        if item is None:
+            continue
+        minutes = getattr(item, 'prep_minutes', None)
+        if minutes:
+            slowest = max(slowest, int(minutes))
+    if slowest:
+        return slowest
+    return int(venue.default_prep_minutes) if venue else 20
