@@ -1075,6 +1075,7 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'DINE_IN': 'እዚሁ መመገብ / በተያዘ ጠረጴዛ',
   'Dine-In': 'እዚሁ መመገብ',
   'Dine-In / Reserved Table': 'እዚሁ መመገብ / በተያዘ ጠረጴዛ',
+  'Dine-In (Table Service)': 'እዚሁ መመገብ / በተያዘ ጠረጴዛ',
   'by reserved table': 'በተያዘ ጠረጴዛ',
   'By Reserved Table': 'በተያዘ ጠረጴዛ',
   'reserved table': 'በተያዘ ጠረጴዛ',
@@ -1195,4 +1196,23 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'was successful and the kitchen is preparing it.': 'ክፍያው ተሳክቷል፤ ወጥ ቤታችን እያዘጋጀው ነው።',
   'could not be completed.': 'ሊጠናቀቅ አልቻለም።',
 };
+
+/**
+ * Format raw order type codes (e.g. DELIVERY, PICKUP, DINE_IN) into human-readable text.
+ * Falls back to clean standard English names, and translates to Amharic if a translation helper is provided.
+ */
+export function formatOrderType(orderType?: string, t?: (key: string, fallback?: string) => string): string {
+  const code = (orderType || '').toUpperCase().trim();
+  if (code === 'DELIVERY') {
+    return t ? t('Delivery') : 'Delivery';
+  }
+  if (code === 'PICKUP') {
+    return t ? t('Store Pickup') : 'Store Pickup';
+  }
+  if (code === 'DINE_IN' || code === 'DINE-IN') {
+    return t ? t('Dine-In / Reserved Table') : 'Dine-In / Reserved Table';
+  }
+  return orderType || '';
+}
+
 
