@@ -250,8 +250,10 @@ def answer_query(query, session_id=None, user=None, use_agent=None):
     if use_agent:
         from .agent import run_agent
 
-        agent_result = run_agent(query, user=user, session=session,
-                                 staged=session.staged_order, language=language)
+        agent_result = run_agent(
+            query, user=user, session=session,
+            staged=session.staged_order, language=language,
+            request_timeout=getattr(settings, 'ASSISTANT_REQUEST_TIMEOUT_S', 30))
         if agent_result:
             session.remember_exchange(query, agent_result['answer_en'], agent_result['answer_am'])
             session.remember(query, agent_result['intent'])
@@ -262,6 +264,13 @@ def answer_query(query, session_id=None, user=None, use_agent=None):
                 session.pending_auth_intent = (agent_result['action'] or {}).get('resume_intent')
             else:
                 session.pending_auth_intent = None
+
+            # Carry the verifier's role/scope refusal into the same session, so a
+            # guest who asked a manager-only question and then a normal question in
+            # the next turn does not re-trigger the same refusal.
+            if agent_result.get('scope'):
+                session.last_scope = agent_result['scope']
+
             return agent_result
 
     if is_out_of_scope(query):
