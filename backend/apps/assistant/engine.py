@@ -7,6 +7,7 @@ fact in the reply comes from the database.
 """
 
 import logging
+import re
 
 from . import responder
 from .retriever import (
@@ -359,6 +360,13 @@ def answer_query(query, session_id=None, user=None, use_agent=None):
     elif items and intent == 'unknown':
         intent = 'price'
 
+    # An unfinished order keeps the conversation: once items are staged, a bare
+    # name, phone number or "yes" is an answer to the assistant's last question,
+    # not a new menu query. Without this, "Hana" was looked up as a product and
+    # the guest was told we had no such information.
+    if intent in ('unknown', 'unknown_item') and not session.staged_order.is_empty():
+        intent = 'order_create'
+
     # ── Sign-in gate ──────────────────────────────────────────────────
     # Checked here, once the intent is final, because intent detection is what
     # tells a booking apart from a question about a product that happens to be
@@ -368,9 +376,15 @@ def answer_query(query, session_id=None, user=None, use_agent=None):
     # signed-in customer. Everything else - the whole menu, prices, opening
     # hours - stays open, because that is how a guest decides to sign up.
     if requires_auth(intent) and not is_authenticated(user):
-        answer, action = _auth_required_reply(intent, query, session)
-        session.remember(query, intent)
-        return _finalize(query, answer, intent, [], [], action, language, session)
+        # A guest may still track a booking or order with the exact code we gave
+        # them; "show me my reservations" needs the account that owns them.
+        quoted_code = re.search(r'\b(?:RES|ORD)-\d{8}-[A-Za-z0-9]{4}\b', query, re.I)
+        from .auth_gate import CODE_LOOKUP_INTENTS
+
+        if not (intent in CODE_LOOKUP_INTENTS and quoted_code):
+            answer, action = _auth_required_reply(intent, query, session)
+            session.remember(query, intent)
+            return _finalize(query, answer, intent, [], [], action, language, session)
 
     # Reservation intents own the conversation
     if intent == 'reservation_create':
@@ -466,7 +480,11 @@ def answer_query(query, session_id=None, user=None, use_agent=None):
     # Menu / venue answers
     answer, payload, meta = responder.build_venue_answer(intent, query, category, items)
 
-    if answer is None:
+    # The knowledge base only answers knowledge questions. Its search is a loose
+    # token overlap, so falling back to it for a product lookup meant "how much is
+    # the Unicorn Latte?" came back with a paragraph about Jebena brewing instead
+    # of "we don't sell that".
+    if answer is None and intent not in ('price', 'availability', 'unknown_item'):
         kb_answer, _, _ = responder._from_knowledge_base(query)
         if kb_answer:
             answer, payload, meta = kb_answer, [], {'action': 'none'}
