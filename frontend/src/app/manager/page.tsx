@@ -1481,7 +1481,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                   : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
               }`}
             >
-              <i className={`ph ${isOpen ? 'ph-door-closed' : 'ph-door-open'} text-sm`}></i>
+              <i className={`ph ${isOpen ? 'ph-door' : 'ph-door-open'} text-sm`}></i>
               <span>{isOpen ? t('Close Store') : t('Open Store')}</span>
             </button>
 
@@ -1550,7 +1550,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { label: 'Live Orders', value: analytics.live_orders_count ?? 0, icon: 'ph-bell-ringing', tone: 'text-[var(--accent)]' },
-                { label: 'In Kitchen', value: analytics.in_kitchen_count ?? 0, icon: 'ph-coffee-maker', tone: 'text-blue-600 dark:text-blue-300' },
+                { label: 'In Kitchen', value: analytics.in_kitchen_count ?? 0, icon: 'ph-coffee', tone: 'text-blue-600 dark:text-blue-300' },
                 { label: 'Awaiting Payment', value: analytics.awaiting_payment_count ?? 0, icon: 'ph-hourglass', tone: 'text-amber-600 dark:text-yellow-300' },
                 { label: 'Avg. Order Value', value: analytics.average_order_value ?? 0, money: true, icon: 'ph-chart-line', tone: 'text-emerald-600 dark:text-emerald-300' },
               ].map(card => (
@@ -3042,7 +3042,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                           </span>
                           {item.is_signature && (
                             <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold tracking-wide uppercase bg-amber-500/90 text-white backdrop-blur-sm flex items-center gap-1">
-                              <i className="ph ph-star-fill text-[9px]"></i> {t('Signature Item')}
+                              <i className="ph ph-star text-[9px]"></i> {t('Signature Item')}
                             </span>
                           )}
                         </div>
@@ -3060,7 +3060,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                         {/* Mobile signature star badge */}
                         {item.is_signature && (
                           <div className="absolute top-1 left-1 md:hidden bg-amber-500 text-white rounded-full p-1 shadow-sm">
-                            <i className="ph ph-star-fill text-[9px]"></i>
+                            <i className="ph ph-star text-[9px]"></i>
                           </div>
                         )}
                       </div>
@@ -4089,7 +4089,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                     className="w-4 h-4 rounded text-[var(--accent)] focus:ring-0 cursor-pointer"
                   />
                   <span className="flex items-center gap-1">
-                    <i className="ph ph-star-fill text-amber-500 text-sm"></i>
+                    <i className="ph ph-star text-amber-500 text-sm"></i>
                     {t('Signature Item')}
                   </span>
                 </label>
