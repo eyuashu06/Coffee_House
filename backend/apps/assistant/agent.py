@@ -71,9 +71,8 @@ DECISION MAKING & TOOLS
 - When reserving a table, always call `check_table_availability` first. If full, propose the alternative times returned by the tool.
 
 ACCOUNTS & PRIVACY
-Browsing the menu, checking venue info, and viewing or adding items to a cart do NOT require an account.
-Placing an order, confirming a table reservation, and viewing or cancelling personal bookings/orders require an authenticated account.
-If a customer is not signed in and asks to place an order or book a table, explain warmly that they need to sign in or create an account, summarize what you have prepared for them, and reassure them you will complete it once signed in without having them repeat details.
+No account is needed for anything on this storefront: browsing the menu, placing an order, and booking a table all work for a guest. The name and phone number are what the cafe uses to reach them, so collect both before placing an order or confirming a booking.
+Listing a customer's past reservations or orders, and cancelling one, still needs the account that owns them; a guest can track a single booking or order by the exact code it was given.
 
 LANGUAGE REQUIREMENT
 Always provide your answer in BOTH English and Amharic. Speak natural, culturally authentic Amharic used in Addis Ababa (not stiff mechanical translation).
@@ -150,22 +149,34 @@ def tool_declarations(include_private):
               'The current order with real prices, plus the running total and delivery fee.'),
         ]
 
+    # Ordering and booking are open to guests, so these two tools are always
+    # available. The name and phone number are required for a guest and ignored
+    # for a signed-in customer.
+    tools.append(_tool('place_order',
+                       'Place the order. Works for guests too: for a guest, pass the '
+                       'contact_name and contact_phone they gave you. Confirm the order type and '
+                       'delivery address with the customer first.',
+                       {'order_type': {'type': 'string', 'enum': ['DELIVERY', 'PICKUP', 'DINE_IN']},
+                        'address': {'type': 'string',
+                                    'description': 'Delivery address. Required for DELIVERY.'},
+                        'contact_name': {'type': 'string',
+                                         'description': 'Name on the order (guest orders)'},
+                        'contact_phone': {'type': 'string',
+                                          'description': 'Phone number for the order (guest orders)'}}))
+    tools.append(_tool('create_reservation',
+                       'Book a table. Works for guests too: pass the name and phone number they '
+                       'gave you. Only call this after check_table_availability says the slot is '
+                       'free. The result is the only thing that makes a booking real.',
+                       {'date': {'type': 'string', 'description': 'YYYY-MM-DD'},
+                        'time': {'type': 'string', 'description': 'HH:MM 24-hour'},
+                        'guests': {'type': 'integer'},
+                        'name': {'type': 'string', 'description': 'Name for the booking'},
+                        'phone': {'type': 'string',
+                                  'description': 'Phone number for the booking (guest bookings)'}},
+                       ['date', 'time', 'guests', 'name']))
+
     if include_private:
-        tools.append(_tool('place_order',
-                           'Place the order. Requires an account. Confirm the order type and '
-                           'delivery address with the customer first.',
-                           {'order_type': {'type': 'string', 'enum': ['DELIVERY', 'PICKUP', 'DINE_IN']},
-                            'address': {'type': 'string',
-                                        'description': 'Delivery address. Required for DELIVERY.'}}))
         tools += [
-            _tool('create_reservation',
-                  'Book a table. Requires an account. Only call this after check_table_availability '
-                  'says the slot is free. The result is the only thing that makes a booking real.',
-                  {'date': {'type': 'string', 'description': 'YYYY-MM-DD'},
-                   'time': {'type': 'string', 'description': 'HH:MM 24-hour'},
-                   'guests': {'type': 'integer'},
-                   'name': {'type': 'string', 'description': 'Name for the booking'}},
-                  ['date', 'time', 'guests', 'name']),
             _tool('find_reservations',
                   "The signed-in customer's reservations, so they can check or cancel one.",
                   {}),
@@ -189,7 +200,11 @@ class ToolContext:
         self.user = user if (user and getattr(user, 'is_authenticated', False)) else None
         self.staged = staged
         self.session = session
+        # Clock hours pass as prose ("at 19:00"), so they start out allowed.
+        # Kept separately from the numbers a tool actually returned, because a
+        # wait time like "20 minutes" must not inherit that allowance.
         self.allowed_numbers = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 30, 45, 60}
+        self.tool_numbers = set()
         self.created_reservation = False
         self.placed_order = None
         self.auth_required = False
@@ -205,6 +220,8 @@ class ToolContext:
             return
         self.allowed_numbers.add(round(number, 2))
         self.allowed_numbers.add(round(number))
+        self.tool_numbers.add(round(number, 2))
+        self.tool_numbers.add(round(number))
 
 
 def _clean(text, limit=1200):
@@ -398,26 +415,31 @@ def execute_tool(name, args, ctx):
         return {'order': _order_payload(ctx.staged.summary(), ctx)}
 
     if name == 'place_order':
-        if ctx.user is None:
-            ctx.auth_required = True
-            return {'error': 'auth_required',
-                    'note': 'Ask them to sign in or sign up. Do not pretend the order was placed.'}
         staged = ctx.staged
         order_type = (args.get('order_type') or staged.order_type or '').upper()
         if order_type:
             staged.order_type = order_type
         if args.get('address'):
             staged.address = args['address']
+        if args.get('contact_name'):
+            staged.contact_name = args['contact_name']
+        if args.get('contact_phone'):
+            staged.contact_phone = args['contact_phone']
         order, error = ordering_service.place_order(
             ctx.user, staged, order_type=order_type, address=args.get('address'))
         if order is None:
             messages = {
                 'missing_order_type': 'Ask whether they want delivery, pickup or to dine in.',
                 'missing_address': 'Ask for a delivery address.',
+                'missing_contact_name': 'Ask for the name to put on the order.',
+                'missing_contact_phone': 'Ask for a phone number for the order.',
                 'empty_order': 'There is nothing in the order yet.',
                 'restaurant_closed': 'The cafe is closed right now, so orders cannot be taken. Say so.',
                 'invalid_order': 'The order could not be created. Apologise and suggest calling.',
             }
+            if error in ('missing_contact_name', 'missing_contact_phone'):
+                return {'placed': False, 'error': error,
+                        'note': messages[error] + ' Do not claim the order was placed.'}
             return {'placed': False, 'error': error, 'note': messages.get(error, '')}
         ctx.placed_order = order
         ctx.placed_order_obj = ordering_service.serialize_order(order)
@@ -427,13 +449,10 @@ def execute_tool(name, args, ctx):
                 'note': 'This order exists. Mention the order number and the total.'}
 
     if name == 'create_reservation':
-        if ctx.user is None:
-            ctx.auth_required = True
-            return {'created': False, 'error': 'auth_required',
-                    'note': 'Ask them to sign in or sign up first. Do not confirm a booking.'}
         guests = args.get('guests')
+        phone = getattr(ctx.user, 'phone', '') if ctx.user else (args.get('phone') or '')
         reservation, error = reservation_service.create_reservation(
-            name=args.get('name'), phone=getattr(ctx.user, 'phone', ''),
+            name=args.get('name'), phone=phone,
             date_str=args.get('date'), time_str=args.get('time'), guests=guests, user=ctx.user)
         if reservation is None:
             messages = {
@@ -490,6 +509,11 @@ def execute_tool(name, args, ctx):
 #: Numbers that are part of ordinary language, not a quoted price or quantity.
 _NUMBER_RE = re.compile(r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)(?![\w])')
 
+#: "20 minutes", "ከ20 ደቂቃ" - a duration is a claim about the venue, not prose.
+_DURATION_RE = re.compile(
+    r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*(?:-\s*)?(?:minutes?|mins?|hours?|hrs?|ደቂቃ|ሰዓት)',
+    re.IGNORECASE)
+
 
 def _normalise_number(token):
     try:
@@ -517,6 +541,16 @@ def verify_answer(en, am, ctx):
         if number in ctx.allowed_numbers or round(number, 2) in ctx.allowed_numbers:
             continue
         problems.append(f'unverified number: {token}')
+
+    # 1b) A wait time is a fact from the venue tool, even when the same digits
+    #     would be a perfectly ordinary clock hour.
+    for match in _DURATION_RE.finditer(text):
+        number = _normalise_number(match.group(1))
+        if number is None:
+            continue
+        if number in ctx.tool_numbers or round(number, 2) in ctx.tool_numbers:
+            continue
+        problems.append(f'unverified duration: {match.group(0)}')
 
     # 2) A booking or an order may only be reported as done if a tool did it.
     for phrase in COMMIT_PHRASES:
@@ -610,14 +644,12 @@ def run_agent(query, user=None, session=None, staged=None, language='en'):
             "to them.")
     else:
         system += (
-            "\n\nThis customer is NOT signed in, and the tools that book a table or read someone's "
-            "orders are not available to you. The tools you do have will refuse with "
-            "auth_required if you try. If they ask to reserve a table, place an order, or see their "
-            "own reservations or orders, tell them plainly that they need to sign in or create an "
-            "account first, say what you were about to do for them, and promise to continue "
-            "straight afterwards. Do not ask them to repeat details they already gave you. "
-            "Building an order with add_to_order works without an account, so you can take their "
-            "choices now and only need sign-in to place it.")
+            "\n\nThis customer is NOT signed in. That is fine: book the table and place the order "
+            "for them anyway. Ask for their name and a phone number first, then pass them to "
+            "create_reservation (phone) or place_order (contact_name, contact_phone). Never ask "
+            "them to create an account before you can help. The tools for listing someone's past "
+            "reservations or orders are not available to guests; a guest can track a single "
+            "booking or order with the exact code you gave them.")
 
     config = {
         'system_instruction': system,
