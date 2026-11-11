@@ -81,6 +81,7 @@ class OrderSerializer(serializers.ModelSerializer):
     contact_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     contact_phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
     order_type = serializers.ChoiceField(choices=Order.ORDER_TYPES, default='DELIVERY')
+    order_type_label = serializers.CharField(source='get_order_type_display', read_only=True)
 
     class Meta:
         model = Order
@@ -90,6 +91,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'customer',
             'customer_username',
             'order_type',
+            'order_type_label',
             'table_number',
             'delivery_zone',
             'contact_name',
