@@ -2,10 +2,13 @@
 Sign-in gate for account-bound actions.
 
 The assistant is a public surface: anyone can open the chat and ask about the
-menu. Anything that touches an account - booking a table, placing an order,
-looking up "my" reservations or orders, or cancelling something - must be
-performed by a signed-in customer, and the guest must be told to sign in or sign
-up first.
+menu, book a table, place an order, or look a booking/order up by its code - that
+is the whole point of a storefront, and none of it needs an account. The name
+and phone number on the booking/order are what the cafe uses to reach the
+customer.
+
+Only the destructive, account-bound actions stay gated: cancelling something
+must be done by the customer who owns it.
 
 Two rules keep this honest:
 
@@ -26,12 +29,15 @@ from .responder import bilingual
 #: asking for sign-in at the moment of checkout is both safer and far less
 #: annoying than making them sign in before they know what they want.
 AUTH_REQUIRED_INTENTS = {
-    'reservation_create',
     'reservation_cancel',
     'reservation_status',
     'order_status',
     'order_cancel',
 }
+
+#: Status questions stay public when the customer quotes the exact code we gave
+#: them - that is how a guest tracks the table they just booked.
+CODE_LOOKUP_INTENTS = {'reservation_status', 'order_status'}
 
 #: Intents that stay public. Menu browsing, prices, hours and general help are
 #: how a guest decides whether they want to sign up at all.
