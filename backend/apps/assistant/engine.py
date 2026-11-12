@@ -250,10 +250,16 @@ def answer_query(query, session_id=None, user=None, use_agent=None):
     if use_agent:
         from .agent import run_agent
 
-        agent_result = run_agent(
-            query, user=user, session=session,
-            staged=session.staged_order, language=language,
-            request_timeout=getattr(settings, 'ASSISTANT_REQUEST_TIMEOUT_S', 30))
+        agent_result = None
+        try:
+            agent_result = run_agent(
+                query, user=user, session=session,
+                staged=session.staged_order, language=language,
+                request_timeout=getattr(settings, 'ASSISTANT_REQUEST_TIMEOUT_S', 30))
+        except Exception:
+            logger.exception('Assistant agent crashed; falling back to deterministic engine')
+            agent_result = None
+
         if agent_result:
             session.remember_exchange(query, agent_result['answer_en'], agent_result['answer_am'])
             session.remember(query, agent_result['intent'])
