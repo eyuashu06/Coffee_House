@@ -136,6 +136,7 @@ TRANSLITERATED_AMHARIC_WORDS = {
     'tadiya', 'tadiyas', 'kemey', 'kemeyelkum', 'endet', 'endiet', 'endemin', 'dehina', 'dehna',
     'tena', 'tenayistilign', 'tenayistilin', 'ameseginalew', 'ameseginalehu', 'ameseginalehugn',
     'amesegnalew', 'amesegnalehu', 'amesegenalehu', 'amesegnalehugn', 'eshi', 'ishi', 'betam',
+    'ezaw', 'enazalen', 'endersalen',
     # Interrogatives & pronouns
     'min', 'men', 'minden', 'mindin', 'minder', 'mindenew', 'mindinew', 'menew', 'minew',
     'sint', 'sintu', 'sintnew', 'sintinew', 'yet', 'yetew', 'yetnew', 'man', 'manew', 'lemin',
@@ -143,15 +144,17 @@ TRANSLITERATED_AMHARIC_WORDS = {
     # Copula, existence & verbs
     'new', 'naw', 'nat', 'nech', 'nachehu', 'nachu', 'nen', 'neber', 'nebere', 'nabar',
     'ale', 'alle', 'alew', 'aleh', 'alesh', 'alachu', 'alachehu', 'alachun', 'alewum', 'yelem',
-    'feleku', 'felegi', 'felegie', 'felegu', 'felaghu', 'efelegalehu', 'efelegalo', 'ifelegalehu',
+    'feleku', 'felegi', 'felegie', 'felegu', 'felaghu', 'felge', 'efelegalehu', 'efelegalo', 'ifelegalehu',
     'asayegn', 'asayugn', 'asayun', 'nageregn', 'negerugn', 'nagerugn', 'astawisegn', 'sertu',
-    'megezat', 'magegnot', 'litredugn', 'litredagn', 'mitredugn', 'masyaz', 'asyaz', 'mazaz',
+    'megezat', 'magegnot', 'litredugn', 'litredagn', 'mitredugn', 'masyaz', 'asyaz', 'meyaz', 'mazaz',
     'azezku', 'tizaz', 'tizaze', 'tizazen', 'ametalign', 'asgebalign', 'tekelbelugn',
     'marte', 'konjo', 'tiru', 'gobez', 'ere', 'are', 'ayzo', 'ayzosh', 'ayzoch',
+    # Time, date & party words
+    'nege', 'zare', 'seat', 'sehat', 'sewoch', 'sew', 'botawn', 'yazklign', 'yazilign',
     # Cafe & Ethiopian culture nouns
     'buna', 'bunaw', 'dabo', 'dabow', 'shai', 'shay', 'megeb', 'megeboch', 'migib', 'migiboch',
     'metet', 'metetoch', 'waga', 'wagaw', 'waha', 'wuha', 'bota', 'adrashe', 'adrasha', 'adrashachu',
-    'seat', 'sehat', 'kift', 'zig', 'tibs', 'doro', 'korma', 'injera', 'firfir', 'berbere',
+    'kift', 'zig', 'tibs', 'doro', 'korma', 'injera', 'firfir', 'berbere',
     'jebena', 'sini', 'abol', 'tona', 'baraka', 'tarik', 'tarikachehu', 'tarikachu', 'trapeza',
 }
 
@@ -607,9 +610,9 @@ def _extract_date_and_time(text):
     # "today"/"ዛሬ" means today; "tomorrow"/"ነገ" means the next day. Checked
     # explicitly instead of the old nested-conditional chain, which double-counted
     # 'today' as a tomorrow word and then overrode it anyway.
-    if 'tomorrow' in lowered or 'ነገ' in lowered:
+    if 'tomorrow' in lowered or 'ነገ' in lowered or re.search(r'\bnege\b', lowered):
         target_date = today + timedelta(days=1)
-    elif 'today' in lowered or 'tonight' in lowered or 'ዛሬ' in lowered:
+    elif 'today' in lowered or 'tonight' in lowered or 'ዛሬ' in lowered or re.search(r'\bzare\b', lowered):
         target_date = today
 
     if target_date is None:
@@ -627,9 +630,9 @@ def _extract_date_and_time(text):
         except ValueError:
             pass
 
-    # time: 6pm / 18:30 / 9 morning / ከ18:00 / 6 ሰዓት / 1 at night LT / 1 night LT
+    # time: 6pm / 18:30 / 9 morning / ከ18:00 / 6 ሰዓት / 1 at night LT / 1 night LT / seat 2
     target_time = None
-    is_lt = bool(re.search(r'\b(?:lt|local\s*time)\b', lowered) or 'በኢትዮጵያ' in lowered)
+    is_lt = bool(re.search(r'\b(?:lt|local\s*time|seat|se\'at)\b', lowered) or 'በኢትዮጵያ' in lowered)
 
     time_match = re.search(r'(?<!\d)(\d{1,2})[:.](\d{2})(?!\d)', lowered)
     if time_match:
@@ -652,9 +655,9 @@ def _extract_date_and_time(text):
         # whether "ከ6 ሰዓት" means morning or night. Without the capture it raised
         # IndexError and the whole turn came back as a generic failure.
         preposition = re.search(
-            r'ከ\s*(?<!\d)(\d{1,2})\s*(ሰዓት|ማታ|ጠዋት|ሌሊት)(?![a-z])', lowered)
+            r'ከ?\s*(?<!\d)(\d{1,2})\s*(ሰዓት|ማታ|ጠዋት|ሌሊት|seat|se\'at)(?![a-z])', lowered)
         unit_first = re.search(
-            r'(?<!\d)(ከሰዓት|ሰዓት|ማታ|ጠዋት|ሌሊት)\s*(?:ከ\s*|በ\s*)?(\d{1,2})(?!\d)', lowered)
+            r'(?<!\d)(ከሰዓት|ሰዓት|ማታ|ጠዋት|ሌሊት|seat|se\'at)\s*(?:ከ\s*|በ\s*)?(\d{1,2})(?!\d)', lowered)
 
         if marker:
             hour = int(marker.group(1))
@@ -687,8 +690,8 @@ def _extract_date_and_time(text):
         elif preposition:
             hour = int(preposition.group(1))
             word = preposition.group(2)
-            if is_lt:
-                hour = (hour + 18) % 24 if word == 'ማታ' else (hour + 6) % 24
+            if word in ('seat', 'se\'at') or is_lt:
+                hour = (hour + 18) % 24 if (word in ('ማታ', 'night') or hour <= 6) else (hour + 6) % 24
             else:
                 if word in ('ማታ',) and hour < 12:
                     hour += 12
@@ -698,8 +701,8 @@ def _extract_date_and_time(text):
         elif unit_first:
             hour = int(unit_first.group(2))
             word = unit_first.group(1)
-            if is_lt:
-                hour = (hour + 18) % 24 if word == 'ማታ' else (hour + 6) % 24
+            if word in ('seat', 'se\'at', 'ከሰዓት') or is_lt:
+                hour = (hour + 18) % 24 if (word in ('ማታ', 'night') or hour <= 6) else (hour + 6) % 24
             else:
                 if word == 'ማታ' and hour < 12:
                     hour += 12
@@ -719,19 +722,19 @@ def _extract_guests(text):
     """
     low = normalize_amharic_digits((text or '').lower())
 
-    # 1) explicit "<n> people / ሰዎች / ሰው"
-    match = re.search(r'(\d+)\s*(?:people|persons?|guests?|pax|ሰዎች|ሰዎቻች|ሰው)', low)
+    # 1) explicit "<n> people / ሰዎች / ሰው / sewoch"
+    match = re.search(r'(\d+)\s*(?:people|persons?|guests?|pax|ሰዎች|ሰዎቻች|ሰው|sewoch|sew)\b', low)
     if match:
         return int(match.group(1))
 
-    # 2) "table for 4" / "party of 4" / "for 4 people"
-    match = re.search(r'(?:table\s+for|for|party\s+of|ለ)\s*(\d+)\s*(?:people|persons?|guests?|ሰዎች|ሰው)?', low)
+    # 2) "table for 4" / "party of 4" / "for 4 people" / "le 4 sewoch"
+    match = re.search(r'(?:table\s+for|for|party\s+of|ለ|le)\s*(\d+)\s*(?:people|persons?|guests?|ሰዎች|ሰው|sewoch|sew)?\b', low)
     if match:
         return int(match.group(1))
 
-    # 3) Amharic number words ("ለአራት ሰው")
+    # 3) Amharic number words ("ለአራት ሰው", "le arat sewoch")
     for word, value in AMHARIC_NUMBER_WORDS.items():
-        if word in low:
+        if re.search(r'\b' + re.escape(word) + r'\b', low) or word in low:
             return value
 
     # 4) a lone digit is only a party size when the message carries no time

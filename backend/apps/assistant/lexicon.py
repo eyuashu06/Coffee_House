@@ -12,12 +12,12 @@ intents and to canonical menu categories so questions like
 
 INTENT_KEYWORDS = {
     'greeting': {
-        'en': ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings'],
+        'en': ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings', 'we are on our way', 'on our way'],
         'am': ['ሰላም', 'ሰላምህ', 'ጤና ይስጥልኝ', 'እንደምን አደሩ', 'እንደምን አመሹ', 'እንደምን ዋሉ', 'ሰላም ደህና መጡ',
                'selam', 'selamta', 'selamno', 'selamnesh', 'selamneh', 'selamnachu', 'selamnachehu',
                'tadiya', 'tadiyas', 'kemey', 'endet neh', 'endet nesh', 'endet nachu', 'endemin',
                'endemin aderachu', 'endemin walachu', 'dehna neh', 'dehna nesh', 'dehna nachu',
-               'tena yistilign', 'tenayistilign'],
+               'tena yistilign', 'tenayistilign', 'ezaw enazalen', 'enazalen', 'ezaw endersalen', 'endersalen'],
     },
     'thanks': {
         'en': ['thank', 'thanks', 'thx'],
@@ -66,7 +66,8 @@ INTENT_KEYWORDS = {
     'location': {
         'en': ['where', 'location', 'address', 'find you', 'directions', 'where are you', 'phone number', 'contact'],
         'am': ['ቦታ', 'አድራሻ', 'አድራሻዎ', 'ስልክ', 'የት ነው', 'የት ናችሁ', 'ተጫያቢ',
-               'yet new', 'yet naw', 'yet nachu', 'adrasha', 'adrashachu', 'bota', 'yet new yemitgegnut'],
+               'yet new', 'yet naw', 'yet nachu', 'adrasha', 'adrashachu', 'bota', 'yet new yemitgegnut',
+               'botawn yazklign', 'botan yazklign', 'botan yazilign', 'botawn', 'botan'],
     },
     'price': {
         'en': ['price', 'prices', 'cost', 'how much', 'how many birr', 'etb', 'birr'],
@@ -90,7 +91,8 @@ INTENT_KEYWORDS = {
                'i want to book', 'i want to reserve', 'want a table', 'need a table',
                'reserve it', 'book it', 'party of', 'table booking'],
         'am': ['ማስያዝ', 'ቦታ ማስያዝ', 'ቦታ አስያዝ', 'ቦታ እፈልጋለሁ', 'ቦታ ለማስያዝ', 'ቦታ ማስያዝ እፈልጋለሁ', 'ትራፔዛ',
-               'bota masyaz', 'bota asyaz', 'bota efelegalehu', 'bota ifelegalehu', 'bota lemasyaz', 'trapeza'],
+               'bota masyaz', 'bota asyaz', 'bota efelegalehu', 'bota ifelegalehu', 'bota lemasyaz', 'trapeza',
+               'bota meyaz felge neber', 'bota meyaz', 'felge neber', 'bota meyas'],
     },
     'reservation_cancel': {
         'en': ['cancel', 'cancellation', 'call off', 'cancel reservation', 'cancel my reservation',
@@ -209,7 +211,7 @@ OUT_OF_SCOPE = {
 # ── Reservation slot words ────────────────────────────────────────────
 
 TOMORROW_WORDS = {'en': ['today', 'tomorrow', 'tonight', 'tomorrow morning', 'tomorrow evening'],
-                  'am': ['ዛሬ', 'ነገ', 'ዛሬ ከሰዓት', 'ነገ ከሰዓት', 'ዛሬ ማታ']}
+                  'am': ['ዛሬ', 'ነገ', 'ዛሬ ከሰዓት', 'ነገ ከሰዓት', 'ዛሬ ማታ', 'nege', 'zare']}
 
 DAYS_OF_WEEK = {
     'monday': '0', 'tuesday': '1', 'wednesday': '2', 'thursday': '3',
@@ -225,6 +227,8 @@ AMHARIC_DIGITS = {
 AMHARIC_NUMBER_WORDS = {
     'አንድ': 1, 'ሁለት': 2, 'ሦስት': 3, 'አራት': 4, 'አምስት': 5, 'ስድስት': 6, 'ሰባት': 7,
     'ስምንት': 8, 'ዘጠኝ': 9, 'አስር': 10,
+    'and': 1, 'hulet': 2, 'sost': 3, 'arat': 4, 'amist': 5, 'sidist': 6, 'sebat': 7,
+    'semint': 8, 'zetegn': 9, 'asir': 10,
 }
 
 INTENT_LABEL_EN = {
