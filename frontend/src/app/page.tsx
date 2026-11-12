@@ -732,8 +732,8 @@ export default function Home() {
             caption: t('The morning roast, done where everyone can smell it.'),
         },
         {
-            src: 'https://images.pexels.com/photos/6605231/pexels-photo-6605231.jpeg?auto=compress&cs=tinysrgb&w=1400&q=80',
-            alt: 'Guests sharing fresh wood-fired pizza and cafe refreshments',
+            src: '/images/ethiopian_pizza_cafe_2.jpg',
+            alt: 'Ethiopian couple sharing freshly baked wood-fired pizza and traditional coffee at Buna Hub',
             caption: t('Crisp wood-fired pizza shared among friends and family.'),
         },
         {
@@ -750,8 +750,8 @@ export default function Home() {
             caption: t('Artisanal smash burgers made fresh with prime local beef.'),
         },
         {
-            src: 'https://images.pexels.com/photos/6605231/pexels-photo-6605231.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80',
-            alt: 'Couple enjoying freshly baked wood-fired pizza and cafe refreshments',
+            src: '/images/ethiopian_pizza_cafe_2.jpg',
+            alt: 'Ethiopian couple enjoying freshly baked wood-fired pizza and cafe drinks',
             caption: t('Sharing freshly baked wood-fired pizza with loved ones.'),
         },
         {
@@ -760,8 +760,8 @@ export default function Home() {
             caption: t('Hearty smash burgers and crisp seasoned fries for table gatherings.'),
         },
         {
-            src: 'https://images.pexels.com/photos/7886606/pexels-photo-7886606.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80',
-            alt: 'Friends enjoying wood-fired pizza and vibrant conversation in Addis Ababa',
+            src: '/images/ethiopian_pizza_dining_4.jpg',
+            alt: 'Ethiopian friends enjoying wood-fired pizza and vibrant conversation in Addis Ababa',
             caption: t('Crisp artisan crusts, rich cheese, and great conversations.'),
         },
         {
@@ -1017,8 +1017,8 @@ export default function Home() {
                                 <Reveal>
                                     <figure className="grain bg-[var(--surface)] border border-[var(--border)] rounded-[18px] p-2.5 shadow-[var(--shadow)]">
                                         <img
-                                            src="https://images.pexels.com/photos/6742970/pexels-photo-6742970.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80"
-                                            alt="Woman preparing coffee over charcoal in the traditional way — photo by Lan Yao on Pexels"
+                                            src="/images/ethiopian_roasting.jpg"
+                                            alt={t('Woman roasting fresh coffee beans in a traditional pan over hot coals')}
                                             decoding="async"
                                             loading="lazy"
                                             className="w-full aspect-[4/3] object-cover rounded-[12px]"
@@ -1161,7 +1161,7 @@ export default function Home() {
                                     {/* pb-24 keeps the last card clear of the floating chat button */}
                                     <div className="mt-8 sm:hidden flex flex-col gap-3 pb-24">
                                         {filteredItems.map((item) => {
-                                            const itemImg = (item as any).image_display || item.image_url || 'https://images.pexels.com/photos/37756986/pexels-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80';
+                                            const itemImg = (item as any).image_display || item.image_url || '/images/ethiopian_cafe.jpg';
                                             return (
                                                 <div
                                                     key={item.id}
@@ -1232,7 +1232,7 @@ export default function Home() {
                                     {/* Refined medium-sized cards for balanced, beautiful food & drink display */}
                                     <div className="mt-8 hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-4.5 pb-8">
                                         {filteredItems.map((item) => {
-                                            const itemImg = (item as any).image_display || item.image_url || 'https://images.pexels.com/photos/37756986/pexels-photo-37756986.jpeg?auto=compress&cs=tinysrgb&w=640&q=80';
+                                            const itemImg = (item as any).image_display || item.image_url || '/images/ethiopian_cafe.jpg';
                                             return (
                                                 <div
                                                     key={item.id}
