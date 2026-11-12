@@ -312,14 +312,14 @@ export default function CartDrawer({
           {/* Header */}
           <div className="p-5 bg-surface-2 border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2 text-[var(--accent)]">
-              <span className="material-symbols-outlined text-xl">shopping_bag</span>
+              <i className="ph ph-shopping-bag text-xl"></i>
               <h3 className="font-display text-lg font-bold text-[var(--text)]">{t('Your Cart')}</h3>
             </div>
             <button 
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-[var(--surface)] hover:bg-[var(--accent-soft)] text-[var(--text)] border border-[var(--border)] flex items-center justify-center transition-colors"
             >
-              <span className="material-symbols-outlined text-base">close</span>
+              <i className="ph ph-x text-base"></i>
             </button>
           </div>
 
@@ -327,7 +327,7 @@ export default function CartDrawer({
               checkout is blocked the moment the cart opens, not after scrolling. */}
           {isClosedStore && (
             <div className="px-5 py-3 bg-red-950/80 border-b border-red-500/40 text-red-200 text-xs leading-relaxed flex items-start gap-2">
-              <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">schedule</span>
+              <i className="ph ph-clock text-sm mt-0.5 shrink-0"></i>
               <p>
                 {t('We are closed right now and are not accepting orders.')}
                 {openingHours ? ` ${t('Our opening hours:')} ${openingHours}` : ''}
@@ -340,7 +340,7 @@ export default function CartDrawer({
             {orderSuccess ? (
                 <div className="text-center py-12 px-4 space-y-4">
                   <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/40">
-                    <span className="material-symbols-outlined text-3xl">check</span>
+                    <i className="ph ph-check text-3xl"></i>
                   </div>
                   <h4 className="font-display text-xl text-[var(--text)] font-bold">{t('Order Placed!')}</h4>
                   <p className="text-sm text-[var(--muted)] leading-relaxed">{orderSuccess}</p>
@@ -349,7 +349,7 @@ export default function CartDrawer({
                   {!user && (
                     <div className="p-3.5 rounded-xl bg-surface-container/80 border border-[var(--accent)]/40 text-left space-y-2 my-2">
                       <div className="flex items-center gap-2 text-[var(--accent)] font-bold text-xs">
-                        <span className="material-symbols-outlined text-base">bookmark_add</span>
+                        <i className="ph ph-bookmark-simple text-base"></i>
                         <span>{t('Save details for next time?')}</span>
                       </div>
                       <p className="text-[11px] text-[var(--muted)] leading-relaxed">
@@ -363,7 +363,7 @@ export default function CartDrawer({
                         }}
                         className="w-full py-2 px-3 rounded-lg bg-[var(--accent)] hover:brightness-110 text-[var(--accent-contrast)] font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-sm">person_add</span>
+                        <i className="ph ph-user-plus text-sm"></i>
                         <span>{t('Create Free Account')}</span>
                       </button>
                     </div>
@@ -387,7 +387,7 @@ export default function CartDrawer({
             ) : orderError ? (
                 <div className="py-8 px-4 space-y-4">
                   <div className="p-4 rounded-xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs leading-relaxed flex items-start gap-2">
-                    <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">error</span>
+                    <i className="ph ph-warning-circle text-sm mt-0.5 shrink-0"></i>
                     <span>{orderError}</span>
                   </div>
                   <button
@@ -405,7 +405,7 @@ export default function CartDrawer({
                 </div>
             ) : cartItems.length === 0 ? (
               <div className="text-center py-16 text-outline space-y-3">
-                <span className="material-symbols-outlined text-5xl text-[var(--accent)]/60">local_cafe</span>
+                <i className="ph ph-coffee text-5xl text-[var(--accent)]/60"></i>
                 <p className="text-sm">{t('Cart is Empty')}</p>
                 <button
                   onClick={() => {
@@ -480,7 +480,7 @@ export default function CartDrawer({
                     onClick={() => onRemoveItem(idx)}
                     className="p-1 text-rose-400 hover:text-rose-300 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-base">delete</span>
+                    <i className="ph ph-trash text-base"></i>
                   </button>
                 </div>
               ))
@@ -494,7 +494,7 @@ export default function CartDrawer({
                   <div className="p-3.5 rounded-xl bg-surface border border-[var(--border)] space-y-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] font-bold flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-sm text-[var(--accent)]">phone_iphone</span>
+                        <i className="ph ph-phone text-sm text-[var(--accent)]"></i>
                         {t('Contact & Phone Verification')}
                       </span>
                       <button
@@ -505,7 +505,7 @@ export default function CartDrawer({
                         }}
                         className="text-[11px] text-[var(--accent)] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-xs">login</span>
+                        <i className="ph ph-sign-in text-xs"></i>
                         <span>{t('Sign in to use saved details')}</span>
                       </button>
                     </div>
@@ -553,7 +553,7 @@ export default function CartDrawer({
 
                     {phoneError && (
                       <p className="text-[11px] text-red-400 font-medium flex items-center gap-1">
-                        <span className="material-symbols-outlined text-xs">error</span>
+                        <i className="ph ph-warning-circle text-xs"></i>
                         {phoneError}
                       </p>
                     )}
@@ -564,7 +564,7 @@ export default function CartDrawer({
                 ) : (
                   <div className="p-2.5 rounded-xl bg-[var(--accent-soft)]/20 border border-[var(--accent)]/30 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2 text-[var(--text)] min-w-0">
-                      <span className="material-symbols-outlined text-base text-[var(--accent)] shrink-0">verified_user</span>
+                      <i className="ph ph-shield-check text-base text-[var(--accent)] shrink-0"></i>
                       <div className="min-w-0">
                         <p className="font-semibold truncate">
                           {user.first_name || user.username} {user.phone ? `· ${user.phone}` : ''}
@@ -605,9 +605,9 @@ export default function CartDrawer({
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {([
-                      { value: 'DELIVERY', label: t('Delivery'), icon: 'delivery_dining' },
-                      { value: 'PICKUP', label: t('Store Pickup'), icon: 'storefront' },
-                      { value: 'DINE_IN', label: t('Dine-In / Reserved Table'), icon: 'table_restaurant' },
+                      { value: 'DELIVERY', label: t('Delivery'), icon: 'ph-moped' },
+                      { value: 'PICKUP', label: t('Store Pickup'), icon: 'ph-storefront' },
+                      { value: 'DINE_IN', label: t('Dine-In / Reserved Table'), icon: 'ph-fork-knife' },
                     ] as { value: OrderType; label: string; icon: string }[]).map((option) => (
                       <button
                         key={option.value}
@@ -620,7 +620,7 @@ export default function CartDrawer({
                             : 'bg-surface text-[var(--muted)] border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-sm shrink-0">{option.icon}</span>
+                        <i className={`ph ${option.icon} text-sm shrink-0`}></i>
                         <span className="whitespace-normal">{option.label}</span>
                       </button>
                     ))}
@@ -707,7 +707,7 @@ export default function CartDrawer({
                 className="w-full py-3.5 px-6 rounded-full bg-[var(--accent)] hover:brightness-110 text-[var(--accent-contrast)] font-bold text-sm uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <span>{isSubmitting ? t('Processing Order...') : (language === 'am' ? 'ክፍያ ፈፅመው ይዘዙ' : t('Pay to Order'))}</span>
-                <span className="material-symbols-outlined text-base">east</span>
+                <i className="ph ph-arrow-right text-base"></i>
               </button>
             </div>
           )}
