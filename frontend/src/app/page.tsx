@@ -722,8 +722,8 @@ export default function Home() {
             caption: t('The traditional buna ceremony, poured from a clay jebena.'),
         },
         {
-            src: 'https://images.pexels.com/photos/6243673/pexels-photo-6243673.jpeg?auto=compress&cs=tinysrgb&w=1400&q=80',
-            alt: 'Ethiopian diners enjoying gourmet smash burgers and crispy fries',
+            src: '/images/ethiopian_burger_cafe_1.jpg',
+            alt: 'Ethiopian diner enjoying gourmet smash burger and crispy fries at Buna Hub',
             caption: t('Prime artisanal burgers and hand-cut fries fresh from our kitchen.'),
         },
         {
@@ -745,8 +745,8 @@ export default function Home() {
 
     const diningSlides: Slide[] = [
         {
-            src: 'https://images.pexels.com/photos/6243673/pexels-photo-6243673.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80',
-            alt: 'Ethiopian guest enjoying a fresh artisanal burger at Buna Hub dining room',
+            src: '/images/ethiopian_burger_cafe_1.jpg',
+            alt: 'Young Ethiopian customer enjoying a fresh artisanal cheeseburger and golden fries at Buna Hub Addis Ababa',
             caption: t('Artisanal smash burgers made fresh with prime local beef.'),
         },
         {
@@ -755,8 +755,8 @@ export default function Home() {
             caption: t('Sharing freshly baked wood-fired pizza with loved ones.'),
         },
         {
-            src: 'https://images.pexels.com/photos/5649938/pexels-photo-5649938.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80',
-            alt: 'Friends eating delicious burgers together at a lively cafe table',
+            src: '/images/ethiopian_burger_dining_3.jpg',
+            alt: 'Ethiopian friends laughing and enjoying delicious smash burgers, fries, and iced drinks at a cozy booth',
             caption: t('Hearty smash burgers and crisp seasoned fries for table gatherings.'),
         },
         {
@@ -765,8 +765,8 @@ export default function Home() {
             caption: t('Crisp artisan crusts, rich cheese, and great conversations.'),
         },
         {
-            src: 'https://images.pexels.com/photos/5649942/pexels-photo-5649942.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80',
-            alt: 'Group enjoying juicy burgers and cafe hospitality in Addis Ababa',
+            src: '/images/ethiopian_cafe_food_5.jpg',
+            alt: 'Smiling Ethiopian diner lifting a slice of wood-fired pizza with melted cheese, burger, and traditional sini coffee cups',
             caption: t('Fresh cafe kitchen flavors bringing friends together every day.'),
         },
     ];
