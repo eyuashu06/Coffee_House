@@ -722,19 +722,52 @@ export default function Home() {
             caption: t('The traditional buna ceremony, poured from a clay jebena.'),
         },
         {
+            src: 'https://images.pexels.com/photos/6243673/pexels-photo-6243673.jpeg?auto=compress&cs=tinysrgb&w=1400&q=80',
+            alt: 'Ethiopian diners enjoying gourmet smash burgers and crispy fries',
+            caption: t('Prime artisanal burgers and hand-cut fries fresh from our kitchen.'),
+        },
+        {
             src: '/images/ethiopian_roasting.jpg',
             alt: 'Ethiopian woman roasting fresh coffee beans in a traditional pan over hot coals',
             caption: t('The morning roast, done where everyone can smell it.'),
+        },
+        {
+            src: 'https://images.pexels.com/photos/6605231/pexels-photo-6605231.jpeg?auto=compress&cs=tinysrgb&w=1400&q=80',
+            alt: 'Guests sharing fresh wood-fired pizza and cafe refreshments',
+            caption: t('Crisp wood-fired pizza shared among friends and family.'),
         },
         {
             src: '/images/ethiopian_cafe.jpg',
             alt: 'Warm and inviting Ethiopian cafe gathering in Addis Ababa',
             caption: t('A warm gathering over fresh coffee in Addis Ababa.'),
         },
+    ];
+
+    const diningSlides: Slide[] = [
         {
-            src: 'https://images.pexels.com/photos/9452515/pexels-photo-9452515.jpeg?auto=compress&cs=tinysrgb&w=1400&q=80',
-            alt: 'Steaming clay jebena pot resting on hot embers — photo by Yosef Futsum on Pexels',
-            caption: t('Jebena resting on glowing coals.'),
+            src: 'https://images.pexels.com/photos/6243673/pexels-photo-6243673.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80',
+            alt: 'Ethiopian guest enjoying a fresh artisanal burger at Buna Hub dining room',
+            caption: t('Artisanal smash burgers made fresh with prime local beef.'),
+        },
+        {
+            src: 'https://images.pexels.com/photos/6605231/pexels-photo-6605231.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80',
+            alt: 'Couple enjoying freshly baked wood-fired pizza and cafe refreshments',
+            caption: t('Sharing freshly baked wood-fired pizza with loved ones.'),
+        },
+        {
+            src: 'https://images.pexels.com/photos/5649938/pexels-photo-5649938.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80',
+            alt: 'Friends eating delicious burgers together at a lively cafe table',
+            caption: t('Hearty smash burgers and crisp seasoned fries for table gatherings.'),
+        },
+        {
+            src: 'https://images.pexels.com/photos/7886606/pexels-photo-7886606.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80',
+            alt: 'Friends enjoying wood-fired pizza and vibrant conversation in Addis Ababa',
+            caption: t('Crisp artisan crusts, rich cheese, and great conversations.'),
+        },
+        {
+            src: 'https://images.pexels.com/photos/5649942/pexels-photo-5649942.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80',
+            alt: 'Group enjoying juicy burgers and cafe hospitality in Addis Ababa',
+            caption: t('Fresh cafe kitchen flavors bringing friends together every day.'),
         },
     ];
 
@@ -1017,22 +1050,21 @@ export default function Home() {
                             <div className="mt-14 grid md:grid-cols-2 gap-8 lg:gap-14 items-center">
                                 <Reveal className="md:order-2">
                                     <figure className="grain bg-[var(--surface)] border border-[var(--border)] rounded-[18px] p-2.5 shadow-[var(--shadow)]">
-                                        <img
-                                            src="https://images.pexels.com/photos/38519890/pexels-photo-38519890.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80"
-                                            alt="Woman performing the coffee ceremony in traditional dress — photo by LekePOV on Pexels"
-                                            decoding="async"
-                                            loading="lazy"
-                                            className="w-full aspect-[4/3] object-cover rounded-[12px]"
+                                        <Slideshow
+                                            slides={diningSlides}
+                                            intervalMs={4500}
+                                            className="w-full aspect-[4/3]"
+                                            rounded="rounded-[12px]"
                                         />
                                     </figure>
                                 </Reveal>
                                 <Reveal delay={120} className="md:order-1">
-                                    <h3 className="font-display text-[26px] sm:text-[30px] leading-snug">{t('Three rounds, one blessing')}</h3>
+                                    <h3 className="font-display text-[26px] sm:text-[30px] leading-snug">{t('From roasting pan to artisanal kitchen')}</h3>
                                     <p className="mt-4 text-[16.5px] leading-[1.75] text-[var(--muted)]">
-                                        {t('Three rounds — abol, tona, and baraka. Staying for the third is how strangers become regulars.')}
+                                        {t('Three rounds — abol, tona, and baraka — paired with freshly prepared artisanal smash burgers and wood-fired pizza. Staying for the third is how strangers become regulars.')}
                                     </p>
                                     <p className="mt-4 text-[16.5px] leading-[1.75] text-[var(--muted)]">
-                                        {t('Our own roastery sits behind the counter — Yirgacheffe and Guji lots we buy through two family exporters.')}
+                                        {t('Our own roastery sits behind the counter, while our kitchen prepares Addis Ababa comfort food with local prime ingredients.')}
                                     </p>
                                 </Reveal>
                             </div>

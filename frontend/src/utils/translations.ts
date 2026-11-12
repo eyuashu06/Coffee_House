@@ -250,6 +250,25 @@ export const translations: Record<string, string> = {
   'poured three times.': 'ሦስት ዙር የሚቀዳ።',
   'The morning roast, done where everyone can smell it.':
     'የማለዳው ቡና ቁሊት፣ መዓዛው አዳራሹን የሚሞላበት።',
+  'Prime artisanal burgers and hand-cut fries fresh from our kitchen.':
+    'ልዩ የበርገር እና የድንች ጥብስ ምርጫዎቻችን ከኩሽናችን በቀጥታ።',
+  'Crisp wood-fired pizza shared among friends and family.':
+    'በእንጨት ምድጃ የተጋገረ ጥርት ያለ ፒዛ ከጓደኞችና ቤተሰብ ጋር የሚጋራ።',
+  'Artisanal smash burgers made fresh with prime local beef.':
+    'ከጥራት ካለው የሀገር ውስጥ ስጋ የተዘጋጁ ልዩ ስማሽ በርገሮች።',
+  'Sharing freshly baked wood-fired pizza with loved ones.':
+    'ትኩስ የእንጨት ምድጃ ፒዛን ከወዳጅ ዘመድ ጋር መጋራት።',
+  'Hearty smash burgers and crisp seasoned fries for table gatherings.':
+    'ጣፋጭ ስማሽ በርገሮች እና የቅመም ፍራይስ ለጠረጴዛ መሰብሰቢያ።',
+  'Crisp artisan crusts, rich cheese, and great conversations.':
+    'ጥሩ የእንጨት ምድጃ ፒዛ እና ሞቅ ያለ ጨዋታ።',
+  'Fresh cafe kitchen flavors bringing friends together every day.':
+    'ጓደኞችን በየዕለቱ የሚያሰባስቡ ትኩስ የምግብ ጣዕሞች።',
+  'From roasting pan to artisanal kitchen': 'ከቡና መቁያው እስከ ዘመናዊ ኩሽናችን',
+  'Three rounds — abol, tona, and baraka — paired with freshly prepared artisanal smash burgers and wood-fired pizza. Staying for the third is how strangers become regulars.':
+    'ሦስት ዙር ቡና — አቦል፣ ቶና፣ እና በረካ — ከልዩ ስማሽ በርገርና ትኩስ ፒዛ ጋር ተጣምሮ። ሦስተኛውን ዙር መጠበቅ እንግዶች ቋሚ ደንበኛ የሚሆኑበት መንገድ ነው።',
+  'Our own roastery sits behind the counter, while our kitchen prepares Addis Ababa comfort food with local prime ingredients.':
+    'የቡና መቁያችን ከጀርባ ሲገኝ፣ ኩሽናችንም በአዲስ አበባ ምርጥ የምግብ ጣዕሞችን በጥራት ያቀርባል።',
   'Buna dabo naw': 'ቡና ዳቦ ነው',
   'Our own roastery sits behind the counter — a small drum that turns out eight kilos at a time, mostly Yirgacheffe and Guji lots we buy through two family exporters. The burger grill and the pizza oven came later, because a ceremony that lasts three hours makes people hungry.':
     'የራሳችን የቡና መቆያ ከተጋባዥው ጀርባ ይገኛል — በአንድ ጊዜ 8 ኪሎ የሚቆላ። በአብዛኛው ከይርጋጨፌ እና ከጉጂ የሚመጡ ቡናዎች ናቸው። በርገርና ፒዛ በኋላ የተጨመሩት የሦስት ሰዓት ቡና ጨዋታ ሰዎችን ስለሚያስርብ ነው!።',
