@@ -148,6 +148,27 @@ export interface AssistantChatProps {
   onOpenCart?: () => void;
 }
 
+const TRANSLITERATED_AMHARIC_WORDS = [
+  'selam', 'tadiya', 'tadiyas', 'kemey', 'endet', 'endiet', 'endemin', 'dehina', 'dehna',
+  'tena', 'min', 'men', 'minden', 'mindin', 'minder', 'mindenew', 'mindinew', 'menew',
+  'sint', 'sintu', 'sintnew', 'yet', 'yetew', 'yetnew', 'man', 'manew', 'lemin',
+  'new', 'naw', 'nat', 'nech', 'nachehu', 'nachu', 'nen', 'neber', 'nebere',
+  'ale', 'alle', 'alew', 'aleh', 'alesh', 'alachu', 'alachehu', 'alachun', 'yelem',
+  'feleku', 'felegi', 'felegie', 'felegu', 'efelegalehu', 'ifelegalehu',
+  'asayegn', 'asayugn', 'asayun', 'nageregn', 'astawisegn', 'masyaz', 'asyaz',
+  'mazaz', 'tizaz', 'ametalign', 'asgebalign',
+  'eshi', 'ishi', 'betam', 'ameseginalew', 'ameseginalehu', 'amesegnalew',
+  'buna', 'dabo', 'shai', 'shay', 'megeb', 'migib', 'metet', 'waga', 'bota',
+  'adrasha', 'kift', 'zig', 'tarik', 'tarikachehu', 'jebena', 'sini', 'trapeza'
+];
+
+function isTransliteratedOrGeezAmharic(text: string): boolean {
+  if (!text) return false;
+  if (/[\u1200-\u137F]/.test(text)) return true;
+  const low = text.toLowerCase();
+  return TRANSLITERATED_AMHARIC_WORDS.some(w => new RegExp(`\\b${w}\\b`, 'i').test(low));
+}
+
 export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChatProps = {}) {
   // The assistant answers in ONE language at a time. Showing English and Amharic
   // stacked for every reply doubled the height of every message and, for a
@@ -238,6 +259,7 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
 
       const data = await res.json();
       const action: AssistantAction = data.action || {};
+      const detectedQueryLang = (data.language === 'am' || isTransliteratedOrGeezAmharic(query)) ? 'am' : (data.language || 'en');
       setMessages(prev => [
         ...prev,
         {
@@ -245,7 +267,7 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
           from: 'assistant',
           en: data.answer_en || data.answer || '',
           am: data.answer_am || '',
-          queryLang: data.language,
+          queryLang: detectedQueryLang,
           items: data.items || [],
           reservations: data.reservations || [],
           orders: data.orders || [],
@@ -429,8 +451,8 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
                                 <div className="min-w-0 flex-1">
                                   <span className="block text-[12px] font-bold text-[var(--text)] truncate">{tItem(item.name)}</span>
                                   <span className="block text-[11px] text-[var(--accent)] font-semibold">
-                                    {Number(item.price).toFixed(0)} {language === 'am' ? 'ብር' : 'ETB'}
-                                    {!item.available && <span className="text-red-600 dark:text-red-400"> · {t('Unavailable')}</span>}
+                                    {Number(item.price).toFixed(0)} {language === 'am' || msg.queryLang === 'am' ? 'ብር' : 'ETB'}
+                                    {!item.available && <span className="text-red-600 dark:text-red-400"> · {language === 'am' || msg.queryLang === 'am' ? 'አይገኝም' : t('Unavailable')}</span>}
                                   </span>
                                 </div>
                               </div>
@@ -445,7 +467,7 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
                                   }`}
                                 >
                                   <i className={`ph ${isJustAdded ? 'ph-check' : 'ph-shopping-bag'} text-sm`}></i>
-                                  <span>{isJustAdded ? (language === 'am' ? 'ተጨምሯል! ✓' : 'Added! ✓') : (language === 'am' ? 'ወደ ቅርጫት ጨምር' : 'Add to Cart')}</span>
+                                  <span>{isJustAdded ? (language === 'am' || msg.queryLang === 'am' ? 'ተጨምሯል! ✓' : 'Added! ✓') : (language === 'am' || msg.queryLang === 'am' ? 'ወደ ቅርጫት ጨምር' : 'Add to Cart')}</span>
                                 </button>
                               )}
                             </div>
