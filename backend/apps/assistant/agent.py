@@ -32,7 +32,7 @@ import re
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = 'gemini-3.5-flash-lite'
+DEFAULT_MODEL = 'gemini-2.0-flash'
 MAX_TOOL_ROUNDS = 6
 MAX_HISTORY_TURNS = 10
 
@@ -570,12 +570,20 @@ def verify_answer(en, am, ctx):
 
 def _client():
     from django.conf import settings
-    from google import genai
+    try:
+        from google import genai
+    except ImportError:
+        logger.warning('google-genai package not found; assistant will use deterministic engine')
+        return None
 
     api_key = getattr(settings, 'GEMINI_API_KEY', '')
     if not api_key:
         return None
-    return genai.Client(api_key=api_key)
+    try:
+        return genai.Client(api_key=api_key)
+    except Exception as e:
+        logger.warning('Failed to initialize Gemini Client: %s', e)
+        return None
 
 
 def _to_gemini_contents(history):
@@ -605,7 +613,7 @@ def _extract_json(text):
     return data
 
 
-def run_agent(query, user=None, session=None, staged=None, language='en'):
+def run_agent(query, user=None, session=None, staged=None, language='en', request_timeout=None):
     """
     Run one conversational turn with the language model.
 
@@ -625,13 +633,16 @@ def run_agent(query, user=None, session=None, staged=None, language='en'):
         return None
 
     model = getattr(settings, 'ASSISTANT_MODEL', DEFAULT_MODEL)
-    # The caller (AssistantMessageView) may supply a hard deadline so a slow
-    # provider cannot hold a chat open past the frontend's 45 s wrapper.
-    request_timeout = min(int(getattr(settings, 'ASSISTANT_REQUEST_TIMEOUT_S', 30)), 30)
-    if request_timeout < 1:
-        request_timeout = 1
+    if request_timeout is None:
+        request_timeout = getattr(settings, 'ASSISTANT_REQUEST_TIMEOUT_S', 30)
+    try:
+        request_timeout = min(int(request_timeout), 30)
+        if request_timeout < 1:
+            request_timeout = 1
+    except (TypeError, ValueError):
+        request_timeout = 30
 
-    timeout_ms = getattr(settings, 'ASSISTANT_LLM_TIMEOUT', 20) * 1000
+    timeout_ms = int(getattr(settings, 'ASSISTANT_LLM_TIMEOUT', request_timeout)) * 1000
     http_options = {'timeout': timeout_ms}
     history = list(getattr(session, 'history', []) or [])
     ctx = ToolContext(user=user, staged=staged, session=session)
@@ -665,7 +676,7 @@ def run_agent(query, user=None, session=None, staged=None, language='en'):
     }
 
     models_to_try = [model]
-    for fallback in ('gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash'):
+    for fallback in ('gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-flash-8b'):
         if fallback not in models_to_try:
             models_to_try.append(fallback)
 
@@ -674,22 +685,18 @@ def run_agent(query, user=None, session=None, staged=None, language='en'):
     for candidate_model in models_to_try:
         try:
             response = client.models.generate_content(
-                model=candidate_model, contents=contents, config=config,
-                request_timeout=request_timeout)
+                model=candidate_model, contents=contents, config=config)
             active_model = candidate_model
             break
-        except httpx.TimeoutException:
-            logger.warning('Assistant model %s timed out; retrying once', candidate_model)
+        except Exception as e:
+            logger.warning('Assistant model %s failed: %s; trying retry or fallback', candidate_model, e)
             try:
                 response = client.models.generate_content(
-                    model=candidate_model, contents=contents, config=config,
-                    request_timeout=request_timeout)
+                    model=candidate_model, contents=contents, config=config)
                 active_model = candidate_model
                 break
             except Exception as retry_err:
                 logger.warning('Assistant model %s retry also failed: %s', candidate_model, retry_err)
-        except Exception as e:
-            logger.warning('Assistant model %s failed: %s; trying fallback', candidate_model, e)
 
     if response is None:
         logger.warning('All assistant models failed; falling back to deterministic engine')
