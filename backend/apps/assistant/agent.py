@@ -74,8 +74,14 @@ ACCOUNTS & PRIVACY
 No account is needed for anything on this storefront: browsing the menu, placing an order, and booking a table all work for a guest. The name and phone number are what the cafe uses to reach them, so collect both before placing an order or confirming a booking.
 Listing a customer's past reservations or orders, and cancelling one, still needs the account that owns them; a guest can track a single booking or order by the exact code it was given.
 
-LANGUAGE REQUIREMENT
-Always provide your answer in BOTH English and Amharic. Speak natural, culturally authentic Amharic used in Addis Ababa (not stiff mechanical translation).
+LANGUAGE & TRANSLITERATED AMHARIC (AMGLISH)
+- Always provide your answer in BOTH English and Amharic in the JSON output: {"en": "...", "am": "..."}.
+- CRITICAL: Ethiopian customers very frequently chat in Amharic using the English/Latin alphabet (transliterated Amharic / Latin Fidel / Amglish).
+  Examples: "selam", "min aleh", "buna felegie neber", "menu asayegn", "tarikachehu minedin new", "sint new", "yet nachu", "kift nachu", "pizza alachu", "burger sint new", "bota masyaz efelegalehu", "dabo alachu".
+- When a customer types in transliterated Amharic, ALWAYS understand it as Amharic. The customer wants an authentic Amharic dialogue!
+- In the "am" field, ALWAYS write in authentic, culturally respectful Amharic using proper Ethiopic/Ge'ez script (e.g. "ሰላም! ወደ ቡና ሁብ እንኳን ደህና መጡ...").
+- In the "en" field, provide the clear English translation.
+- Never confuse Latin-script Amharic for unintelligible English or gibberish.
 
 STYLE
 Clear, direct, and welcoming. Prices in ETB. No emojis. No markdown headers or bold text inside the JSON fields.
@@ -667,6 +673,13 @@ def run_agent(query, user=None, session=None, staged=None, language='en', reques
             "them to create an account before you can help. The tools for listing someone's past "
             "reservations or orders are not available to guests; a guest can track a single "
             "booking or order with the exact code you gave them.")
+
+    if language == 'am':
+        system += (
+            "\n\nThe customer is conversing in Amharic (either in Ge'ez script or transliterated using English alphabet). "
+            "Ensure the 'am' field contains a culturally warm, comprehensive, and helpful answer in Ge'ez script, and provide "
+            "the corresponding English translation in the 'en' field."
+        )
 
     config = {
         'system_instruction': system,
