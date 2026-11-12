@@ -136,7 +136,7 @@ INSTALLED_APPS = [
 # never invent a price or claim a booking that was not made.
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', os.environ.get('GOOGLE_API_KEY', ''))
 ASSISTANT_USE_LLM = os.environ.get('ASSISTANT_USE_LLM', 'False').lower() in ('1', 'true', 'yes')
-ASSISTANT_MODEL = os.environ.get('ASSISTANT_MODEL', 'gemini-3.5-flash-lite')
+ASSISTANT_MODEL = os.environ.get('ASSISTANT_MODEL', 'gemini-2.0-flash')
 #: Requests to the model are capped so a slow provider cannot hold a chat open.
 ASSISTANT_LLM_TIMEOUT = int(os.environ.get('ASSISTANT_LLM_TIMEOUT', '20'))
 #: Absolute cap on a single assistant request, so a slow or overloaded provider
