@@ -106,11 +106,18 @@ def _amharic_prefix_match(token, keyword):
     Amharic matches on a shared prefix, because verbs inflect (አላችሁ / አላችሁን /
     አለህ) and the lexicon cannot list every form. English matches exactly, or
     across a regular plural, which is how customers actually write ("coffees").
+    Transliterated Amharic (Amglish) matches exact words, stem variants or
+    shared prefixes.
     """
     if token == keyword:
         return True
     if keyword.isascii() and token.isascii():
-        return token in _english_form_variants(keyword)
+        if token in _english_form_variants(keyword):
+            return True
+        shorter, longer = sorted([token, keyword], key=len)
+        if len(shorter) >= 4 and longer.startswith(shorter[:4]):
+            return True
+        return False
     shorter, longer = sorted([token, keyword], key=len)
     if len(shorter) >= 3 and longer.startswith(shorter):
         return True
@@ -121,14 +128,67 @@ def _hits(token, keywords):
     return any(_amharic_prefix_match(token, kw) for kw in keywords)
 
 
+# ── Transliterated Amharic (Amglish) vocabulary ───────────────────────
+
+TRANSLITERATED_AMHARIC_WORDS = {
+    # Greetings & politeness
+    'selam', 'selamta', 'selamno', 'selamnesh', 'selamneh', 'selamnachehu', 'selamnachu',
+    'tadiya', 'tadiyas', 'kemey', 'kemeyelkum', 'endet', 'endiet', 'endemin', 'dehina', 'dehna',
+    'tena', 'tenayistilign', 'tenayistilin', 'ameseginalew', 'ameseginalehu', 'ameseginalehugn',
+    'amesegnalew', 'amesegnalehu', 'amesegenalehu', 'amesegnalehugn', 'eshi', 'ishi', 'betam',
+    # Interrogatives & pronouns
+    'min', 'men', 'minden', 'mindin', 'minder', 'mindenew', 'mindinew', 'menew', 'minew',
+    'sint', 'sintu', 'sintnew', 'sintinew', 'yet', 'yetew', 'yetnew', 'man', 'manew', 'lemin',
+    'yene', 'ante', 'anchi', 'innante', 'enante', 'egna', 'erso', 'issu', 'issua',
+    # Copula, existence & verbs
+    'new', 'naw', 'nat', 'nech', 'nachehu', 'nachu', 'nen', 'neber', 'nebere', 'nabar',
+    'ale', 'alle', 'alew', 'aleh', 'alesh', 'alachu', 'alachehu', 'alachun', 'alewum', 'yelem',
+    'feleku', 'felegi', 'felegie', 'felegu', 'felaghu', 'efelegalehu', 'efelegalo', 'ifelegalehu',
+    'asayegn', 'asayugn', 'asayun', 'nageregn', 'negerugn', 'nagerugn', 'astawisegn', 'sertu',
+    'megezat', 'magegnot', 'litredugn', 'litredagn', 'mitredugn', 'masyaz', 'asyaz', 'mazaz',
+    'azezku', 'tizaz', 'tizaze', 'tizazen', 'ametalign', 'asgebalign', 'tekelbelugn',
+    'marte', 'konjo', 'tiru', 'gobez', 'ere', 'are', 'ayzo', 'ayzosh', 'ayzoch',
+    # Cafe & Ethiopian culture nouns
+    'buna', 'bunaw', 'dabo', 'dabow', 'shai', 'shay', 'megeb', 'megeboch', 'migib', 'migiboch',
+    'metet', 'metetoch', 'waga', 'wagaw', 'waha', 'wuha', 'bota', 'adrashe', 'adrasha', 'adrashachu',
+    'seat', 'sehat', 'kift', 'zig', 'tibs', 'doro', 'korma', 'injera', 'firfir', 'berbere',
+    'jebena', 'sini', 'abol', 'tona', 'baraka', 'tarik', 'tarikachehu', 'tarikachu', 'trapeza',
+}
+
+
+def is_transliterated_amharic(text):
+    """Detect whether a Latin-script text represents transliterated Amharic (Amglish)."""
+    tokens = tokenize(text)
+    if not tokens:
+        return False
+    hits = 0
+    for tok in tokens:
+        if tok in TRANSLITERATED_AMHARIC_WORDS:
+            hits += 1
+            continue
+        for kw in TRANSLITERATED_AMHARIC_WORDS:
+            if len(kw) >= 4 and len(tok) >= 4 and tok.startswith(kw[:4]):
+                if (tok.startswith('tarik') or tok.startswith('feleg') or tok.startswith('asay') or
+                        tok.startswith('alach') or tok.startswith('nach') or tok.startswith('selam')):
+                    hits += 1
+                    break
+    return hits >= 1
+
+
 # ── Intent detection ──────────────────────────────────────────────────
 
 def detect_language(text):
-    amharic = len([c for c in (text or '') if 'ሀ' <= c <= '፿'])
-    latin = len([c for c in (text or '') if c.isascii() and c.isalpha()])
+    if not text:
+        return 'en'
+    amharic = len([c for c in text if 'ሀ' <= c <= '፿'])
+    latin = len([c for c in text if c.isascii() and c.isalpha()])
     if amharic > latin and amharic >= 2:
         return 'am'
     if amharic and not latin:
+        return 'am'
+    if amharic >= 2:
+        return 'am'
+    if is_transliterated_amharic(text):
         return 'am'
     return 'en'
 
