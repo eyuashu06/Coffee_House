@@ -10,12 +10,12 @@ interface OrderTrackerProps {
 }
 
 const STATUS_STAGES = [
-  { key: 'PENDING_PAYMENT', label: 'Payment', icon: 'payments' },
-  { key: 'PLACED', label: 'Placed', icon: 'receipt_long' },
-  { key: 'PREPARING', label: 'Preparing', icon: 'coffee_maker' },
-  { key: 'READY', label: 'Ready', icon: 'check_circle' },
-  { key: 'OUT_FOR_DELIVERY', label: 'Delivery', icon: 'local_shipping' },
-  { key: 'COMPLETED', label: 'Completed', icon: 'done_all' },
+  { key: 'PENDING_PAYMENT', label: 'Payment', icon: 'ph-credit-card' },
+  { key: 'PLACED', label: 'Placed', icon: 'ph-receipt' },
+  { key: 'PREPARING', label: 'Preparing', icon: 'ph-coffee' },
+  { key: 'READY', label: 'Ready', icon: 'ph-check-circle' },
+  { key: 'OUT_FOR_DELIVERY', label: 'Delivery', icon: 'ph-moped' },
+  { key: 'COMPLETED', label: 'Completed', icon: 'ph-checks' },
 ];
 
 /**
@@ -88,7 +88,7 @@ export default function OrderTracker({
   if (['CANCELLED', 'REJECTED', 'FAILED'].includes(status)) {
     return (
       <div className="flex items-center gap-2 p-3 mt-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold">
-        <span className="material-symbols-outlined">cancel</span>
+        <i className="ph ph-x-circle text-base"></i>
         {t('Order was', 'ትዕዛዙ')} {t(status.toLowerCase(), status.toLowerCase())}.
       </div>
     );
@@ -126,7 +126,7 @@ export default function OrderTracker({
                       : 'bg-[var(--surface)] text-[var(--muted)] border-2 border-[var(--border)]'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">{stage.icon}</span>
+                <i className={`ph ${stage.icon} text-[16px]`}></i>
               </div>
               <span className={`text-[9px] font-bold uppercase tracking-wider text-center ${
                 isCompleted || isCurrent ? 'text-[var(--accent)]' : 'text-[var(--muted)]'
