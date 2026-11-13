@@ -6,9 +6,11 @@ sees admin data, other customers' orders, payments or credentials.
 """
 
 import re
+from datetime import datetime
 from difflib import SequenceMatcher
 
 from django.db.models import Q
+from django.utils import timezone
 
 from apps.menu.models import MenuItem
 from apps.orders.models import RestaurantSettings
@@ -113,9 +115,6 @@ def _amharic_prefix_match(token, keyword):
         return True
     if keyword.isascii() and token.isascii():
         if token in _english_form_variants(keyword):
-            return True
-        shorter, longer = sorted([token, keyword], key=len)
-        if len(shorter) >= 4 and longer.startswith(shorter[:4]):
             return True
         return False
     shorter, longer = sorted([token, keyword], key=len)
@@ -652,9 +651,12 @@ def _extract_date_and_time(text):
     # "today"/"ዛሬ" means today; "tomorrow"/"ነገ" means the next day. Checked
     # explicitly instead of the old nested-conditional chain, which double-counted
     # 'today' as a tomorrow word and then overrode it anyway.
+    asked_for_today = bool(
+        'today' in lowered or 'tonight' in lowered or 'ዛሬ' in lowered or re.search(r'\bzare\b', lowered)
+    )
     if 'tomorrow' in lowered or 'ነገ' in lowered or re.search(r'\bnege\b', lowered):
         target_date = today + timedelta(days=1)
-    elif 'today' in lowered or 'tonight' in lowered or 'ዛሬ' in lowered or re.search(r'\bzare\b', lowered):
+    elif asked_for_today:
         target_date = today
 
     if target_date is None:
@@ -763,6 +765,16 @@ def _extract_date_and_time(text):
         elif 'noon' in lowered or 'midday' in lowered or 'ቀን ማታ' in lowered:
             target_time = '12:00'
 
+    # If "today" was requested but that clock time already passed, continue the
+    # booking flow on the next day instead of dead-ending in "past date".
+    if target_date == today and target_time and asked_for_today:
+        try:
+            parsed_time = datetime.strptime(target_time, '%H:%M').time()
+            if parsed_time <= timezone.localtime().time():
+                target_date = today + timedelta(days=1)
+        except ValueError:
+            pass
+
     return target_date, target_time
 
 
@@ -819,6 +831,7 @@ def _extract_name(text):
         'person', 'pax', 'wanna', 'want', 'make', 'today', 'tomorrow', 'tonight',
         'order', 'food', 'drink', 'coffee', 'buna', 'at', 'on', 'with', 'please',
         'hello', 'hi', 'hey', 'selam', 'ok', 'yes', 'no', 'pizza', 'burger',
+        'pickup', 'pick', 'delivery', 'deliver', 'dine', 'dinein',
         'ማስያዝ', 'ቦታ', 'ጠረጴዛ', 'ሰዎች', 'ሰው', 'ነገ', 'ዛሬ', 'ማታ', 'ጠዋት', 'ሰላም'
     }
     for pattern in patterns:
