@@ -710,7 +710,7 @@ def _extract_date_and_time(text):
 
         # 3. prepositioned hour: at 6, on the 4, make it at 12, make it on the 4 at us, around 3, ከ6, በ6
         prep = re.search(
-            r'(?:at|on\s+the|on|by|around|make\s+it\s+(?:at\s+|on\s+(?:the\s+)?)?|ከ|በ)\s*(\d{1,2})(?!\d|[:.])(?:\s*(?:in|at|on))?(?:\s*(am|pm|night|evening|morning|ጠዋት|ማታ|ethiopian?|ethiopia|us|usa|lt|seat|se\'at))?',
+            r'(?:at|on\s+the|on|by|around|make\s+it\s+(?:at\s+|on\s+(?:the\s+)?)?|ከ|በ)\s*(\d{1,2})(?!\d|[:.])(?:\s*(?:in|at|on))?(?:\s*(am|pm|night|evening|morning|ጠዋት|ማታ|ሰዓት|ethiopian?|ethiopia|us|usa|lt|seat|se\'at))?',
             lowered)
 
         if unit_first:
