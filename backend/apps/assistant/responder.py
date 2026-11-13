@@ -321,11 +321,17 @@ def format_time_with_lt(time_str):
         minute = int(parts[1]) if len(parts) > 1 else 0
         min_str = f":{minute:02d}" if minute else ":00"
 
+        # US 12-hour format
+        us_hour = hour % 12 or 12
+        us_ampm = "AM" if hour < 12 else "PM"
+        us_str = f"{us_hour}{min_str} {us_ampm}"
+
         # Ethiopian time calculation: starts at 6:00 AM (12:00 dawn LT)
         # 06:00 -> 12:00 day LT
         # 07:00 -> 1:00 morning LT
         # 12:00 -> 6:00 afternoon LT
         # 13:00 -> 7:00 afternoon LT
+        # 16:00 -> 10:00 afternoon LT
         # 18:00 -> 12:00 dusk LT
         # 19:00 -> 1:00 night LT
         # 24:00/00:00 -> 6:00 night LT
@@ -346,8 +352,8 @@ def format_time_with_lt(time_str):
             period_en = "night"
             period_am = "ሌሊት"
 
-        en = f"{time_str} ({lt_hour}{min_str} LT {period_en})"
-        am = f"{time_str} ({period_am} {lt_hour}{min_str} ሰዓት)"
+        en = f"{time_str} ({us_str} / {lt_hour}{min_str} LT {period_en})"
+        am = f"{time_str} ({us_str} / {period_am} {lt_hour}{min_str} ሰዓት)"
         return {'en': en, 'am': am}
     except Exception:
         return {'en': time_str, 'am': time_str}
@@ -375,9 +381,9 @@ def _reservation_prompt(missing, state):
     en_missing, am_missing = [], []
     labels = {
         'name': ('your name', 'ስምዎ'),
-        'phone': ('your phone number', 'የስልክ ቁጥርዎ'),
+        'phone': ('your phone number (e.g. 09... or 07...)', 'የስልክ ቁጥርዎ (ለምሳሌ 09... ወይም 07...)'),
         'date': ('the date', 'ቀን'),
-        'time': ('the time', 'ሰዓት'),
+        'time': ('the reservation time (available 7:00 AM – 9:00 PM / 1:00 ጧት – 3:00 ማታ LT)', 'የቦታ ማስያዣ ሰዓት (ከጠዋቱ 1:00 ጧት እስከ ማታ 3:00 ማታ)'),
         'guests': ('how many guests', 'የሰዎች ብዛት'),
     }
     for field in missing:
@@ -405,8 +411,35 @@ def handle_reservation_create(text, state, user=None):
         if not state.get('phone') and getattr(user, 'phone', ''):
             state['phone'] = getattr(user, 'phone', '')
 
+    # Validate operating hours immediately if date and time are provided
+    if state.get('date') and state.get('time'):
+        from apps.orders.models import RestaurantSettings
+        venue = RestaurantSettings.get_settings()
+        when = reservation_service.parse_date_time(state['date'], state['time'])
+        if when and not venue.is_store_within_operating_hours(when):
+            bad_time = state.pop('time')
+            bad_lt = format_time_with_lt(bad_time)
+            suggestions = reservation_service.suggest_alternative_times(
+                state['date'], bad_time, state.get('guests', 2))
+            sugg_en = [format_time_with_lt(s)['en'] for s in suggestions]
+            sugg_am = [format_time_with_lt(s)['am'] for s in suggestions]
+            sugg_en_text = ("\n\nAvailable reservation times:\n" + "\n".join(f"• {s}" for s in sugg_en)) if sugg_en else ""
+            sugg_am_text = ("\n\nክፍት የስራ ሰዓታት፦\n" + "\n".join(f"• {s}" for s in sugg_am)) if sugg_am else ""
+            en = (
+                f"The requested time {bad_lt['en']} is outside our operating hours. "
+                "Our reservation hours are 7:00 AM – 9:00 PM (1:00 ጧት – 3:00 ማታ Ethiopian time)."
+                f"{sugg_en_text}\n\nWhich time would you prefer?"
+            )
+            am = (
+                f"የጠየቁት ሰዓት {bad_lt['am']} ከስራ ሰዓታችን ውጭ ነው። "
+                "የቦታ ማስያዣ ሰዓታችን ከጠዋቱ 1:00 ጧት እስከ ማታ 3:00 ማታ (7:00 AM – 9:00 PM) ነው።"
+                f"{sugg_am_text}\n\nየትኛውን ሰዓት መያዝ ይፈልጋሉ?"
+            )
+            missing = [f for f in ('name', 'phone', 'date', 'time', 'guests') if not state.get(f)]
+            return bilingual(en, am), [], state, {'action': 'suggest_alternative_time', 'missing': missing}
+
     # For guests (not signed in), phone number is required to verify and contact the guest.
-    # For signed-in users, use user.phone if available; if not provided, account identity is known.
+    # For signed-in users, account identity is known.
     if user and getattr(user, 'is_authenticated', False):
         missing = [f for f in ('name', 'date', 'time', 'guests') if not state.get(f)]
     else:
@@ -426,31 +459,33 @@ def handle_reservation_create(text, state, user=None):
                   "እባክዎን በቀጥታ ወደ Coffee House ይደውሉ፤ እናስተናግዶታለን።")
             return bilingual(en, am), [], state, {'action': 'none'}
 
+        bad_time = state.pop('time')
+        bad_lt = format_time_with_lt(bad_time)
         suggestions = reservation_service.suggest_alternative_times(
-            state['date'], state['time'], state['guests'])
+            state['date'], bad_time, state['guests'])
         if suggestions:
             sugg_en = [format_time_with_lt(s)['en'] for s in suggestions]
             sugg_am = [format_time_with_lt(s)['am'] for s in suggestions]
             en = (
-                "Sorry, that time is not available. Our operating hours are 7:00 AM – 9:00 PM "
+                f"Sorry, {bad_lt['en']} is not available. Our operating hours are 7:00 AM – 9:00 PM "
                 "(1:00 ጧት – 3:00 ማታ Ethiopian time).\n\n"
                 "Available reservation times:\n"
                 + '\n'.join(f"• {s}" for s in sugg_en) +
                 "\n\nWhich time would you prefer?"
             )
             am = (
-                "ይቅርታ፣ ያ ሰዓት ክፍት አይደለም። የስራ ሰዓታችን ከጠዋቱ 1:00 ጧት እስከ ማታ 3:00 ማታ "
+                f"ይቅርታ፣ {bad_lt['am']} ክፍት አይደለም። የስራ ሰዓታችን ከጠዋቱ 1:00 ጧት እስከ ማታ 3:00 ማታ "
                 "(7:00 AM – 9:00 PM) ነው።\n\n"
                 "የሚገኙ ክፍት ሰዓታት፦\n"
                 + '\n'.join(f"• {s}" for s in sugg_am) +
                 "\n\nየትኛውን ሰዓት መያዝ ይፈልጋሉ?"
             )
         else:
-            en = ("Sorry, that time is not available. Our opening hours are 7:00 AM – 9:00 PM "
+            en = (f"Sorry, {bad_lt['en']} is not available. Our opening hours are 7:00 AM – 9:00 PM "
                   "(1:00 ጧት – 3:00 ማታ Ethiopian time). Please choose another time within our business hours or call the Coffee House.")
-            am = ("ይቅርታ፣ ያ ሰዓት ክፍት አይደለም። የስራ ሰዓታችን ከጠዋቱ 1:00 ጧት እስከ ማታ 3:00 ማታ "
+            am = (f"ይቅርታ፣ {bad_lt['am']} ክፍት አይደለም። የስራ ሰዓታችን ከጠዋቱ 1:00 ጧት እስከ ማታ 3:00 ማታ "
                   "(7:00 AM – 9:00 PM) ነው። እባክዎን በስራ ሰዓት ውስጥ ሌላ ሰዓት ይምረጡ ወይም ወደ Coffee House ይደውሉ።")
-        return bilingual(en, am), [], state, {'action': 'suggest_alternative_time'}
+        return bilingual(en, am), [], state, {'action': 'suggest_alternative_time', 'missing': ['time']}
 
     reservation, error = reservation_service.create_reservation(
         name=state['name'], phone=state.get('phone', ''), date_str=state['date'],

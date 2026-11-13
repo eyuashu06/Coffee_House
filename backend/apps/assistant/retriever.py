@@ -223,6 +223,7 @@ def detect_intent(text):
         # same word scored two or three times and "cancel my order" was read as a
         # reservation.
         seen = set()
+        matched_tokens = set()
         for lang in ('en', 'am'):
             for kw in groups.get(lang, []):
                 kw_low = kw.lower()
@@ -231,9 +232,11 @@ def detect_intent(text):
                         score += 3
                         seen.add(kw_low)
                 else:
-                    if _hits(kw_low, token_set) and kw_low not in seen:
-                        score += 2
-                        seen.add(kw_low)
+                    for t in token_set:
+                        if t not in matched_tokens and _amharic_prefix_match(t, kw_low):
+                            score += 2
+                            matched_tokens.add(t)
+                            break
         if score:
             scores[intent] = score
 
@@ -674,11 +677,13 @@ def _extract_date_and_time(text):
         except ValueError:
             pass
 
-    # time: 6pm / 18:30 / 9 morning / ከ18:00 / 6 ሰዓት / 1 at night LT / 1 night LT / seat 2
+    # time: 6pm / 18:30 / 9 morning / ከ18:00 / 6 ሰዓት / 1 at night LT / 1 night LT / seat 2 / at 10 in ethiopian / on the 4 at us
     target_time = None
-    is_lt = bool(
-        re.search(r'\b(?:lt|local\s*time|seat|se\'at|ethiopia\s*time|ethiopian\s*time)\b', lowered)
+    is_us = bool(re.search(r'\b(?:us|u\.s\.|usa|standard|western|american)\b', lowered))
+    is_lt = not is_us and bool(
+        re.search(r'\b(?:lt|local\s*time|seat|se\'at|saat|sa\'at|habesha|ethiopian?|ethiopia)\b', lowered)
         or 'በኢትዮጵያ' in lowered
+        or 'የኢትዮጵያ' in lowered
     )
 
     time_match = re.search(r'(?<!\d)(\d{1,2})[:.](\d{2})(?!\d)', lowered)
@@ -687,49 +692,28 @@ def _extract_date_and_time(text):
         m = time_match.group(2)
         if is_lt:
             h = _convert_ethiopian_hour(h, lowered)
+        elif is_us:
+            if h < 12 and ('pm' in lowered or 'night' in lowered or 'evening' in lowered or (1 <= h <= 6)):
+                h += 12
+            elif ('am' in lowered or 'morning' in lowered) and h == 12:
+                h = 0
         target_time = f"{h:02d}:{m}"
     else:
-        marker = re.search(
-            r'(?<!\d)(\d{1,2})\s*(?:at\s+|in\s+(?:the\s+)?|on\s+)?(am|pm|morning|afternoon|evening|night|noon|midday|ጠዋት|ከሰዓት|ማታ|ሌሊት)(?![a-z])', lowered)
-        lt_lone = re.search(
-            r'(?<!\d)(\d{1,2})\s*(?:at\s+|on\s+)?(?:lt|local\s*time|ethiopia\s*time|ethiopian\s*time)\b', lowered)
-        preposition = re.search(
-            r'ከ?\s*(?<!\d)(\d{1,2})\s*(ሰዓት|ማታ|ጠዋት|ሌሊት|seat|se\'at)(?![a-z])', lowered)
+        # 1. unit first: seat 10, ከሰዓት 4, ሰዓት 6, ማታ 1
         unit_first = re.search(
             r'(?<!\d)(ከሰዓት|ሰዓት|ማታ|ጠዋት|ሌሊት|seat|se\'at)\s*(?:ከ\s*|በ\s*)?(\d{1,2})(?!\d)', lowered)
-        bare_hour = re.search(
-            r'(?:at|by|for|make\s+it\s+at|around|ከ|በ)\s*(\d{1,2})(?!\d|[:.])(?:\s*(am|pm|night|evening|morning|ጠዋት|ማታ))?', lowered)
 
-        if marker:
-            hour = int(marker.group(1))
-            word = marker.group(2).strip()
-            if is_lt:
-                hour = _convert_ethiopian_hour(hour, word)
-            else:
-                if word in DAY_PART_WORDS and word not in ('am', 'pm', 'ጠዋት', 'ማታ'):
-                    hour += DAY_PART_WORDS[word]
-                    hour = min(hour, 23)
-                elif word in ('pm', 'ማታ') and hour < 12:
-                    hour += 12
-                elif word in ('am', 'ጠዋት') and hour == 12:
-                    hour = 0
-            target_time = f"{hour:02d}:00"
-        elif lt_lone:
-            hour = int(lt_lone.group(1))
-            hour = _convert_ethiopian_hour(hour, lowered)
-            target_time = f"{hour:02d}:00"
-        elif preposition:
-            hour = int(preposition.group(1))
-            word = preposition.group(2)
-            if word in ('seat', 'se\'at') or is_lt:
-                hour = _convert_ethiopian_hour(hour, word)
-            else:
-                if word in ('ማታ',) and hour < 12:
-                    hour += 12
-                elif word == 'ጠዋት' and hour == 12:
-                    hour = 0
-            target_time = f"{hour:02d}:00"
-        elif unit_first:
+        # 2. hour followed by marker/unit: 4 pm, 6 morning, 10 in ethiopian, 4 at us, 10 lt, 10 seat, 2 night LT
+        marker = re.search(
+            r'(?<!\d)(\d{1,2})\s*(?:at\s+|in\s+(?:the\s+)?|on\s+)?(am|pm|morning|afternoon|evening|night|noon|midday|ጠዋት|ከሰዓት|ማታ|ሌሊት|ethiopian?|ethiopia|us|usa|lt|local\s*time|seat|se\'at)(?![a-z])',
+            lowered)
+
+        # 3. prepositioned hour: at 6, on the 4, make it at 12, make it on the 4 at us, around 3, ከ6, በ6
+        prep = re.search(
+            r'(?:at|on\s+the|on|by|around|make\s+it\s+(?:at\s+|on\s+(?:the\s+)?)?|ከ|በ)\s*(\d{1,2})(?!\d|[:.])(?:\s*(?:in|at|on))?(?:\s*(am|pm|night|evening|morning|ጠዋት|ማታ|ethiopian?|ethiopia|us|usa|lt|seat|se\'at))?',
+            lowered)
+
+        if unit_first:
             hour = int(unit_first.group(2))
             word = unit_first.group(1)
             if word in ('seat', 'se\'at', 'ከሰዓት') or is_lt:
@@ -740,11 +724,37 @@ def _extract_date_and_time(text):
                 elif word == 'ጠዋት' and hour == 12:
                     hour = 0
             target_time = f"{hour:02d}:00"
-        elif bare_hour:
-            h = int(bare_hour.group(1))
-            period = bare_hour.group(2) or ''
-            if is_lt:
+        elif marker:
+            hour = int(marker.group(1))
+            word = marker.group(2).strip()
+            if is_lt or word in ('lt', 'local time', 'seat', 'se\'at', 'ethiopian', 'ethiopia'):
+                hour = _convert_ethiopian_hour(hour, word or lowered)
+            elif is_us or word in ('us', 'usa'):
+                if hour < 12 and (word in ('pm', 'night', 'evening', 'ማታ') or is_us or 1 <= hour <= 6):
+                    hour += 12
+                elif word in ('am', 'morning', 'ጠዋት') and hour == 12:
+                    hour = 0
+            else:
+                if word in ('pm', 'night', 'evening', 'ማታ') and hour < 12:
+                    hour += 12
+                elif word in ('am', 'morning', 'ጠዋት') and hour == 12:
+                    hour = 0
+                elif word in ('afternoon', 'evening') and hour < 12:
+                    hour += 12
+                elif word in DAY_PART_WORDS and word not in ('am', 'pm', 'ጠዋት', 'ማታ'):
+                    hour += DAY_PART_WORDS[word]
+                    hour = min(hour, 23)
+            target_time = f"{hour:02d}:00"
+        elif prep:
+            h = int(prep.group(1))
+            period = (prep.group(2) or '').lower()
+            if is_lt or period in ('lt', 'seat', 'se\'at', 'ethiopian', 'ethiopia'):
                 h = _convert_ethiopian_hour(h, period or lowered)
+            elif is_us or period in ('us', 'usa'):
+                if h < 12 and (period in ('pm', 'night', 'evening', 'ማታ') or is_us or 1 <= h <= 6):
+                    h += 12
+                elif period in ('am', 'morning', 'ጠዋት') and h == 12:
+                    h = 0
             else:
                 if period in ('pm', 'night', 'evening', 'ማታ') and h < 12:
                     h += 12
@@ -780,7 +790,7 @@ def _extract_date_and_time(text):
 
 def _extract_guests(text):
     """
-    Extract the party size. Must not mistake the hour in "6 PM" for a guest count,
+    Extract the party size. Must not mistake the hour in "6 PM" or "on the 4 at us" for a guest count,
     so an explicit "4 people" / "ለ4 ሰው" pattern is required before any bare digit.
     """
     low = normalize_amharic_digits((text or '').lower())
@@ -799,8 +809,8 @@ def _extract_guests(text):
     if match:
         return int(match.group(1))
 
-    # 2) "table for 4" / "party of 4" / "for 4 people" / "le 4 sewoch"
-    match = re.search(r'(?:table\s+for|for|party\s+of|ለ|le)\s*(\d+)\s*(?:people|persons?|guests?|ሰዎች|ሰው|sewoch|sew)?\b', low)
+    # 2) "table for 4" / "reservation for 4" / "party of 4" / "for 4 people" / "le 4 sewoch"
+    match = re.search(r'(?:table\s+for|reservation\s+for|booking\s+for|party\s+of|ለ|le)\s*(\d+)\s*(?:people|persons?|guests?|ሰዎች|ሰው|sewoch|sew)?\b', low)
     if match:
         return int(match.group(1))
 
@@ -812,10 +822,11 @@ def _extract_guests(text):
     # 4) a lone digit is only a party size when the message carries no time
     _, extracted_time = _extract_date_and_time(text)
     if not extracted_time:
-        digits = re.findall(r'\b(\d{1,2})\b', low)
-        for value in digits:
-            if 1 <= int(value) <= 50:
-                return int(value)
+        if not re.search(r'\b(?:us|u\.s\.|usa|lt|seat|se\'at|morning|night|evening|afternoon|ጠዋት|ማታ)\b', low):
+            digits = re.findall(r'\b(\d{1,2})\b', low)
+            for value in digits:
+                if 1 <= int(value) <= 50:
+                    return int(value)
     return None
 
 
@@ -823,6 +834,7 @@ def _extract_name(text):
     """A reservation name is usually the short phrase after 'name is' / 'ስም' or a standalone name."""
     patterns = [
         r'(?:my name is|name is|under the name of|under the name|under|named|name)[:\s]+([A-Za-z\u1200-\u137F][A-Za-z\u1200-\u137F\s\-\.]{1,30})',
+        r'\b(?:for|under)\s+([A-Za-z\u1200-\u137F]{2,20})(?=\s+(?:phone|tel|\+?251|0[79]|\d|at|on|$))',
         r'ስም(?:\s*ነው|\s*:\s*|\s+)\s*([^\s,.]{2,30})',
         r'ስሜ\s*([^\s,.]{2,30})',
     ]
@@ -831,8 +843,10 @@ def _extract_name(text):
         'person', 'pax', 'wanna', 'want', 'make', 'today', 'tomorrow', 'tonight',
         'order', 'food', 'drink', 'coffee', 'buna', 'at', 'on', 'with', 'please',
         'hello', 'hi', 'hey', 'selam', 'ok', 'yes', 'no', 'pizza', 'burger',
-        'pickup', 'pick', 'delivery', 'deliver', 'dine', 'dinein',
-        'ማስያዝ', 'ቦታ', 'ጠረጴዛ', 'ሰዎች', 'ሰው', 'ነገ', 'ዛሬ', 'ማታ', 'ጠዋት', 'ሰላም'
+        'pickup', 'pick', 'delivery', 'deliver', 'dine', 'dinein', 'dine-in', 'store',
+        'lunch', 'dinner', 'breakfast', 'brunch', 'us', 'me', 'two', 'three', 'four',
+        'five', 'six', 'seven', 'eight', 'nine', 'ten',
+        'ማስያዝ', 'ቦታ', 'ጠረጴዛ', 'ሰዎች', 'ሰው', 'ነገ', 'ዛሬ', 'ማታ', 'ጠዋት', 'ሰላም', 'አዎ', 'አይ'
     }
     for pattern in patterns:
         match = re.search(pattern, (text or ''), re.IGNORECASE)

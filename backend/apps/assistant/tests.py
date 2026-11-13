@@ -1358,8 +1358,8 @@ class OrderPricingTests(TestCase):
 
 class EthiopianTimeAndReservationDialogueTests(AssistantTestBase):
     def test_ethiopian_time_dialogue_with_me_and_friend_and_name(self):
-        # Turn 1: Guest asks for reservation for "me and my friend" at 6 Local time
-        r1 = self.ask('hey, i wanna order pizza for me and my friend today at 6 Local time with reservation table', session_id='conv-lema')
+        # Turn 1: Guest asks for reservation for "me and my friend" tomorrow at 6 Local time
+        r1 = self.ask('hey, i wanna order pizza for me and my friend tomorrow at 6 Local time with reservation table', session_id='conv-lema')
         self.assertEqual(r1['action']['action'], 'collect_reservation_details')
         self.assertIn('name', r1['action']['missing'])
         self.assertIn('phone', r1['action']['missing'])
@@ -1381,3 +1381,40 @@ class EthiopianTimeAndReservationDialogueTests(AssistantTestBase):
         self.assertIn('Lema', r3['answer_en'])
         self.assertIn('12:00', r3['answer_en'])
         self.assertIn('2 guests', r3['answer_en'])
+
+    def test_ethiopian_10_vs_us_4_equivalency(self):
+        from apps.assistant.retriever import _extract_date_and_time
+
+        # "at 10 in ethiopian" should be 16:00 (4:00 PM standard / 10:00 LT afternoon)
+        _, t_eth = _extract_date_and_time('table for 2 tomorrow at 10 in ethiopian')
+        self.assertEqual(t_eth, '16:00')
+
+        # "on the 4 at us" should also resolve to 16:00 (4:00 PM standard / 10:00 LT afternoon)
+        _, t_us = _extract_date_and_time('make it on the 4 at us')
+        self.assertEqual(t_us, '16:00')
+
+        # "at 4 us"
+        _, t_us2 = _extract_date_and_time('at 4 us')
+        self.assertEqual(t_us2, '16:00')
+
+        # Full dialogue with "at 10 in ethiopian"
+        r = self.ask('table for 2 tomorrow at 10 in ethiopian for Abebe phone 0911223344')
+        self.assertEqual(r['action']['action'], 'reservation_created')
+        self.assertIn('4:00 PM', r['answer_en'])
+        self.assertIn('10:00', r['answer_en'])
+        self.assertIn('Abebe', r['answer_en'])
+
+    def test_operating_hours_rejection_and_alternative_suggestions(self):
+        # 4:00 AM is closed (opening hours are 7:00 AM - 9:00 PM)
+        r = self.ask('table for 2 tomorrow at 4:00 AM for Dawit phone 0912345678', session_id='closed-hours-test')
+        self.assertEqual(r['action']['action'], 'suggest_alternative_time')
+        self.assertIn('outside our operating hours', r['answer_en'])
+        self.assertIn('7:00 AM – 9:00 PM', r['answer_en'])
+        # Time should be cleared from state so customer can supply a valid time
+        self.assertIn('time', r['action']['missing'])
+
+        # Now customer provides "on the 4 at us" (4 PM / 16:00)
+        r2 = self.ask('make it on the 4 at us', session_id='closed-hours-test')
+        self.assertEqual(r2['action']['action'], 'reservation_created')
+        self.assertIn('4:00 PM', r2['answer_en'])
+        self.assertIn('Dawit', r2['answer_en'])
