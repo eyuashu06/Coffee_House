@@ -411,8 +411,8 @@ def handle_reservation_create(text, state, user=None):
         if not state.get('phone') and getattr(user, 'phone', ''):
             state['phone'] = getattr(user, 'phone', '')
 
-    # Validate operating hours immediately if date and time are provided
-    if state.get('date') and state.get('time'):
+    # Validate operating hours once date, time, and party size are known
+    if state.get('date') and state.get('time') and state.get('guests'):
         from apps.orders.models import RestaurantSettings
         venue = RestaurantSettings.get_settings()
         when = reservation_service.parse_date_time(state['date'], state['time'])
@@ -420,7 +420,7 @@ def handle_reservation_create(text, state, user=None):
             bad_time = state.pop('time')
             bad_lt = format_time_with_lt(bad_time)
             suggestions = reservation_service.suggest_alternative_times(
-                state['date'], bad_time, state.get('guests', 2))
+                state['date'], bad_time, state['guests'])
             sugg_en = [format_time_with_lt(s)['en'] for s in suggestions]
             sugg_am = [format_time_with_lt(s)['am'] for s in suggestions]
             sugg_en_text = ("\n\nAvailable reservation times:\n" + "\n".join(f"• {s}" for s in sugg_en)) if sugg_en else ""
