@@ -350,7 +350,7 @@ def revenue_report(days=30, order_type=None, now=None):
 
 def closed_order_total(days=30, now=None):
     """Orders that ended without being served, for the CSV summary line."""
-    queryset = Order.objects.filter(
+    queryset = _order_model().objects.filter(
         status__in=set(CLOSED_STATUSES) - set(PAID_STATUSES),
         created_at__gte=range_start(days, now=now),
     )
