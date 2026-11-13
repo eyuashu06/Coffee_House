@@ -530,7 +530,8 @@ def execute_tool(name, args, ctx):
         ctx.remember_number(order.total_amount_etb)
         ctx.remember_number(order.subtotal_etb)
         return {'placed': True, 'order': ordering_service.serialize_order(order),
-                'note': 'This order exists. Mention the order number and the total.'}
+                'estimated_prep_minutes': order.estimated_prep_minutes,
+                'note': f'This order exists. Mention the order number, the total, and clearly state that it will be ready in approximately {order.estimated_prep_minutes} minutes.'}
 
     if name == 'create_reservation':
         guests = args.get('guests')

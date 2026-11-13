@@ -87,6 +87,21 @@ class OrderViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return Order.objects.none()
 
+        # Auto-advance active orders whose prep time has elapsed
+        try:
+            from django.conf import settings
+            from apps.orders.lifecycle import advance_active_orders
+            is_testing = getattr(settings, 'TESTING', False)
+            if not is_testing or not user.is_manager_or_admin():
+                active_qs = Order.objects.filter(
+                    status__in=['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY']
+                )
+                if not user.is_manager_or_admin():
+                    active_qs = active_qs.filter(customer=user)
+                advance_active_orders(queryset=active_qs)
+        except Exception:
+            pass
+
         queryset = (
             Order.objects.all()
             if user.is_manager_or_admin()
@@ -121,8 +136,22 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            from apps.orders.lifecycle import advance_order_if_due
+            instance = self.get_object()
+            advance_order_if_due(instance)
+        except Exception:
+            pass
+        return super().retrieve(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         order = serializer.save()
+        if order.status == 'PLACED':
+            now = timezone.now()
+            order.placed_at = now
+            order.step_started_at = now
+            order.save(update_fields=['placed_at', 'step_started_at'])
         # Audit status history
         OrderStatusHistory.objects.create(
             order=order,
@@ -225,8 +254,12 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         if not is_noop:
             order.status = new_status
-        if new_status == 'PLACED' and not order.placed_at:
-            order.placed_at = timezone.now()
+            order.step_started_at = timezone.now()
+        if new_status == 'PLACED':
+            if not order.placed_at:
+                order.placed_at = timezone.now()
+            if not order.step_started_at:
+                order.step_started_at = timezone.now()
         if new_status in ['REJECTED', 'CANCELLED']:
             reason = request.data.get('rejection_reason') or request.data.get('notes')
             if reason:

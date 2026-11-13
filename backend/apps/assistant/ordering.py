@@ -505,6 +505,12 @@ def is_authenticated_user(user):
 
 
 def serialize_order(order):
+    try:
+        from apps.orders.lifecycle import advance_order_if_due
+        advance_order_if_due(order)
+    except Exception:
+        pass
+
     return {
         'id': order.id,
         'order_number': order.order_number,
@@ -512,6 +518,7 @@ def serialize_order(order):
         'order_type_label': order.get_order_type_display(),
         'status': order.status,
         'status_label': order.get_status_display(),
+        'estimated_prep_minutes': int(order.estimated_prep_minutes or 20),
         'total_etb': float(order.total_amount_etb),
         'subtotal_etb': float(order.subtotal_etb),
         'delivery_fee_etb': float(order.delivery_fee_etb),
@@ -530,7 +537,14 @@ def my_orders(user, limit=5):
     if not is_authenticated_user(user):
         return []
     qs = Order.objects.filter(customer=user).prefetch_related('items')
-    return [serialize_order(order) for order in qs[:limit]]
+    orders = list(qs[:limit])
+    try:
+        from apps.orders.lifecycle import advance_order_if_due
+        for o in orders:
+            advance_order_if_due(o)
+    except Exception:
+        pass
+    return [serialize_order(order) for order in orders]
 
 
 def _order_prep_minutes_from_lines(priced_lines, venue):

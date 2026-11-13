@@ -751,6 +751,8 @@ export const translations: Record<string, string> = {
   'Ready around': 'ዝግጁ የሚሆነው በግምት',
   'Ready in about': 'ዝግጁ የሚሆነው በግምት',
   'Ready now — ask at the counter with your order number.': 'አሁን ዝግጁ ነው — በትዕዛዝ ቁጥርዎ ካውንተር ላይ ይጠይቁ።',
+  'Out for delivery — our courier is on the way to your address.': 'ትዕዛዝዎ በመንገድ ላይ ነው — መልእክተኛችን ወደ አድራሻዎ እያመጣው ነው።',
+  'Order completed — enjoy your meal!': 'ትዕዛዝዎ ደርሷል — በደስታ ይመገቡ!',
 
   // ── Booking & Account Additional ──────────────────────────────────────────
   'Free times nearby:': 'በቅርብ ያሉ ክፍት ሰዓታት፦',

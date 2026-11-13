@@ -747,8 +747,9 @@ def handle_order_intent(intent, text, staged, user=None):
             found_order = Order.objects.filter(order_number__iexact=code).prefetch_related('items').first()
             if found_order and (not user or not user.is_authenticated or (hasattr(user, 'is_manager_or_admin') and user.is_manager_or_admin()) or found_order.customer == user):
                 data = ordering_service.serialize_order(found_order)
-                en = f"Here is the status for order {data['order_number']}:\n• Status: {data['status_label']}\n• Total: {format_price(data['total_etb'])}"
-                am = f"የትዕዛዝ #{data['order_number']} ሁኔታ፦\n• ሁኔታ፦ {data['status_label']}\n• ጠቅላላ፦ {format_price(data['total_etb'])}"
+                prep_min = data.get('estimated_prep_minutes', 20)
+                en = f"Here is the status for order {data['order_number']}:\n• Status: {data['status_label']}\n• Estimated prep time: {prep_min} min\n• Total: {format_price(data['total_etb'])}"
+                am = f"የትዕዛዝ #{data['order_number']} ሁኔታ፦\n• ሁኔታ፦ {data['status_label']}\n• የሚወስደው ጊዜ፦ {prep_min} ደቂቃ\n• ጠቅላላ፦ {format_price(data['total_etb'])}"
                 return bilingual(en, am), [data], {'action': 'none'}
 
         orders = ordering_service.my_orders(user)
@@ -877,17 +878,20 @@ def handle_order_intent(intent, text, staged, user=None):
                 return bilingual(en, am), [], {'action': 'none'}
 
             data = ordering_service.serialize_order(order)
+            prep_min = data.get('estimated_prep_minutes', 20)
             en = ("Your order is placed.\n\n"
                   f"Order number: {data['order_number']}\n"
                   f"Type: {data['order_type_label']}\n"
                   f"Items: {data['item_count']}\n"
-                  f"Total: {format_price(data['total_etb'])}\n\n"
-                  "Complete payment on the next step and we will start preparing it.")
+                  f"Total: {format_price(data['total_etb'])}\n"
+                  f"Estimated time: Ready in about {prep_min} minutes.\n\n"
+                  "Complete payment on the next step and our kitchen will prepare your order.")
             am = ("ትዕዛዝዎ ተጠናቋል!\n\n"
                   f"የትዕዛዝ ቁጥር፦ {data['order_number']}\n"
                   f"ዓይነት፦ {data['order_type_label']}\n"
                   f"ምርቶች፦ {data['item_count']}\n"
-                  f"ጠቅላላ፦ {format_price(data['total_etb'])}\n\n"
+                  f"ጠቅላላ፦ {format_price(data['total_etb'])}\n"
+                  f"የሚወስደው ጊዜ፦ በ{prep_min} ደቂቃ ውስጥ ዝግጁ ይሆናል።\n\n"
                   "በቀጣዩ ደረጃ ክፍያውን ያጠናቅቁ፤ ወዲያውኑ ማዘጋጀት እንጀምራለን።")
             return bilingual(en, am), [data], {'action': 'order_placed', 'order': data,
                                                'order_number': data['order_number']}

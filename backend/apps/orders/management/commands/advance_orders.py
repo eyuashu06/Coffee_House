@@ -15,25 +15,13 @@ re-opens a closed order.
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-
-from apps.orders.models import Order
-from apps.reports.reporting import ORDER_STEP_DURATIONS, advance_order
+from apps.orders.lifecycle import advance_active_orders
 
 
 class Command(BaseCommand):
     help = 'Advance paid orders to the next lifecycle step when enough time has passed.'
 
     def handle(self, *args, **options):
-        now = timezone.localtime()
-        moved = 0
-        for order in Order.objects.exclude(status__in=['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED']):
-            changed, new_status = advance_order(order, now=now, durations=ORDER_STEP_DURATIONS)
-            if not changed:
-                continue
-            from apps.orders.workflow import assert_transition
-            assert_transition(order.status, new_status)
-            order.status = new_status
-            order.step_started_at = now
-            order.save(update_fields=['status', 'step_started_at'])
-            moved += 1
+        now = timezone.now()
+        moved = advance_active_orders(now=now)
         self.stdout.write(self.style.SUCCESS(f'Advanced {moved} order(s).'))

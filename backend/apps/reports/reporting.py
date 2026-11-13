@@ -70,8 +70,10 @@ CAFE_TZ = timezone.get_current_timezone()
 #: RestaurantSettings for per-venue config (when that is wired up).
 ORDER_STEP_DURATIONS = {
     'PLACED': ('ACCEPTED', 2),
-    'ACCEPTED': ('PREPARING', 10),
-    'PREPARING': ('READY', 15),
+    'ACCEPTED': ('PREPARING', 2),
+    'PREPARING': ('READY', 20),
+    'READY': ('COMPLETED', 5),
+    'OUT_FOR_DELIVERY': ('COMPLETED', 15),
 }
 
 
@@ -82,14 +84,38 @@ def advance_order(order, now=None, durations=None):
     """
     if now is None:
         now = timezone.localtime()
-    durations = durations or ORDER_STEP_DURATIONS
+    
     current = order.status
-    if current not in durations:
-        return False, None
-    next_status, required_minutes = durations[current]
-    started = order.step_started_at
+    if durations:
+        if current not in durations:
+            return False, None
+        next_status, required_minutes = durations[current]
+    else:
+        prep_time = int(getattr(order, 'estimated_prep_minutes', 0) or 20)
+        if current == 'PLACED':
+            next_status, required_minutes = 'ACCEPTED', 2
+        elif current == 'ACCEPTED':
+            next_status, required_minutes = 'PREPARING', 2
+        elif current == 'PREPARING':
+            next_status, required_minutes = 'READY', prep_time
+        elif current == 'READY':
+            if order.order_type == 'DELIVERY':
+                next_status, required_minutes = 'OUT_FOR_DELIVERY', 2
+            else:
+                next_status, required_minutes = 'COMPLETED', 5
+        elif current == 'OUT_FOR_DELIVERY':
+            next_status, required_minutes = 'COMPLETED', 15
+        else:
+            return False, None
+
+    started = order.step_started_at or order.placed_at or order.created_at
     if started is None:
         return False, None
+    if timezone.is_naive(started):
+        started = timezone.make_aware(started, timezone.get_current_timezone())
+    if timezone.is_naive(now):
+        now = timezone.make_aware(now, timezone.get_current_timezone())
+
     if now - started < timezone.timedelta(minutes=required_minutes):
         return False, None
     from apps.orders.workflow import assert_transition

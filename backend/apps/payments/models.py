@@ -148,8 +148,10 @@ class Payment(models.Model):
         order = self.order
         if order.status == 'PENDING_PAYMENT':
             order.status = 'PLACED'
+            now = timezone.now()
             if not order.placed_at:
-                order.placed_at = timezone.now()
+                order.placed_at = now
+            order.step_started_at = now
             order.save()
             OrderStatusHistory.objects.create(
                 order=order,
@@ -163,6 +165,10 @@ class Payment(models.Model):
             # path out of EXPIRED and it is deliberately not a status transition: the
             # expiry job must never be undone by a stale confirmation, only by money.
             order.status = 'PLACED'
+            now = timezone.now()
+            order.placed_at = now
+            order.step_started_at = now
+            order.save()
             order.rejection_reason = ''
             if not order.placed_at:
                 order.placed_at = timezone.now()

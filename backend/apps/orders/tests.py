@@ -852,3 +852,94 @@ class RestaurantSettingsApiTests(TestCase):
         self.assertFalse(venue.is_store_within_operating_hours(sun_early))
         self.assertTrue(venue.is_store_within_operating_hours(sun_open))
         self.assertFalse(venue.is_store_within_operating_hours(sun_closed))
+
+
+class OrderLifecycleAutoAdvanceTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='lifecycle_cust',
+            email='lifecycle@example.com',
+            password='testpassword123',
+            phone='+251911999888'
+        )
+
+    def test_pickup_order_advances_through_all_steps_to_completed(self):
+        from apps.orders.lifecycle import advance_order_if_due
+        from apps.accounts.models import Notification
+
+        t0 = timezone.now()
+        order = Order.objects.create(
+            order_number='ORD-TEST-0001',
+            customer=self.user,
+            contact_name='Lifecycle Tester',
+            contact_phone='+251911999888',
+            order_type='PICKUP',
+            subtotal_etb=Decimal('250.00'),
+            total_amount_etb=Decimal('250.00'),
+            status='PLACED',
+            estimated_prep_minutes=20,
+            placed_at=t0,
+            step_started_at=t0,
+        )
+
+        # 1 minute later: not ready to advance from PLACED
+        advance_order_if_due(order, now=t0 + timezone.timedelta(minutes=1))
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'PLACED')
+
+        # 2 minutes later: advances to ACCEPTED
+        advance_order_if_due(order, now=t0 + timezone.timedelta(minutes=2))
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'ACCEPTED')
+
+        # 4 minutes later: advances to PREPARING
+        advance_order_if_due(order, now=t0 + timezone.timedelta(minutes=4))
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'PREPARING')
+
+        # 15 minutes after t0 (11 min into prep): still PREPARING (prep time is 20 min)
+        advance_order_if_due(order, now=t0 + timezone.timedelta(minutes=15))
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'PREPARING')
+
+        # 24 minutes after t0 (20 min prep completed): advances to READY
+        advance_order_if_due(order, now=t0 + timezone.timedelta(minutes=24))
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'READY')
+
+        # 30 minutes after t0 (5 min after READY for pickup): advances to COMPLETED
+        advance_order_if_due(order, now=t0 + timezone.timedelta(minutes=30))
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'COMPLETED')
+
+        # Verify customer received notifications for the steps
+        notifs = list(Notification.objects.filter(user=self.user).order_by('created_at'))
+        self.assertTrue(len(notifs) >= 4)
+        messages = [n.message for n in notifs]
+        self.assertTrue(any('Ready' in m for m in messages))
+        self.assertIn('Completed', messages)
+
+    def test_delivery_order_advances_through_out_for_delivery_to_completed(self):
+        from apps.orders.lifecycle import advance_order_if_due
+
+        t0 = timezone.now()
+        order = Order.objects.create(
+            order_number='ORD-TEST-0002',
+            customer=self.user,
+            contact_name='Delivery Tester',
+            contact_phone='+251911999888',
+            order_type='DELIVERY',
+            delivery_address='Bole Atlas, Addis Ababa',
+            subtotal_etb=Decimal('350.00'),
+            total_amount_etb=Decimal('350.00'),
+            status='PLACED',
+            estimated_prep_minutes=20,
+            placed_at=t0,
+            step_started_at=t0,
+        )
+
+        # 45 minutes later: spans PLACED (2m) -> ACCEPTED (2m) -> PREPARING (20m) -> READY (2m) -> OUT_FOR_DELIVERY (15m) -> COMPLETED
+        advance_order_if_due(order, now=t0 + timezone.timedelta(minutes=45))
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'COMPLETED')
+

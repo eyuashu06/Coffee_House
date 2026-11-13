@@ -147,9 +147,19 @@ export default function OrderTracker({
           t={t}
         />
       )}
-      {isReadyPhase(status, orderType) && orderType !== 'DELIVERY' && (
+      {isReadyPhase(status, orderType) && orderType !== 'DELIVERY' && status !== 'COMPLETED' && (
         <p className="mt-3 text-[13px] font-semibold text-[var(--accent)]">
           {t('Ready now — ask at the counter with your order number.')}
+        </p>
+      )}
+      {status === 'OUT_FOR_DELIVERY' && (
+        <p className="mt-3 text-[13px] font-semibold text-blue-500 dark:text-blue-400">
+          {t('Out for delivery — our courier is on the way to your address.')}
+        </p>
+      )}
+      {status === 'COMPLETED' && (
+        <p className="mt-3 text-[13px] font-semibold text-emerald-500 dark:text-emerald-400">
+          {t('Order completed — enjoy your meal!')}
         </p>
       )}
     </div>
