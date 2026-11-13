@@ -520,13 +520,33 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
                     )}
 
                     {msg.action?.action === 'order_placed' && (
-                      <a
-                        href="/account?tab=orders"
-                        className="border-t border-[var(--border)] pt-3 flex items-center gap-1.5 text-[12px] font-bold text-[var(--accent)] hover:underline"
-                      >
-                        <i className="ph ph-receipt"></i>
-                        {t('Track your order')}
-                      </a>
+                      <div className="mt-3 pt-3 border-t border-[var(--border)] flex flex-col gap-2">
+                        <a
+                          href={`/account?tab=orders&order=${msg.action?.order_number || ''}&pay=1`}
+                          className="w-full h-10 rounded-[12px] bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-[13px] flex items-center justify-center gap-2 shadow-md hover:opacity-95 active:scale-[0.98] transition-all"
+                        >
+                          <i className="ph ph-credit-card text-[16px]"></i>
+                          <span>{language === 'am' ? 'ወደ ክፍያ ገጽ ይሂዱ (ክፍያ ይፈጽሙ)' : 'Proceed to Payment (Pay Now)'}</span>
+                        </a>
+                        <a
+                          href="/account?tab=orders"
+                          className="text-center text-[11.5px] font-medium text-[var(--muted)] hover:text-[var(--accent)] transition-colors py-0.5"
+                        >
+                          {language === 'am' ? 'የትዕዛዝ ሁኔታን ይከታተሉ' : 'View order details & receipt'}
+                        </a>
+                      </div>
+                    )}
+
+                    {msg.action?.action === 'reservation_created' && (
+                      <div className="mt-3 pt-3 border-t border-[var(--border)] flex flex-col gap-2">
+                        <a
+                          href="/account?tab=reservations"
+                          className="w-full h-10 rounded-[12px] bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] font-bold text-[13px] flex items-center justify-center gap-2 hover:bg-[var(--accent)] hover:text-[var(--accent-contrast)] active:scale-[0.98] transition-all"
+                        >
+                          <i className="ph ph-calendar-check text-[16px]"></i>
+                          <span>{language === 'am' ? 'የተያዙ ጠረጴዛዎችን ይመልከቱ' : 'View My Reservations'}</span>
+                        </a>
+                      </div>
                     )}
 
                     {msg.error && lastFailed && (

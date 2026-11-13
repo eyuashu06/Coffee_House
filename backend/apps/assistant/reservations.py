@@ -91,6 +91,15 @@ def check_availability(date_str, time_str, guests):
     if guests and guests > max_guests():
         return False, 'too_large'
 
+    # Operating hours check (e.g. store is closed at midnight or outside opening schedule)
+    try:
+        from apps.orders.models import RestaurantSettings
+        venue = RestaurantSettings.get_settings()
+        if not venue.is_store_within_operating_hours(when):
+            return False, 'outside_hours'
+    except Exception:
+        pass
+
     window_start = when - timedelta(minutes=slot_minutes())
     window_end = when + timedelta(minutes=slot_minutes())
 
@@ -104,22 +113,37 @@ def check_availability(date_str, time_str, guests):
     return True, 'available'
 
 
-def suggest_alternative_times(date_str, time_str, guests, count=3):
+def suggest_alternative_times(date_str, time_str, guests, count=4):
     """Suggest nearby times that the database says are actually free."""
     when = parse_date_time(date_str, time_str)
-    if when is None:
-        return []
     suggestions = []
     now = timezone.now()
-    for offset_minutes in (60, 120, 180, -60, -120):
-        candidate = when + timedelta(minutes=offset_minutes)
-        if candidate < now:
-            continue
-        ok, _ = check_availability(candidate.date().isoformat(), candidate.strftime('%H:%M'), guests)
-        if ok:
-            suggestions.append(candidate.strftime('%H:%M'))
+
+    if when is not None:
+        for offset_minutes in (60, 120, 180, -60, -120):
+            candidate = when + timedelta(minutes=offset_minutes)
+            if candidate < now:
+                continue
+            ok, _ = check_availability(candidate.date().isoformat(), candidate.strftime('%H:%M'), guests)
+            if ok:
+                time_fmt = candidate.strftime('%H:%M')
+                if time_fmt not in suggestions:
+                    suggestions.append(time_fmt)
+            if len(suggestions) >= count:
+                return suggestions
+
+    # If nearby search found fewer than count (e.g. requested time was midnight or closed),
+    # check popular daytime and evening slots during store operating hours:
+    popular_slots = ['08:00', '10:00', '12:00', '13:30', '15:00', '17:00', '18:30', '20:00']
+    for slot in popular_slots:
+        cand = parse_date_time(date_str, slot)
+        if cand and cand >= now:
+            ok, _ = check_availability(date_str, slot, guests)
+            if ok and slot not in suggestions:
+                suggestions.append(slot)
         if len(suggestions) >= count:
             break
+
     return suggestions
 
 

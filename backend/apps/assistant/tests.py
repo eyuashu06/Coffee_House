@@ -1354,3 +1354,30 @@ class OrderPricingTests(TestCase):
         res = self.order({'order_type': 'PICKUP', 'items': [
             {'menu_item': self.item.id, 'quantity': 1}]})
         self.assertEqual(Decimal(res.data['total_amount_etb']), Decimal('300.00'))
+
+
+class EthiopianTimeAndReservationDialogueTests(AssistantTestBase):
+    def test_ethiopian_time_dialogue_with_me_and_friend_and_name(self):
+        # Turn 1: Guest asks for reservation for "me and my friend" at 6 Local time
+        r1 = self.ask('hey, i wanna order pizza for me and my friend today at 6 Local time with reservation table', session_id='conv-lema')
+        self.assertEqual(r1['action']['action'], 'collect_reservation_details')
+        self.assertIn('name', r1['action']['missing'])
+        self.assertIn('phone', r1['action']['missing'])
+        # Party size must be 2, time must be 12:00 (lunch, 6:00 LT)
+        self.assertIn('2 guests', r1['answer_en'])
+        self.assertIn('12:00', r1['answer_en'])
+
+        # Turn 2: User provides standalone name 'Lema'
+        r2 = self.ask('Lema', session_id='conv-lema')
+        self.assertEqual(r2['action']['action'], 'collect_reservation_details')
+        self.assertIn('phone', r2['action']['missing'])
+        self.assertNotIn('name', r2['action']['missing'])
+        self.assertIn('Lema', r2['answer_en'])
+
+        # Turn 3: User provides phone number '0911223344'
+        r3 = self.ask('0911223344', session_id='conv-lema')
+        self.assertEqual(r3['action']['action'], 'reservation_created')
+        self.assertIn('confirmed', r3['answer_en'].lower())
+        self.assertIn('Lema', r3['answer_en'])
+        self.assertIn('12:00', r3['answer_en'])
+        self.assertIn('2 guests', r3['answer_en'])
