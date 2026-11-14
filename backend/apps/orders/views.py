@@ -69,6 +69,15 @@ class OrderViewSet(viewsets.ModelViewSet):
                 try:
                     order = Order.objects.select_related('customer').get(pk=order_id)
                     if order.customer:
+                        # Empty customer's server cart after order is created
+                        try:
+                            from apps.cart.models import Cart
+                            cart = Cart.objects.filter(user=order.customer).first()
+                            if cart:
+                                cart.items.all().delete()
+                        except Exception:
+                            pass
+
                         from apps.accounts.views import issue_tokens_for_user, set_auth_cookies
                         from apps.accounts.serializers import UserSerializer
                         refresh, access = issue_tokens_for_user(order.customer)

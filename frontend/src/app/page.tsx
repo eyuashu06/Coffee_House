@@ -681,10 +681,9 @@ export default function Home() {
 
     const handleClearCart = () => {
         clearLocalCart();
+        setGuestCart([]);
         if (isSignedIn) {
             void clearServerCart();
-        } else {
-            setGuestCart([]);
         }
     };
 

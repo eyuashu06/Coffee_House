@@ -190,9 +190,14 @@ export function useCart(isSignedIn: boolean): UseCartResult {
 
   const clearCart = useCallback(async () => {
     clearLocalCart();
+    setCart(null);
     if (!isSignedIn) return;
-    const res = await apiFetch('/api/v1/cart/merge/', { method: 'DELETE' });
-    if (res.ok) setCart((await res.json()) as ServerCart);
+    try {
+      const res = await apiFetch('/api/v1/cart/merge/', { method: 'DELETE' });
+      if (res.ok) setCart((await res.json()) as ServerCart);
+    } catch {
+      // ignore
+    }
   }, [isSignedIn]);
 
   const syncGuestCart = useCallback(async () => {

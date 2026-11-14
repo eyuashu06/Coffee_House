@@ -226,6 +226,8 @@ export default function CartDrawer({
           orderNumber: orderData.order_number || `ORD-${orderData.id}`,
           totalAmount: orderData.total_amount_etb || orderTotal.toFixed(2),
         });
+        // The customer has placed their order: immediately empty the cart so menu items don't remain
+        onClearCart();
         setIsPaymentModalOpen(true);
       } else {
         let errMsg = t('Failed to place order.');

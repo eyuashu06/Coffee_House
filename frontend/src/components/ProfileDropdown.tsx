@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
@@ -29,6 +30,11 @@ export default function ProfileDropdown({
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Edit Profile Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -313,6 +319,21 @@ export default function ProfileDropdown({
                   </div>
                 </div>
               </div>
+
+              {/* Prominent Edit Profile Button on the Profile Card */}
+              <div className="mt-2.5 pt-2 border-t border-[var(--border)]/60">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    setIsEditModalOpen(true);
+                  }}
+                  className="w-full h-8.5 px-3 rounded-xl bg-[var(--accent-soft)] hover:bg-[var(--accent)] hover:text-[var(--accent-contrast)] text-[var(--accent)] text-[12.5px] font-bold flex items-center justify-center gap-1.5 transition-all border border-[var(--accent)]/30 cursor-pointer shadow-sm"
+                >
+                  <i className="ph ph-user-gear text-[15px]"></i>
+                  <span>{t('Edit Profile')}</span>
+                </button>
+              </div>
             </div>
 
             {/* Quick Display Text Size Selector */}
@@ -457,11 +478,11 @@ export default function ProfileDropdown({
         </div>
       </div>
 
-      {/* INLINE EDIT PROFILE MODAL */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      {/* INLINE EDIT PROFILE MODAL RENDERED IN BODY VIA PORTAL SO IT CENTERS IN THE MIDDLE */}
+      {mounted && isEditModalOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
           <div
-            className="w-full max-w-md bg-surface-2 border border-[var(--border)] rounded-[24px] shadow-2xl overflow-hidden p-6 text-[var(--text)] relative animate-scale-up"
+            className="w-full max-w-md bg-surface-2 border border-[var(--border)] rounded-[24px] shadow-2xl overflow-hidden p-6 text-[var(--text)] relative my-auto animate-scale-up"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -628,7 +649,8 @@ export default function ProfileDropdown({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

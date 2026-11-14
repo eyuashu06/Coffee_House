@@ -1105,16 +1105,61 @@ export default function AccountPage() {
                               </p>
                             </div>
                             <div className="flex items-center gap-2 w-full sm:w-auto">
-                              {order.status === 'PENDING_PAYMENT' && (
-                                <button
-                                  type="button"
-                                  onClick={() => setPayOrder(order)}
-                                  className="flex-1 sm:flex-initial h-9 sm:h-9.5 px-3.5 rounded-lg sm:rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] text-[12px] sm:text-[13px] font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-                                >
-                                  <i className="ph ph-credit-card text-[15px]"></i>
-                                  <span>{t('Pay')} {Number(order.total_amount_etb).toFixed(2)} {birr}</span>
-                                </button>
-                              )}
+                              {(() => {
+                                const orderPaid = isOrderPaid(order);
+                                const orderSettling = !orderPaid && (
+                                  isPaymentSettling(order) ||
+                                  order.payment_state === 'settling' ||
+                                  order.latest_payment?.status === 'PENDING' ||
+                                  (isConfirmingPayment && highlightCode === order.order_number)
+                                );
+                                const orderFailed = !orderPaid && !orderSettling && isPaymentFailed(order);
+                                const orderUnpaid = !orderPaid && !orderSettling && !orderFailed && order.status === 'PENDING_PAYMENT';
+
+                                if (orderSettling) {
+                                  return (
+                                    <div
+                                      className="flex-1 sm:flex-initial h-9 sm:h-9.5 px-3.5 rounded-lg sm:rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[12px] sm:text-[13px] font-semibold flex items-center justify-center gap-1.5 select-none shadow-sm"
+                                      title={t('Payment is currently being verified. You do not need to pay again.')}
+                                    >
+                                      <i className="ph ph-spinner-gap animate-spin text-[15px]"></i>
+                                      <span>
+                                        {order.latest_payment?.payment_method === 'cash'
+                                          ? t('Cash Pending Confirmation')
+                                          : t('Checking Payment Completeness…')}
+                                      </span>
+                                    </div>
+                                  );
+                                }
+
+                                if (orderFailed) {
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => setPayOrder(order)}
+                                      className="flex-1 sm:flex-initial h-9 sm:h-9.5 px-3.5 rounded-lg sm:rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] text-[12px] sm:text-[13px] font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                                    >
+                                      <i className="ph ph-arrows-counter-clockwise text-[15px]"></i>
+                                      <span>{t('Retry Payment')} {Number(order.total_amount_etb).toFixed(2)} {birr}</span>
+                                    </button>
+                                  );
+                                }
+
+                                if (orderUnpaid) {
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => setPayOrder(order)}
+                                      className="flex-1 sm:flex-initial h-9 sm:h-9.5 px-3.5 rounded-lg sm:rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] text-[12px] sm:text-[13px] font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                                    >
+                                      <i className="ph ph-credit-card text-[15px]"></i>
+                                      <span>{t('Pay')} {Number(order.total_amount_etb).toFixed(2)} {birr}</span>
+                                    </button>
+                                  );
+                                }
+
+                                return null;
+                              })()}
                               {isOrderPaid(order) ? (
                                 <button
                                   type="button"
@@ -1401,8 +1446,8 @@ export default function AccountPage() {
 
         {/* TAB: PROFILE */}
         {activeTab === 'profile' && (
-          <div className="animate-fade-in max-w-2xl">
-            <div className="bg-surface-2 border border-[var(--border)] rounded-2xl p-4 sm:p-5">
+          <div className="animate-fade-in max-w-2xl mx-auto">
+            <div className="bg-surface-2 border border-[var(--border)] rounded-2xl p-5 sm:p-7 shadow-lg">
               <h3 className="font-display text-[17px] sm:text-[20px] font-bold mb-3 sm:mb-4 flex items-center gap-2">
                 <i className="ph ph-user text-[var(--accent)] text-[18px]"></i>
                 {t('Personal Details')}

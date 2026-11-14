@@ -63,6 +63,9 @@ export default function PaymentModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const [existingPaymentState, setExistingPaymentState] = useState<'paid' | 'settling' | null>(null);
+  const [existingPaymentDetails, setExistingPaymentDetails] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [showTestPresets, setShowTestPresets] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +78,37 @@ export default function PaymentModal({
       setReceiptFile(null);
       setReceiptPreview(null);
       setReceiptBase64(null);
+      setExistingPaymentState(null);
+      setExistingPaymentDetails(null);
+      isSubmittingRef.current = false;
+
+      // Check current order payment state so customer doesn't pay again
+      if (orderId) {
+        apiFetch(`/api/v1/orders/${orderId}/`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (!data) return;
+            const isPaid =
+              data.payment_state === 'paid' ||
+              data.latest_payment?.status === 'SUCCESS' ||
+              (data.status && !['PENDING_PAYMENT', 'EXPIRED', 'CANCELLED', 'REJECTED'].includes(data.status));
+            const isSettling =
+              !isPaid &&
+              (data.payment_state === 'settling' ||
+                data.latest_payment?.status === 'PENDING' ||
+                data.latest_payment?.gateway_status === 'pending_review');
+
+            if (isPaid) {
+              setExistingPaymentState('paid');
+              setExistingPaymentDetails(data.latest_payment);
+            } else if (isSettling) {
+              setExistingPaymentState('settling');
+              setExistingPaymentDetails(data.latest_payment);
+            }
+          })
+          .catch(() => {});
+      }
+
       // Load payment accounts managed by admin
       apiFetch('/api/v1/payments/accounts/')
         .then((res) => res.json())
@@ -84,7 +118,7 @@ export default function PaymentModal({
         })
         .catch(() => {});
     }
-  }, [isOpen]);
+  }, [isOpen, orderId]);
 
   if (!isOpen) return null;
 
@@ -153,6 +187,12 @@ export default function PaymentModal({
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current || isSubmitting) return;
+    if (existingPaymentState === 'paid') {
+      setError(t('This order has already been paid for. You do not need to pay again.'));
+      return;
+    }
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setError(null);
 
@@ -234,6 +274,7 @@ export default function PaymentModal({
     } catch (err: any) {
       setError(err.message || t('Payment processing error.'));
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -260,6 +301,43 @@ export default function PaymentModal({
           </button>
         </div>
 
+        {/* Existing Payment Status Warning */}
+        {existingPaymentState === 'paid' && (
+          <div className="mt-3.5 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-200 text-xs space-y-2.5 animate-fade-in">
+            <div className="flex items-center gap-2 font-bold text-sm text-emerald-700 dark:text-emerald-300">
+              <span className="material-symbols-outlined text-xl">check_circle</span>
+              <span>{t('This order has already been paid for.')}</span>
+            </div>
+            <p className="text-[12px] leading-relaxed">
+              {t('A successful payment has already been recorded for this order. You do not need to pay again.')}
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-xs uppercase cursor-pointer hover:brightness-110 transition-all"
+            >
+              {t('Close')}
+            </button>
+          </div>
+        )}
+
+        {existingPaymentState === 'settling' && (
+          <div className="mt-3.5 p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-900 dark:text-blue-200 text-xs space-y-1.5 animate-fade-in">
+            <div className="flex items-center gap-2 font-bold text-sm text-blue-700 dark:text-blue-300">
+              <span className="material-symbols-outlined text-lg animate-spin">hourglass_top</span>
+              <span>{t('Payment Under Verification')}</span>
+            </div>
+            <p className="text-[12px] leading-relaxed">
+              {t('A payment for this order was already submitted and is currently being verified. You do not need to pay again.')}
+            </p>
+            {existingPaymentDetails?.transaction_reference && (
+              <p className="text-[11px] font-mono text-[var(--accent)]">
+                {t('Reference:')} {existingPaymentDetails.transaction_reference}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Error Alert */}
         {error && (
           <div className={`mt-3.5 p-3 rounded-lg text-xs flex items-start gap-2 border ${
@@ -274,6 +352,7 @@ export default function PaymentModal({
           </div>
         )}
 
+        {existingPaymentState !== 'paid' && (
         <form onSubmit={handlePay} className="mt-4 space-y-4">
           {/* Payment Method Selector */}
           <div>
@@ -601,6 +680,7 @@ export default function PaymentModal({
             )}
           </button>
         </form>
+        )}
       </div>
     </div>
   );

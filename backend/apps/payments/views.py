@@ -215,7 +215,7 @@ class InitializePaymentView(APIView):
             return Response({'error': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         # An order that is already paid must not be paid twice.
-        if order.status != 'PENDING_PAYMENT':
+        if order.status != 'PENDING_PAYMENT' or order.payments.filter(status='SUCCESS').exists():
             if order.status == 'EXPIRED':
                 # Saying "already been paid for" here would be a lie the customer can
                 # disprove from their bank statement. The order is dead because the
@@ -240,17 +240,27 @@ class InitializePaymentView(APIView):
         tx_ref = f"TX-ORD-{order.id}-{int(time.time())}"
         amount_etb = order.total_amount_etb
 
-        # Create Payment object
-        payment = Payment.objects.create(
-            order=order,
-            tx_ref=tx_ref,
-            payment_method=payment_method,
-            phone_number=clean_phone,
-            transaction_reference=transaction_reference,
-            amount_etb=amount_etb,
-            currency='ETB',
-            status='PENDING'
-        )
+        # Check if there is already an active pending payment being verified
+        active_pending = order.payments.filter(status='PENDING').order_by('-created_at').first()
+        if active_pending and payment_method in {'telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa', 'cash'}:
+            payment = active_pending
+            payment.payment_method = payment_method
+            payment.phone_number = clean_phone
+            payment.transaction_reference = transaction_reference
+            payment.amount_etb = amount_etb
+            payment.save()
+        else:
+            # Create Payment object
+            payment = Payment.objects.create(
+                order=order,
+                tx_ref=tx_ref,
+                payment_method=payment_method,
+                phone_number=clean_phone,
+                transaction_reference=transaction_reference,
+                amount_etb=amount_etb,
+                currency='ETB',
+                status='PENDING'
+            )
 
         # ── Cash (Delivery / Onsite / Dine-in Table) ─────────────────────────
         # Cash payments MUST be approved by staff/manager upon delivery, pickup,

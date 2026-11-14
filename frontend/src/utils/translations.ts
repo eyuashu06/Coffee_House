@@ -616,6 +616,17 @@ export const translations: Record<string, string> = {
   'Payment was cancelled': 'ክፍያው ተሰርዟል',
   'Payment is pending': 'ክፍያው በመጠባበቅ ላይ ነው',
   'Confirming payment…': 'ክፍያውን በማረጋገጥ ላይ...',
+  'Payment Submitted — Checking Verification…': 'ክፍያ ተልኳል — ማረጋገጫ በመፈተሽ ላይ…',
+  'Checking Payment Completeness…': 'ክፍያ በመረጋገጥ ላይ…',
+  'Cash Pending Confirmation': 'ጥሬ ገንዘብ በመረጋገጥ ላይ',
+  'Payment is currently being verified. You do not need to pay again.':
+    'ክፍያዎ በመረጋገጥ ላይ ነው። እንደገና መክፈል አያስፈልግዎትም።',
+  'Retry Payment': 'ክፍያ እንደገና ይሞክሩ',
+  'A payment for this order has already been submitted and is currently being verified.':
+    'ለዚህ ትዕዛዝ ክፍያ አስቀድሞ ተልኳል፤ በአሁኑ ጊዜ በመረጋገጥ ላይ ነው።',
+  'This order has already been paid for.': 'ይህ ትዕዛዝ አስቀድሞ ተከፍሏል።',
+  'A payment for this order was already submitted and is currently being verified. You do not need to pay again.':
+    'ለዚህ ትዕዛዝ ክፍያ አስቀድሞ ተልኳል፤ በአሁኑ ጊዜ በመረጋገጥ ላይ ስለሆነ እንደገና መክፈል አያስፈልግዎትም።',
   'is paid and our kitchen has been notified.': 'ተከፍሏል፣ ወደ ኩሽናችንም ተልኳል።',
   'Your order is saved — tap "Pay Now" to try again.':
     'ትዕዛዝዎ ተመዝግቧል — እንደገና ለማሞከር "አሁን ክፈል" የሚለውን ይጫኑ።',
