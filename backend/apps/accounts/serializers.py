@@ -31,14 +31,19 @@ class UserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
     phone = serializers.CharField(required=False, allow_blank=True)
-    email = serializers.EmailField(required=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    full_name = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'phone', 'password', 'first_name', 'last_name')
+        fields = ('id', 'username', 'email', 'phone', 'password', 'first_name', 'last_name', 'full_name')
 
     def validate_email(self, value):
         value = (value or '').strip()
+        if not value:
+            return ''
         # Must be an address the customer really owns — we send receipts there and
         # the payment gateway rejects non-deliverable domains.
         validate_deliverable_email(value)
@@ -47,6 +52,21 @@ class RegisterSerializer(serializers.ModelSerializer):
         if User.objects.filter(email__iexact=normalized).exists():
             raise serializers.ValidationError('A user with this email address already exists.')
         return normalized
+
+    def validate(self, attrs):
+        # Ensure full_name is provided or both first_name and last_name are provided
+        full_name = attrs.get('full_name', '').strip()
+        first_name = attrs.get('first_name', '').strip()
+        last_name = attrs.get('last_name', '').strip()
+
+        if full_name:
+            parts = full_name.split(maxsplit=1)
+            attrs['first_name'] = parts[0]
+            attrs['last_name'] = parts[1] if len(parts) > 1 else ''
+        elif not (first_name or last_name):
+            raise serializers.ValidationError({'full_name': 'Full name is required.'})
+
+        return attrs
 
     def validate_phone(self, value):
         if not value:
@@ -68,6 +88,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         password = validated_data.pop('password')
         email = validated_data.pop('email', '')
+        validated_data.pop('full_name', None)
         user = User.objects.create_user(
             password=password,
             role='CUSTOMER',

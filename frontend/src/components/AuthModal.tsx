@@ -56,9 +56,8 @@ export default function AuthModal({
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState('');
   const [rawPhone, setRawPhone] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [resetEmail, setResetEmail] = useState('');
 
   // 6-digit OTP Password Recovery States
@@ -95,7 +94,7 @@ export default function AuthModal({
   // and the payment gateway refuses domains without mail infrastructure).
   const validateSignupEmail = (value: string): string | null => {
     const emailValue = value.trim();
-    if (!emailValue) return t('Email address is required.');
+    if (!emailValue) return null; // Email is now optional
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailValue)) {
       return t('Enter a valid email address, e.g. name@gmail.com.');
     }
@@ -124,10 +123,16 @@ export default function AuthModal({
     }
 
     if (mode === 'REGISTER') {
-      const emailError = validateSignupEmail(email);
-      if (emailError) {
-        setError(emailError);
+      if (!fullName.trim()) {
+        setError(language === 'am' ? 'ሙሉ ስም ማስገባት ግዴታ ነው።' : t('Full Name is strictly required.'));
         return;
+      }
+      if (email.trim()) {
+        const emailError = validateSignupEmail(email);
+        if (emailError) {
+          setError(emailError);
+          return;
+        }
       }
       if (!username.trim() || username.trim().length < 3) {
         setError(t('Username must be at least 3 characters long.'));
@@ -174,11 +179,15 @@ export default function AuthModal({
         }, 400);
       } else if (mode === 'REGISTER') {
         const formattedPhone = formatPhone(rawPhone);
+        const nameParts = fullName.trim().split(/\s+/);
+        const firstName = nameParts[0] || fullName.trim();
+        const lastName = nameParts.slice(1).join(' ');
         await register({
           username,
-          email,
+          email: email.trim() || undefined,
           phone: formattedPhone || undefined,
           password,
+          full_name: fullName.trim(),
           first_name: firstName,
           last_name: lastName,
         });
@@ -286,16 +295,16 @@ export default function AuthModal({
               {mode === 'CUSTOMER_PHONE'
                 ? 'phone_iphone'
                 : mode === 'LOGIN'
-                ? 'badge'
+                ? 'lock_open'
                 : mode === 'REGISTER'
                 ? 'person_add'
                 : 'lock_reset'}
             </span>
             <h3 className="font-display text-lg sm:text-xl font-bold text-[var(--accent)]">
               {mode === 'CUSTOMER_PHONE'
-                ? (language === 'am' ? 'የደንበኛ መግቢያ' : 'Customer Sign In')
+                ? (language === 'am' ? 'የስልክ መግቢያ' : 'Sign In with Phone')
                 : mode === 'LOGIN'
-                ? (language === 'am' ? 'የሰራተኞች መግቢያ' : 'Staff & Admin Login')
+                ? (language === 'am' ? 'የይለፍ ቃል መግቢያ' : 'Unified Account Sign In')
                 : mode === 'REGISTER'
                 ? t('Join Artisanal Reserve')
                 : t('Reset Password')}
@@ -309,7 +318,7 @@ export default function AuthModal({
           </button>
         </div>
 
-        {/* Tab Switcher for Customer vs Staff */}
+        {/* Unified Tab Switcher: Phone vs Password */}
         {(mode === 'CUSTOMER_PHONE' || mode === 'LOGIN') && (
           <div className="grid grid-cols-2 p-1 bg-surface-2 rounded-xl border border-[var(--border)] mt-3.5">
             <button
@@ -322,7 +331,7 @@ export default function AuthModal({
               }`}
             >
               <span className="material-symbols-outlined text-sm">phone_iphone</span>
-              <span>{language === 'am' ? 'ደንበኛ (በስልክ)' : 'Customer (Phone)'}</span>
+              <span>{language === 'am' ? 'በስልክ ቁጥር' : 'Phone Number'}</span>
             </button>
             <button
               type="button"
@@ -333,8 +342,8 @@ export default function AuthModal({
                   : 'text-[var(--muted)] hover:text-[var(--text)]'
               }`}
             >
-              <span className="material-symbols-outlined text-sm">badge</span>
-              <span>{language === 'am' ? 'ሰራተኛ / አስተዳዳሪ' : 'Staff / Manager'}</span>
+              <span className="material-symbols-outlined text-sm">lock</span>
+              <span>{language === 'am' ? 'በይለፍ ቃል' : 'Password (All Users)'}</span>
             </button>
           </div>
         )}
@@ -473,61 +482,45 @@ export default function AuthModal({
 
           {mode === 'REGISTER' && (
             <>
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
-                    {t('First Name')}
-                  </label>
-                  <input
-                    type="text"
-                    name="given-name"
-                    autoComplete="given-name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder={language === 'am' ? 'ለምሳሌ አበበ' : 'e.g. Abebe'}
-                    className="w-full px-3 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
-                    {t('Last Name')}
-                  </label>
-                  <input
-                    type="text"
-                    name="family-name"
-                    autoComplete="family-name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder={language === 'am' ? 'ለምሳሌ ብክል' : 'e.g. Bikila'}
-                    className="w-full px-3 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
-                  />
-                </div>
-              </div>
-
               <div>
                 <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
-                  {t('Username')}
+                  {language === 'am' ? 'ሙሉ ስም' : 'Full Name'} <span className="text-red-500">*</span>
                 </label>
-<input
-                    type="text"
-                    name="username"
-                    autoComplete="username"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder={language === 'am' ? 'ልዩ የተጠቃሚ ስም ይምረጡ' : 'Choose a unique username'}
+                <input
+                  type="text"
+                  name="name"
+                  autoComplete="name"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder={language === 'am' ? 'ለምሳሌ አበበ ቢቂላ' : 'e.g. Abebe Bikila'}
                   className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
-                  {t('Email Address')}
+                  {t('Username')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="username"
+                  autoComplete="username"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder={language === 'am' ? 'ልዩ የተጠቃሚ ስም ይምረጡ' : 'Choose a unique username'}
+                  className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
+                  {t('Email Address')} <span className="text-[10.5px] font-normal lowercase text-[var(--muted)]">({language === 'am' ? 'አማራጭ' : 'optional'})</span>
                 </label>
                 <input
                   type="email"
                   name="email"
-                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="abebe@gmail.com"
@@ -535,7 +528,7 @@ export default function AuthModal({
                   className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
                 />
                 <p className="text-[10.5px] text-[var(--muted)] mt-1 leading-relaxed">
-                  {t('Use an email you can open — your receipt and payment confirmation are sent there.')}
+                  {t('Optional: If provided, your receipt and payment confirmation will be sent here.')}
                 </p>
               </div>
 
@@ -674,7 +667,7 @@ export default function AuthModal({
                   {mode === 'CUSTOMER_PHONE'
                     ? (language === 'am' ? 'ይግቡ / ይቀጥሉ' : 'Continue / Sign In')
                     : mode === 'LOGIN'
-                    ? (language === 'am' ? 'የሰራተኛ መግቢያ' : 'Staff Sign In')
+                    ? (language === 'am' ? 'ይግቡ' : 'Sign In')
                     : mode === 'REGISTER'
                     ? t('Create Account')
                     : forgotStep === 'EMAIL'
@@ -738,7 +731,7 @@ export default function AuthModal({
                 onClick={() => { setError(null); setSuccess(null); setMode('LOGIN'); setForgotStep('EMAIL'); }}
                 className="text-[var(--accent)] font-semibold hover:underline"
               >
-                {language === 'am' ? '← ወደ ሰራተኞች መግቢያ ተመለስ' : '← Back to Staff Sign In'}
+                {language === 'am' ? '← ወደ መግቢያ ተመለስ' : '← Back to Sign In'}
               </button>
             </p>
           ) : (

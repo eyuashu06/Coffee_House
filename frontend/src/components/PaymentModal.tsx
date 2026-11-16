@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useCafe } from '../context/CafeContext';
 import { apiFetch } from '../lib/api';
 import EthiopianPhoneInput from './EthiopianPhoneInput';
 
@@ -53,8 +54,9 @@ export default function PaymentModal({
   onPaymentComplete,
 }: PaymentModalProps) {
   const { t, language } = useLanguage();
+  const { settings: cafeSettings } = useCafe();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('telebirr');
-  const [phone, setPhone] = useState('+251911223344');
+  const [phone, setPhone] = useState('');
   const [transactionRef, setTransactionRef] = useState('');
   const [proofMode, setProofMode] = useState<'FILE' | 'CODE'>('CODE');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -67,7 +69,6 @@ export default function PaymentModal({
   const [existingPaymentState, setExistingPaymentState] = useState<'paid' | 'settling' | null>(null);
   const [existingPaymentDetails, setExistingPaymentDetails] = useState<any>(null);
   const [copied, setCopied] = useState(false);
-  const [showTestPresets, setShowTestPresets] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const birr = language === 'am' ? 'ብር' : 'ETB';
 
@@ -123,11 +124,7 @@ export default function PaymentModal({
   if (!isOpen) return null;
 
   const currentAccount = accounts.find((a) => a.method === paymentMethod);
-
-  const handleTestPreset = (testPhone: string) => {
-    setPhone(testPhone);
-    setError(null);
-  };
+  const officialContactPhone = cafeSettings?.primary_phone || '+251 11 555 0148';
 
   const handleCopyAccount = (number: string) => {
     if (navigator?.clipboard?.writeText) {
@@ -200,9 +197,8 @@ export default function PaymentModal({
     const isManualDigital = ['telebirr', 'cbebirr', 'awashbirr', 'ebirr', 'mpesa'].includes(paymentMethod);
     const hasCode = transactionRef.trim().length >= 4 && !transactionRef.startsWith('Receipt:');
     const hasFile = Boolean(receiptFile);
-    const isTest = phone.includes('900000000');
 
-    if (isManualDigital && !hasCode && !hasFile && !isTest) {
+    if (isManualDigital && !hasCode && !hasFile) {
       setError(
         language === 'am'
           ? 'እባክዎ የግብይቱን ኮድ/ሊንክ ያስገቡ ወይም የደረሰኝ ፋይል (ምስል/PDF) ይጫኑ።'
@@ -596,34 +592,18 @@ export default function PaymentModal({
                 />
               </div>
 
-              {/* Quick toggle for developer test numbers */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowTestPresets(!showTestPresets)}
-                  className="text-[11px] text-[var(--muted)] hover:text-[var(--accent)] flex items-center gap-1 cursor-pointer"
+              {/* Official Cafe / Admin Contact Support */}
+              <div className="p-2.5 rounded-xl bg-surface-2 border border-[var(--border)] text-[11px] text-[var(--muted)] flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-[var(--text)] font-medium">
+                  <span className="material-symbols-outlined text-sm text-[var(--accent)]">support_agent</span>
+                  <span>{language === 'am' ? 'የካፌው ኦፊሴላዊ ስልክ' : 'Official Cafe Support:'}</span>
+                </span>
+                <a
+                  href={`tel:${officialContactPhone.replace(/\s+/g, '')}`}
+                  className="font-mono font-bold text-[var(--accent)] hover:underline"
                 >
-                  <span className="material-symbols-outlined text-xs">{showTestPresets ? 'expand_less' : 'expand_more'}</span>
-                  {showTestPresets ? t('Hide test presets') : t('Developer test phone presets')}
-                </button>
-                {showTestPresets && (
-                  <div className="grid grid-cols-2 gap-2 mt-2 p-2 rounded-lg bg-surface-2 border border-[var(--border)]">
-                    <button
-                      type="button"
-                      onClick={() => handleTestPreset('+251900000000')}
-                      className="p-1.5 rounded text-left text-[11px] text-emerald-500 hover:bg-emerald-500/10"
-                    >
-                      🟢 900 000 000 (Mock Auto-Pass)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleTestPreset('+251911111111')}
-                      className="p-1.5 rounded text-left text-[11px] text-red-500 hover:bg-red-500/10"
-                    >
-                      🔴 911 111 111 (Mock Fail)
-                    </button>
-                  </div>
-                )}
+                  {officialContactPhone}
+                </a>
               </div>
             </div>
           )}

@@ -87,7 +87,11 @@ export default function EthiopianPhoneInput({
     if (digits.length === 0) {
       onChange('');
     } else {
-      onChange(`+251${digits}`);
+      const full = `+251${digits}`;
+      // Strictly enforce ^\+251(9|7)\d{0,8}$ as digits are typed/pasted
+      if (/^\+251(9|7)\d*$/.test(full)) {
+        onChange(full);
+      }
     }
   };
 

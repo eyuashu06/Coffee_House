@@ -19,14 +19,14 @@ def normalize_ethiopian_phone(value):
     return cleaned
 
 def validate_ethiopian_phone(value):
-    """Validates Ethiopian phone formats: +2519..., +2517..., 09..., 07..., 9..., 7..."""
+    """Validates Ethiopian phone formats: +251(9|7)XXXXXXXX, 09..., 07..., 9..., 7..."""
     if not value:
         return
     norm = normalize_ethiopian_phone(value)
-    pattern = r'^\+251[79]\d{8}$'
+    pattern = r'^\+251(9|7)\d{8}$'
     if not re.match(pattern, norm):
         raise ValidationError(
-            'Invalid Ethiopian phone number. Must be a valid mobile number starting with 9 or 7 (e.g., 911223344, 0911223344, or +251911223344).'
+            'Invalid Ethiopian phone number. Must be a valid mobile number starting with 9 or 7 (e.g., ^\\+251(9|7)\\d{8}$).'
         )
 
 class User(AbstractUser):

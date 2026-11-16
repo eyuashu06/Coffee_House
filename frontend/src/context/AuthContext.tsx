@@ -32,9 +32,10 @@ interface AuthContextType {
   reportUnauthorized: () => void;
   register: (data: {
     username: string;
-    email: string;
+    email?: string;
     phone?: string;
     password: string;
+    full_name?: string;
     first_name?: string;
     last_name?: string;
   }) => Promise<void>;
@@ -187,9 +188,10 @@ function formatAuthError(data: any, fallback: string): string {
 
   const register = async (reqData: {
     username: string;
-    email: string;
+    email?: string;
     phone?: string;
     password: string;
+    full_name?: string;
     first_name?: string;
     last_name?: string;
   }) => {

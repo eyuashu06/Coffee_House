@@ -1,4 +1,6 @@
 import os
+import re
+import logging
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,7 +38,7 @@ def _env_flag(name, default='false'):
 
 # Read DEBUG from environment or .env; defaults to true for local development.
 # In production, set DEBUG=0 or DEBUG=false to disable and enforce SECRET_KEY.
-DEBUG = _env_flag('DEBUG', 'true')
+DEBUG = _env_flag('DEBUG', 'false')
 
 #: The site is behind HTTPS end to end.
 IS_PRODUCTION_RENDER = bool(
@@ -421,10 +423,20 @@ _frontend_url = os.environ.get('FRONTEND_URL', '').strip()
 if _frontend_url and _frontend_url not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append(_frontend_url)
 
+# Validate any extra origins supplied via CORS_ALLOWED_ORIGINS.
+_origin_pattern = r'^https?://[\w.-]+(?::\d+)?$'
 _extra_cors = [o.strip() for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()]
 for _origin in _extra_cors:
-    if _origin not in CORS_ALLOWED_ORIGINS:
-        CORS_ALLOWED_ORIGINS.append(_origin)
+    if not re.match(_origin_pattern, _origin):
+        logging.warning(f"CORS origin '{_origin}' is malformed and will be ignored.")
+        continue
+    if not IS_PRODUCTION_RENDER:
+        # Allow extensions in dev only.
+        if _origin not in CORS_ALLOWED_ORIGINS:
+            CORS_ALLOWED_ORIGINS.append(_origin)
+    else:
+        logging.info(f"Production mode: ignoring env CORS origin '{_origin}'.")
+
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.vercel\.app$",
@@ -443,7 +455,18 @@ CSRF_TRUSTED_ORIGINS = [
 if _frontend_url and _frontend_url not in CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS.append(_frontend_url)
 
+# Validate any extra origins supplied via CSRF_TRUSTED_ORIGINS.
+_origin_pattern = r'^https?://[\w.-]+(?::\d+)?$'
 _extra_csrf = [o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
+for _origin in _extra_csrf:
+    if not re.match(_origin_pattern, _origin):
+        logging.warning(f"CSRF origin '{_origin}' is malformed and will be ignored.")
+        continue
+    if not IS_PRODUCTION_RENDER:
+        if _origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(_origin)
+    else:
+        logging.info(f"Production mode: ignoring env CSRF origin '{_origin}'.")
 for _origin in _extra_csrf:
     if _origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(_origin)
@@ -456,7 +479,7 @@ SESSION_COOKIE_HTTPONLY = True
 # Whether the password-reset endpoint may hand back a working reset token in its
 # response body. That convenience makes every registered account takeable by anyone
 # who can call the endpoint, so it is off unless someone deliberately turns it on.
-EXPOSE_PASSWORD_RESET_TOKEN = _env_flag('EXPOSE_PASSWORD_RESET_TOKEN')
+EXPOSE_PASSWORD_RESET_TOKEN = False
 
 from datetime import timedelta
 
