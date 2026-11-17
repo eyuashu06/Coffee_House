@@ -61,6 +61,14 @@ export default function ProfileDropdown({
     applyTextSize(sz);
   };
 
+  const TEXT_SIZES: TextSize[] = ['small', 'normal', 'medium', 'large'];
+  const currentSizeIndex = Math.max(0, TEXT_SIZES.indexOf(currentTextSize));
+
+  const handleStepTextSize = (direction: -1 | 1) => {
+    const nextIndex = Math.min(TEXT_SIZES.length - 1, Math.max(0, currentSizeIndex + direction));
+    handleSelectTextSize(TEXT_SIZES[nextIndex]);
+  };
+
   // Populate form with current user data whenever user or modal state changes
   useEffect(() => {
     if (user) {
@@ -325,33 +333,50 @@ export default function ProfileDropdown({
               </div>
             </div>
 
-            {/* Quick Display Text Size Selector */}
+            {/* Quick Display Text Size Selector (Volume-style Slider & Stepper) */}
             <div className="px-3 py-2 mx-1.5 mb-1.5 rounded-xl bg-surface/60 border border-[var(--border)]">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[12px] font-semibold text-[var(--muted)] flex items-center gap-1.5">
                   <i className="ph ph-text-aa text-[15px] text-[var(--accent)]"></i>
                   <span>{t('Text Size')}</span>
                 </span>
-                <span className="text-[11px] font-bold uppercase text-[var(--accent)]">
-                  {t(currentTextSize.charAt(0).toUpperCase() + currentTextSize.slice(1))}
+                <span className="text-[11px] font-bold font-mono text-[var(--accent)]">
+                  {t(currentTextSize.charAt(0).toUpperCase() + currentTextSize.slice(1))} ({currentSizeIndex === 0 ? '85%' : currentSizeIndex === 1 ? '100%' : currentSizeIndex === 2 ? '115%' : '130%'})
                 </span>
               </div>
-              <div className="grid grid-cols-4 gap-1 p-0.5 rounded-lg bg-surface-2 border border-[var(--border)]">
-                {(['small', 'normal', 'medium', 'large'] as TextSize[]).map((sz) => (
-                  <button
-                    key={sz}
-                    type="button"
-                    onClick={() => handleSelectTextSize(sz)}
-                    className={`h-7 rounded-md text-[11px] font-bold transition-all flex items-center justify-center cursor-pointer ${
-                      currentTextSize === sz
-                        ? 'bg-[var(--accent)] text-[var(--accent-contrast)] shadow-sm'
-                        : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--accent-soft)]'
-                    }`}
-                    title={t(sz.charAt(0).toUpperCase() + sz.slice(1))}
-                  >
-                    {sz === 'small' ? 'S' : sz === 'normal' ? 'M' : sz === 'medium' ? 'L' : 'XL'}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => handleStepTextSize(-1)}
+                  disabled={currentSizeIndex === 0}
+                  className="w-7 h-7 rounded-lg border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
+                  title={t('Decrease text size')}
+                  aria-label={t('Decrease text size')}
+                >
+                  <i className="ph ph-minus text-xs font-bold"></i>
+                </button>
+                <div className="flex-1 relative flex items-center px-1">
+                  <input
+                    type="range"
+                    min={0}
+                    max={3}
+                    step={1}
+                    value={currentSizeIndex}
+                    onChange={(e) => handleSelectTextSize(TEXT_SIZES[Number(e.target.value)])}
+                    className="w-full h-1.5 bg-[var(--border)] rounded-lg appearance-none cursor-pointer accent-[var(--accent)] focus:outline-none"
+                    aria-label={t('Text size slider')}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleStepTextSize(1)}
+                  disabled={currentSizeIndex === TEXT_SIZES.length - 1}
+                  className="w-7 h-7 rounded-lg border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
+                  title={t('Increase text size')}
+                  aria-label={t('Increase text size')}
+                >
+                  <i className="ph ph-plus text-xs font-bold"></i>
+                </button>
               </div>
             </div>
 
@@ -477,11 +502,11 @@ export default function ProfileDropdown({
                 <div className="w-10 h-10 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] flex items-center justify-center text-lg">
                   <i className="ph ph-user-gear"></i>
                 </div>
-                <div>
+                <div className="min-w-0 pr-2">
                   <h3 className="font-display text-[20px] font-bold text-[var(--text)] leading-tight">
                     {t('Edit Profile')}
                   </h3>
-                  <p className="text-[12px] text-[var(--muted)]">{user.email || user.username}</p>
+                  <p className="text-[12px] text-[var(--muted)] truncate max-w-[220px] sm:max-w-[280px]" title={user.email || user.username}>{user.email || user.username}</p>
                 </div>
               </div>
               <button
@@ -559,37 +584,50 @@ export default function ProfileDropdown({
                 </div>
               </div>
 
-              {/* Display Text Size Selector for both customer and admin/manager */}
+              {/* Display Text Size Selector (Volume-style Slider & Stepper) */}
               <div className="pt-1">
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
                     <i className="ph ph-text-aa text-[15px] text-[var(--accent)]"></i>
                     <span>{t('Display Text Size')}</span>
                   </label>
-                  <span className="text-[11px] font-bold text-[var(--accent)] uppercase">
-                    {t(currentTextSize.charAt(0).toUpperCase() + currentTextSize.slice(1))}
+                  <span className="text-[11px] font-bold font-mono text-[var(--accent)]">
+                    {t(currentTextSize.charAt(0).toUpperCase() + currentTextSize.slice(1))} ({currentSizeIndex === 0 ? '85%' : currentSizeIndex === 1 ? '100%' : currentSizeIndex === 2 ? '115%' : '130%'})
                   </span>
                 </div>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {[
-                    { id: 'small', label: t('Small') },
-                    { id: 'normal', label: t('Normal') },
-                    { id: 'medium', label: t('Medium') },
-                    { id: 'large', label: t('Large') },
-                  ].map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => handleSelectTextSize(opt.id as TextSize)}
-                      className={`h-9 px-2 rounded-xl border text-center transition-all flex items-center justify-center cursor-pointer text-[12px] font-bold ${
-                        currentTextSize === opt.id
-                          ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] ring-1 ring-[var(--accent)] shadow-sm'
-                          : 'bg-surface border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--text)]'
-                      }`}
-                    >
-                      <span className="truncate">{opt.label}</span>
-                    </button>
-                  ))}
+                <div className="flex items-center gap-2.5 p-2 rounded-xl bg-surface border border-[var(--border)]">
+                  <button
+                    type="button"
+                    onClick={() => handleStepTextSize(-1)}
+                    disabled={currentSizeIndex === 0}
+                    className="w-8 h-8 rounded-lg border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
+                    title={t('Decrease text size')}
+                    aria-label={t('Decrease text size')}
+                  >
+                    <i className="ph ph-minus text-sm font-bold"></i>
+                  </button>
+                  <div className="flex-1 relative flex items-center px-1">
+                    <input
+                      type="range"
+                      min={0}
+                      max={3}
+                      step={1}
+                      value={currentSizeIndex}
+                      onChange={(e) => handleSelectTextSize(TEXT_SIZES[Number(e.target.value)])}
+                      className="w-full h-2 bg-[var(--border)] rounded-lg appearance-none cursor-pointer accent-[var(--accent)] focus:outline-none"
+                      aria-label={t('Text size slider')}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleStepTextSize(1)}
+                    disabled={currentSizeIndex === TEXT_SIZES.length - 1}
+                    className="w-8 h-8 rounded-lg border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
+                    title={t('Increase text size')}
+                    aria-label={t('Increase text size')}
+                  >
+                    <i className="ph ph-plus text-sm font-bold"></i>
+                  </button>
                 </div>
               </div>
 
