@@ -8,8 +8,7 @@ import ItemModal from '../components/ItemModal';
 import AssistantChat from '../components/AssistantChat';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import LanguageToggle from '../components/LanguageToggle';
-import ThemeToggle from '../components/ThemeToggle';
+import { useMenu, MenuItem } from '../context/MenuContext';
 import Slideshow, { Slide } from '../components/Slideshow';
 import Reveal from '../components/Reveal';
 import { apiFetch } from '../lib/api';
@@ -61,20 +60,7 @@ const clearPendingReservation = () => {
     } catch { /* ignore */ }
 };
 
-export interface MenuItem {
-    id: number;
-    name: string;
-    category_slug: string;
-    category_name: string;
-    price: string;
-    base_price_etb?: string;
-    description: string;
-    image_url: string;
-    is_signature: boolean;
-    is_available?: boolean;
-    variants?: { id: number; name: string; price_modifier_etb: string }[];
-    add_ons?: { id: number; name: string; price_etb: string }[];
-}
+export type { MenuItem };
 
 export interface DeliveryZone {
     id: number;
@@ -131,11 +117,7 @@ export default function Home() {
     const isStaff = user?.role === 'ADMIN' || user?.role === 'MANAGER';
     const { t, language, tCategory, tItem, tItemDescription, locale } = useLanguage();
     const { settings: cafeSettings, locations: cafeLocations, primaryLocation } = useCafe();
-    const [items, setItems] = useState<MenuItem[]>([]);
-    // A cold API (the backend sleeps when idle in production) can take a while to
-    // answer. Tracking the request state lets the menu show a skeleton and offer a
-    // retry instead of claiming the menu is empty.
-    const [menuStatus, setMenuStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+    const { items, menuStatus } = useMenu();
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -481,21 +463,6 @@ export default function Home() {
         await executeReservation(bookingData);
     };
 
-    const fetchMenu = useCallback(async () => {
-        setMenuStatus('loading');
-        try {
-            const res = await fetch('/api/v1/menu/items/?page_size=200');
-            if (!res.ok) throw new Error(`Menu request failed (${res.status})`);
-            const data = await res.json();
-            const list: MenuItem[] = Array.isArray(data) ? data : data.results || [];
-            setItems(list.filter(item => item.is_available !== false));
-            setMenuStatus('ready');
-        } catch (e) {
-            console.error(e);
-            setMenuStatus('error');
-        }
-    }, []);
-
     useEffect(() => {
         // Starts from today at current time onwards, not tomorrow
         setMinDateTime(getLocalNowString());
@@ -514,10 +481,8 @@ export default function Home() {
             }));
         }
 
-        fetchMenu();
-
         return () => clearInterval(timer);
-    }, [fetchMenu]);
+    }, []);
 
     useEffect(() => {
         if (!user) return;
@@ -787,26 +752,28 @@ export default function Home() {
                             <span className="w-9 h-9 shrink-0 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
                             <span className="font-display text-[18px] sm:text-[21px] tracking-wide truncate max-w-[130px] xs:max-w-[180px] sm:max-w-none">{cafeSettings.cafe_name || 'Buna Hub'}</span>
                         </Link>
-                        <nav className="hidden md:flex items-center gap-8 text-[15px] font-medium text-[var(--muted)]">
+                        <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-[15px] font-medium text-[var(--muted)]">
                             {navLinks.map((link) => (
                                 <a key={link.href} className="hover:text-[var(--accent)] transition-colors" href={link.href}>{link.label}</a>
                             ))}
+                            {user && (
+                                <Link className="hover:text-[var(--accent)] transition-colors" href="/account?tab=orders">{t('My Orders')}</Link>
+                            )}
+                            {isStaff ? (
+                                <Link className="hover:text-[var(--accent)] text-[var(--accent)] font-semibold transition-colors flex items-center gap-1.5" href="/manager">
+                                    <i className="ph ph-gauge text-[16px]"></i>
+                                    <span>{t('Dashboard')}</span>
+                                </Link>
+                            ) : user ? (
+                                <Link className="hover:text-[var(--accent)] transition-colors" href="/account">{t('Dashboard')}</Link>
+                            ) : null}
                         </nav>
-                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                            <LanguageToggle className="hidden sm:flex h-9 px-2 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13px] sm:text-[13.5px] items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" />
-                            <button onClick={() => setIsCartOpen(true)} className="h-9 px-2.5 sm:px-4 rounded-full border border-[var(--border)] text-[13.5px] sm:text-[14px] flex items-center gap-1 sm:gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0">
-                                <i className="ph ph-shopping-bag-open text-[16px]"></i>
-                                <span className="hidden sm:inline">{t('Cart')}</span>
-                                {language === 'am' ? '' : `(${totalCartCount})`}
-                            </button>
-                            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                                <ThemeToggle className="flex h-9 w-9 shrink-0 cursor-pointer" />
-                                <NotificationsDropdown />
-                                <ProfileDropdown
-                                    onOpenSignIn={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
-                                    onOpenSignUp={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }}
-                                />
-                            </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <NotificationsDropdown />
+                            <ProfileDropdown
+                                onOpenSignIn={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
+                                onOpenSignUp={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }}
+                            />
                             <button
                                 onClick={() => setIsMobileMenuOpen((open) => !open)}
                                 aria-label={isMobileMenuOpen ? t('Close menu') : t('Open menu')}
@@ -939,7 +906,6 @@ export default function Home() {
                             </p>
                             <div className="mt-7 flex flex-wrap items-center gap-3">
                                 <a href="#menu" className="h-12 px-7 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[15px] sm:text-[16px] font-semibold flex items-center gap-2 hover:brightness-110 transition-all shadow-[var(--shadow)]">{t('View the Menu')} <i className="ph ph-arrow-down text-[15px]"></i></a>
-                                <Link href="/account" className="h-12 px-7 rounded-full border border-[var(--border)] text-[15px] sm:text-[16px] flex items-center hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">{t('Order Buna')}</Link>
                                 {isStaff && (
                                     <Link href="/manager" className="h-12 px-6 rounded-full bg-[var(--accent-soft)] border-2 border-[var(--accent)] text-[var(--accent)] font-bold text-[15px] sm:text-[16px] flex items-center gap-2 hover:bg-[var(--accent)] hover:text-[var(--accent-contrast)] transition-all shadow-sm">
                                         <i className="ph ph-gauge text-[18px]"></i>
@@ -961,11 +927,7 @@ export default function Home() {
                     </div>
 
                     {/* quick links — 2-up on phones, full row from sm up */}
-                    <div className="max-w-[1360px] mx-auto grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 mt-8">
-                        <Link href="/account" className="h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
-                            <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-coffee-bean"></i></span>
-                            <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Order')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('pickup & delivery')}</span></span>
-                        </Link>
+                    <div className="max-w-[1360px] mx-auto grid grid-cols-2 sm:grid-cols-4 gap-2 mt-8">
                         <a href="#visit" className="h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
                             <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-calendar-check"></i></span>
                             <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Book')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('save a stool')}</span></span>
@@ -979,24 +941,24 @@ export default function Home() {
                             <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Story')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t("from Kaldi's hills")}</span></span>
                         </a>
                         {isStaff ? (
-                            <Link href="/manager" className="col-span-2 sm:col-span-1 lg:col-span-1 h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] flex items-center gap-3 px-4 hover:brightness-110 transition-all font-semibold">
+                            <Link href="/manager" className="h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] flex items-center gap-3 px-4 hover:brightness-110 transition-all font-semibold">
                                 <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-gauge"></i></span>
                                 <span><span className="block text-[14px] sm:text-[15px] font-bold leading-tight">{t('Dashboard')}</span><span className="block text-[12px] sm:text-[12.5px] opacity-80">{t('admin & orders')}</span></span>
                             </Link>
-                        ) : !user ? (
+                        ) : user ? (
+                            <Link href="/account?tab=orders" className="h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
+                                <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-receipt"></i></span>
+                                <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('My Orders')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('track & reorder')}</span></span>
+                            </Link>
+                        ) : (
                             <button
                                 type="button"
                                 onClick={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
-                                className="col-span-2 sm:col-span-1 lg:col-span-1 h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors text-left cursor-pointer"
+                                className="h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors text-left cursor-pointer"
                             >
                                 <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-user-circle"></i></span>
                                 <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Sign In / Join')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('orders & profile')}</span></span>
                             </button>
-                        ) : (
-                            <Link href="/account" className="col-span-2 sm:col-span-1 lg:col-span-1 h-auto sm:h-16 py-3 sm:py-0 rounded-[14px] bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 px-4 hover:border-[var(--accent)] transition-colors">
-                                <span className="text-[var(--accent)] text-[22px]"><i className="ph ph-map-pin"></i></span>
-                                <span><span className="block text-[14px] sm:text-[15px] font-semibold leading-tight">{t('Track')}</span><span className="block text-[12px] sm:text-[12.5px] text-[var(--muted)]">{t('order status')}</span></span>
-                            </Link>
                         )}
                     </div>
                 </section>

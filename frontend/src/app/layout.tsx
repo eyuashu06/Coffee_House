@@ -4,6 +4,7 @@ import './globals.css';
 import { AuthProvider } from '../context/AuthContext';
 import { LanguageProvider } from '../context/LanguageContext';
 import { CafeProvider } from '../context/CafeContext';
+import { MenuProvider } from '../context/MenuContext';
 import SWRegister from '../components/SWRegister';
 
 const LANGUAGE_COOKIE = 'app_lang';
@@ -65,7 +66,9 @@ export default function RootLayout({
         <LanguageProvider initialLanguage={language}>
           <AuthProvider>
             <CafeProvider>
-              {children}
+              <MenuProvider>
+                {children}
+              </MenuProvider>
             </CafeProvider>
           </AuthProvider>
         </LanguageProvider>
