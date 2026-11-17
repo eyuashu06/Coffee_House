@@ -39,7 +39,7 @@ export default function AuthModal({
   onSuccessCallback,
   postLoginRedirect = null,
 }: AuthModalProps) {
-  const { login, phoneLogin, register } = useAuth();
+  const { login, phoneLogin, sendPhoneOTP, verifyPhoneOTP, register } = useAuth();
   const { t, language } = useLanguage();
   const router = useRouter();
   const [mode, setMode] = useState<'CUSTOMER_PHONE' | 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD'>(
@@ -48,6 +48,12 @@ export default function AuthModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Phone OTP Verification States (eSMS Africa)
+  const [phoneOtpStep, setPhoneOtpStep] = useState<'ENTER_PHONE' | 'VERIFY_OTP'>('ENTER_PHONE');
+  const [phoneOtpCode, setPhoneOtpCode] = useState('');
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const [phoneOtpHint, setPhoneOtpHint] = useState<string | null>(null);
 
   // Form states
   const [customerPhone, setCustomerPhone] = useState('');
@@ -67,12 +73,24 @@ export default function AuthModal({
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
   React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCountdown > 0) {
+      timer = setTimeout(() => setResendCountdown((c) => c - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCountdown]);
+
+  React.useEffect(() => {
     if (isOpen) {
       if (initialMode === 'REGISTER') {
         setMode('REGISTER');
       } else {
         setMode('CUSTOMER_PHONE');
       }
+      setPhoneOtpStep('ENTER_PHONE');
+      setPhoneOtpCode('');
+      setPhoneOtpHint(null);
+      setResendCountdown(0);
       setError(null);
       setSuccess(null);
     }
@@ -88,6 +106,30 @@ export default function AuthModal({
     if (cleaned.startsWith('0')) return `+251${cleaned.slice(1)}`;
     if (cleaned.startsWith('9') || cleaned.startsWith('7')) return `+251${cleaned}`;
     return cleaned;
+  };
+
+  const handleResendPhoneOTP = async () => {
+    if (resendCountdown > 0 || isSubmitting) return;
+    setError(null);
+    setSuccess(null);
+    setIsSubmitting(true);
+    try {
+      const formattedPhone = formatPhone(customerPhone);
+      const res = await sendPhoneOTP(formattedPhone, customerName.trim() || undefined);
+      setResendCountdown(60);
+      if (res.debug_otp) {
+        setPhoneOtpHint((language === 'am' ? 'የማረጋገጫ ኮድ፦ ' : 'Verification code: ') + res.debug_otp);
+      }
+      setSuccess(
+        language === 'am'
+          ? 'አዲስ የማረጋገጫ ኮድ በ SMS ተልኳል!'
+          : 'A new verification code has been sent via SMS!'
+      );
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend code.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Reject placeholder / undeliverable domains client-side (we email receipts there,
@@ -120,6 +162,10 @@ export default function AuthModal({
         setError(language === 'am' ? 'እባክዎ ትክክለኛ ስልክ ቁጥር (ቢያንስ 9 አሃዝ) ያስገቡ።' : 'Please enter a valid phone number (at least 9 digits).');
         return;
       }
+      if (phoneOtpStep === 'VERIFY_OTP' && (!phoneOtpCode || phoneOtpCode.trim().length !== 6)) {
+        setError(language === 'am' ? 'እባክዎ ባለ 6-አሃዝ የማረጋገጫ ኮድ ያስገቡ።' : 'Please enter the 6-digit verification code.');
+        return;
+      }
     }
 
     if (mode === 'REGISTER') {
@@ -149,16 +195,35 @@ export default function AuthModal({
     try {
       if (mode === 'CUSTOMER_PHONE') {
         const formattedPhone = formatPhone(customerPhone);
-        await phoneLogin(formattedPhone, customerName.trim() || undefined);
-        setSuccess(language === 'am' ? 'እንኳን ደህና መጡ! በተሳካ ሁኔታ ገብተዋል።' : 'Welcome! Signed in successfully.');
-        setTimeout(() => {
-          onClose();
-          if (postLoginRedirect) {
-            router.push(postLoginRedirect);
-          } else if (onSuccessCallback) {
-            onSuccessCallback();
+        if (phoneOtpStep === 'ENTER_PHONE') {
+          const res = await sendPhoneOTP(formattedPhone, customerName.trim() || undefined);
+          setPhoneOtpStep('VERIFY_OTP');
+          setResendCountdown(60);
+          if (res.debug_otp) {
+            setPhoneOtpHint(
+              (language === 'am' ? 'የማረጋገጫ ኮድ፦ ' : 'Verification code: ') + res.debug_otp
+            );
           }
-        }, 400);
+          if (res.sms_note) {
+            setPhoneOtpHint((prev) => (prev ? `${prev} · ${res.sms_note}` : res.sms_note));
+          }
+          setSuccess(
+            language === 'am'
+              ? 'ባለ 6-አሃዝ የማረጋገጫ ኮድ በ SMS ተልኳል። እባክዎ ከዚህ በታች ያስገቡት።'
+              : 'A 6-digit verification code has been sent via SMS. Please enter it below.'
+          );
+        } else {
+          await verifyPhoneOTP(formattedPhone, phoneOtpCode.trim(), customerName.trim() || undefined);
+          setSuccess(language === 'am' ? 'እንኳን ደህና መጡ! በተሳካ ሁኔታ ገብተዋል።' : 'Welcome! Signed in successfully.');
+          setTimeout(() => {
+            onClose();
+            if (postLoginRedirect) {
+              router.push(postLoginRedirect);
+            } else if (onSuccessCallback) {
+              onSuccessCallback();
+            }
+          }, 400);
+        }
       } else if (mode === 'LOGIN') {
         await login(usernameOrEmail, password);
         setSuccess(t('Logged in successfully!'));
@@ -373,7 +438,7 @@ export default function AuthModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
-          {mode === 'CUSTOMER_PHONE' && (
+          {mode === 'CUSTOMER_PHONE' && phoneOtpStep === 'ENTER_PHONE' && (
             <>
               <div>
                 <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
@@ -386,8 +451,8 @@ export default function AuthModal({
                 />
                 <p className="text-[11px] text-[var(--muted)] mt-1.5 leading-relaxed">
                   {language === 'am'
-                    ? 'በስልክ ቁጥርዎ ብቻ በቀላሉ ይግቡ። የይለፍ ቃል አያስፈልግም፤ ትዕዛዞችዎ እና መረጃዎ በራስ-ሰር ይቀመጣሉ።'
-                    : 'Sign in effortlessly using your phone number. No password needed; your past orders and preferences are preserved.'}
+                    ? 'ትክክለኛውን ተጠቃሚ ለማረጋገጥ ባለ 6-አሃዝ የማረጋገጫ ኮድ (OTP) በ SMS ይላካል።'
+                    : 'To verify your phone number and ensure authenticity, a 6-digit OTP code will be sent to your phone via SMS.'}
                 </p>
               </div>
 
@@ -404,6 +469,51 @@ export default function AuthModal({
                 />
               </div>
             </>
+          )}
+
+          {mode === 'CUSTOMER_PHONE' && phoneOtpStep === 'VERIFY_OTP' && (
+            <div className="space-y-3">
+              <div className="p-3 rounded-xl bg-surface-2 border border-[var(--border)] flex items-center justify-between text-xs">
+                <div className="truncate mr-2">
+                  <span className="text-[var(--muted)] block text-[10.5px] uppercase font-bold tracking-wider">
+                    {language === 'am' ? 'ኮድ የተላከበት ስልክ ቁጥር' : 'Verification code sent to'}
+                  </span>
+                  <span className="font-bold text-[var(--accent)] font-mono text-sm">{customerPhone}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setPhoneOtpStep('ENTER_PHONE'); setError(null); setSuccess(null); }}
+                  className="text-[var(--accent)] hover:underline shrink-0 font-semibold cursor-pointer text-xs"
+                >
+                  {language === 'am' ? 'ስልክ ቀይር' : 'Change Phone'}
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5 text-center">
+                  {language === 'am' ? 'ባለ 6-አሃዝ የኤስኤምኤስ ማረጋገጫ ኮድ (OTP)' : '6-Digit SMS Verification Code (OTP)'}
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  required
+                  autoFocus
+                  value={phoneOtpCode}
+                  onChange={(e) => setPhoneOtpCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="••••••"
+                  className="w-full h-12 text-center text-2xl font-mono tracking-[0.4em] rounded-xl bg-surface-2 border border-[var(--border)] text-[var(--accent)] focus:outline-none focus:border-[var(--accent)] font-bold"
+                />
+              </div>
+
+              {phoneOtpHint && (
+                <div className="p-2.5 rounded-xl bg-[var(--accent-soft)]/50 border border-[var(--accent)]/30 text-[11.5px] text-[var(--text)] flex items-start gap-2">
+                  <span className="material-symbols-outlined text-base text-[var(--accent)] shrink-0 mt-0.5">info</span>
+                  <span className="leading-relaxed">{phoneOtpHint}</span>
+                </div>
+              )}
+            </div>
           )}
 
           {mode === 'LOGIN' && (
@@ -657,7 +767,7 @@ export default function AuthModal({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full mt-3 py-2.5 rounded-[28px] bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-sm hover:brightness-110 active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full mt-3 py-2.5 rounded-[28px] bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-sm hover:brightness-110 active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             {isSubmitting ? (
               <span className="inline-block w-4 h-4 border-2 border-[var(--accent-contrast)] border-t-transparent rounded-full animate-spin" />
@@ -665,7 +775,9 @@ export default function AuthModal({
               <>
                 <span>
                   {mode === 'CUSTOMER_PHONE'
-                    ? (language === 'am' ? 'ይግቡ / ይቀጥሉ' : 'Continue / Sign In')
+                    ? phoneOtpStep === 'ENTER_PHONE'
+                      ? (language === 'am' ? 'የማረጋገጫ ኮድ ላክ' : 'Send Verification Code')
+                      : (language === 'am' ? 'አረጋግጥና ግባ' : 'Verify & Sign In')
                     : mode === 'LOGIN'
                     ? (language === 'am' ? 'ይግቡ' : 'Sign In')
                     : mode === 'REGISTER'
@@ -678,6 +790,19 @@ export default function AuthModal({
               </>
             )}
           </button>
+
+          {mode === 'CUSTOMER_PHONE' && phoneOtpStep === 'VERIFY_OTP' && (
+            <button
+              type="button"
+              disabled={isSubmitting || resendCountdown > 0}
+              onClick={handleResendPhoneOTP}
+              className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--accent)] disabled:opacity-50 transition-colors pt-1 cursor-pointer font-medium"
+            >
+              {resendCountdown > 0
+                ? (language === 'am' ? `ኮዱን በድጋሚ ለመላክ ${resendCountdown} ሰከንድ ይጠብቁ` : `Resend code in ${resendCountdown}s`)
+                : (language === 'am' ? 'ኮዱ አልደረሰዎትም? በድጋሚ ላክ' : "Didn't receive SMS code? Resend")}
+            </button>
+          )}
 
           {mode === 'FORGOT_PASSWORD' && forgotStep === 'OTP' && (
             <button

@@ -27,7 +27,9 @@ interface AuthContextType {
    */
   authError: string | null;
   login: (usernameOrEmail: string, password: string) => Promise<void>;
-  phoneLogin: (phone: string, name?: string) => Promise<User>;
+  phoneLogin: (phone: string, name?: string, otpCode?: string) => Promise<User>;
+  sendPhoneOTP: (phone: string, name?: string) => Promise<{ success: boolean; message: string; debug_otp?: string; sms_note?: string }>;
+  verifyPhoneOTP: (phone: string, otpCode: string, name?: string) => Promise<User>;
   /** Call this when any API call answers 401 so polling can stop. */
   reportUnauthorized: () => void;
   register: (data: {
@@ -168,8 +170,26 @@ function formatAuthError(data: any, fallback: string): string {
     setUser(data.user);
   };
 
-  const phoneLogin = async (phone: string, name?: string): Promise<User> => {
+  const phoneLogin = async (phone: string, name?: string, otpCode?: string): Promise<User> => {
     const res = await fetch('/api/v1/auth/phone-login/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone, name, otp_code: otpCode }),
+    });
+
+    const data = await parseResponseData(res);
+    if (!res.ok) {
+      throw new Error(formatAuthError(data, 'Phone sign-in failed. Please check your phone number.'));
+    }
+
+    setSessionExpired(false);
+    setUser(data.user);
+    return data.user;
+  };
+
+  const sendPhoneOTP = async (phone: string, name?: string) => {
+    const res = await fetch('/api/v1/auth/phone-otp/send/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -178,7 +198,22 @@ function formatAuthError(data: any, fallback: string): string {
 
     const data = await parseResponseData(res);
     if (!res.ok) {
-      throw new Error(formatAuthError(data, 'Phone sign-in failed. Please check your phone number.'));
+      throw new Error(formatAuthError(data, 'Failed to send verification code. Please check your phone number.'));
+    }
+    return data;
+  };
+
+  const verifyPhoneOTP = async (phone: string, otpCode: string, name?: string): Promise<User> => {
+    const res = await fetch('/api/v1/auth/phone-otp/verify/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone, otp_code: otpCode, name }),
+    });
+
+    const data = await parseResponseData(res);
+    if (!res.ok) {
+      throw new Error(formatAuthError(data, 'Verification failed. Please check the code and try again.'));
     }
 
     setSessionExpired(false);
@@ -240,6 +275,8 @@ function formatAuthError(data: any, fallback: string): string {
         reportUnauthorized,
         login,
         phoneLogin,
+        sendPhoneOTP,
+        verifyPhoneOTP,
         register,
         logout,
         checkAuth,

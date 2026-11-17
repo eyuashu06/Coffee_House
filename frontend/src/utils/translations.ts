@@ -1227,6 +1227,23 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Thank you! Your payment for Order': 'እናመሰግናለን! ለትዕዛዝ ቁጥር',
   'was successful and the kitchen is preparing it.': 'ክፍያው ተሳክቷል፤ ወጥ ቤታችን እያዘጋጀው ነው።',
   'could not be completed.': 'ሊጠናቀቅ አልቻለም።',
+  'Cart Quick-View': 'የቅርጫት እይታ',
+  'View & Edit Cart': 'ቅርጫትን እይ እና አስተካክል',
+  'Items': 'ዕቃዎች',
+  'Theme': 'ገጽታ',
+  'Dark Mode': 'ጨለማ ሁነታ',
+  'Light Mode': 'ብርሃን ሁነታ',
+  'Light': 'ብርሃን',
+  'Dark': 'ጨለማ',
+  'Language': 'ቋንቋ',
+  'Your cart is empty': 'ቅርጫትዎ ባዶ ነው',
+  'Total': 'ድምር',
+  'Preferences & Controls': 'ምርጫዎች እና መቆጣጠሪያዎች',
+  'Send Verification Code': 'የማረጋገጫ ኮድ ላክ',
+  'Verify & Sign In': 'አረጋግጥና ግባ',
+  'Verification code sent to': 'ኮድ የተላከበት ስልክ ቁጥር',
+  '6-Digit SMS Verification Code (OTP)': 'ባለ 6-አሃዝ የኤስኤምኤስ ማረጋገጫ ኮድ (OTP)',
+  'Change Phone': 'ስልክ ቀይር',
 };
 
 /**
