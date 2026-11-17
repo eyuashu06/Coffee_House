@@ -1111,7 +1111,7 @@ export default function ManagerDashboard() {
     }
   };
 
-  const handleUpdateStatus = async (orderId: number, newStatus: string, notes?: string) => {
+  const handleUpdateStatus = async (orderId: number, newStatus: string, notes?: string, customPrepMinutes?: number | null) => {
     setActionMsg(null);
     const order = orders.find((o) => o.id === orderId);
 
@@ -1120,7 +1120,11 @@ export default function ManagerDashboard() {
     const shouldSetPrep =
       newStatus === 'ACCEPTED' &&
       order &&
-      !order.estimated_prep_minutes;
+      (!order.estimated_prep_minutes || customPrepMinutes);
+
+    const prepMinutesToSet = (customPrepMinutes !== undefined && customPrepMinutes !== null)
+      ? customPrepMinutes
+      : (order?.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order?.order_type || ''] ?? 20);
 
     try {
       const res = await apiFetch(`/api/v1/orders/${orderId}/update_status/`, {
@@ -1130,8 +1134,7 @@ export default function ManagerDashboard() {
           status: newStatus,
           notes: notes || undefined,
           rejection_reason: newStatus === 'REJECTED' ? (notes || t('Rejected by manager.')) : undefined,
-          estimated_prep_minutes:
-            shouldSetPrep ? DEFAULT_PREP_MINUTES[order.order_type] ?? 20 : undefined,
+          estimated_prep_minutes: shouldSetPrep ? prepMinutesToSet : undefined,
         }),
       });
 
@@ -1151,13 +1154,13 @@ export default function ManagerDashboard() {
   };
 
   /**
- * Adjust the prep time after accepting, without moving the status.
- *
- * Re-sends the current status as a no-op transition (the API treats same-status as a
- * no-op) so the value can be corrected after the fact, which is what happens when an
- * order turns out to be bigger than it looked.
- */
-const handleSetPrepTime = async (orderId: number, minutes: number) => {
+   * Adjust the prep time after accepting, without moving the status.
+   *
+   * Re-sends the current status as a no-op transition (the API treats same-status as a
+   * no-op) so the value can be corrected after the fact, which is what happens when an
+   * order turns out to be bigger than it looked.
+   */
+  const handleSetPrepTime = async (orderId: number, minutes: number) => {
     const order = orders.find((o) => o.id === orderId);
     if (!order || !Number.isFinite(minutes) || minutes === order.estimated_prep_minutes) return;
 
@@ -1185,7 +1188,7 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
     }
   };
 
-  const handleApprovePayment = async (paymentId?: number, orderId?: number) => {
+  const handleApprovePayment = async (paymentId?: number, orderId?: number, options?: { payment_method?: string; notes?: string }) => {
     if (!paymentId && !orderId) return;
     const targetId = paymentId || orderId;
     setIsApprovingPayment(orderId || null);
@@ -1194,7 +1197,10 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
       const res = await apiFetch(`/api/v1/payments/${targetId}/approve/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: 'Verified and approved by manager portal' }),
+        body: JSON.stringify({
+          notes: options?.notes || 'Verified and approved by manager portal',
+          payment_method: options?.payment_method || undefined,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -2205,40 +2211,138 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                               </div>
                             );
                           })() : (
-                            <div className="flex gap-2">
-                              <div className="flex-1 h-10 rounded-[12px] bg-red-100 border border-red-300 text-red-800 dark:bg-red-950/50 dark:border-red-800 dark:text-red-300 text-[13px] font-semibold flex items-center justify-center px-3 text-center">
-                                {t('Unpaid — waiting on the customer')}
+                            <div className="space-y-2">
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  disabled={isApprovingPayment === order.id}
+                                  onClick={() => handleApprovePayment(order.latest_payment?.id, order.id, { payment_method: 'cash', notes: 'Paid in cash at counter' })}
+                                  className="flex-1 h-10 rounded-[12px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[12.5px] flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                >
+                                  {isApprovingPayment === order.id ? (
+                                    <i className="ph ph-spinner animate-spin text-base"></i>
+                                  ) : (
+                                    <i className="ph ph-money text-base"></i>
+                                  )}
+                                  <span>{t('Mark Paid in Cash')}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStatus(order.id, 'CANCELLED', 'Customer never completed payment.')}
+                                  className="h-10 px-3.5 rounded-[12px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[12.5px] dark:hover:bg-red-950 cursor-pointer"
+                                >
+                                  {t('Cancel')}
+                                </button>
                               </div>
-                              <button onClick={() => handleUpdateStatus(order.id, 'CANCELLED', 'Customer never completed payment.')} className="h-10 rounded-[12px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[13px] px-4 dark:hover:bg-red-950 cursor-pointer">{t('Cancel')}</button>
+                              <p className="text-[11px] text-[var(--muted)] text-center">
+                                {t('Online payment pending. If customer pays at counter, confirm cash above.')}
+                              </p>
                             </div>
                           )}
                         </div>
                       )}
                       {order.status === 'PLACED' && (
-                        <div className="flex gap-2">
-                          <button onClick={() => handleUpdateStatus(order.id, 'ACCEPTED')} className="flex-1 h-10 rounded-[12px] bg-[var(--accent-soft)] text-[var(--accent)] font-bold text-[13px] hover:brightness-110">{t('Accept Order')}</button>
-                          <button onClick={() => handleUpdateStatus(order.id, 'REJECTED', 'Rejected by manager.')} className="flex-1 h-10 rounded-[12px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[13px] dark:hover:bg-red-950">{t('Reject')}</button>
-                        </div>
-                      )}
-                      {order.status === 'ACCEPTED' && (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <label className="text-[12px] text-[var(--muted)] shrink-0" htmlFor={`prep-${order.id}`}>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-surface border border-[var(--border)]">
+                            <label className="text-[12px] font-semibold text-[var(--muted)] shrink-0" htmlFor={`prep-placed-${order.id}`}>
+                              <i className="ph ph-clock mr-1 text-[var(--accent)] align-middle"></i>
                               {t('Ready in')}
                             </label>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cur = order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20;
+                                  handleSetPrepTime(order.id, Math.max(1, cur - 5));
+                                }}
+                                className="w-7 h-7 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] font-bold text-xs flex items-center justify-center cursor-pointer shrink-0"
+                                title={t('Subtract 5 minutes')}
+                              >-5</button>
+                              <input
+                                id={`prep-placed-${order.id}`}
+                                type="number"
+                                min={1}
+                                max={240}
+                                value={order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  if (val >= 1 && val <= 240) {
+                                    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, estimated_prep_minutes: val } : o));
+                                  }
+                                }}
+                                onBlur={(e) => handleSetPrepTime(order.id, Number(e.target.value))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSetPrepTime(order.id, Number((e.target as HTMLInputElement).value));
+                                }}
+                                className="w-14 h-7 text-center rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-xs font-bold focus:border-[var(--accent)] focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cur = order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20;
+                                  handleSetPrepTime(order.id, Math.min(240, cur + 5));
+                                }}
+                                className="w-7 h-7 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] font-bold text-xs flex items-center justify-center cursor-pointer shrink-0"
+                                title={t('Add 5 minutes')}
+                              >+5</button>
+                              <span className="text-[12px] text-[var(--muted)]">{t('min')}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleUpdateStatus(order.id, 'ACCEPTED', undefined, order.estimated_prep_minutes)} className="flex-1 h-10 rounded-[12px] bg-[var(--accent-soft)] text-[var(--accent)] font-bold text-[13px] hover:brightness-110">{t('Accept Order')}</button>
+                            <button onClick={() => handleUpdateStatus(order.id, 'REJECTED', 'Rejected by manager.')} className="flex-1 h-10 rounded-[12px] border border-red-300 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 font-bold text-[13px] dark:hover:bg-red-950">{t('Reject')}</button>
+                          </div>
+                        </div>
+                      )}
+                      {['ACCEPTED', 'PREPARING'].includes(order.status) && (
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-surface border border-[var(--border)] mb-2">
+                          <label className="text-[12px] font-semibold text-[var(--muted)] shrink-0" htmlFor={`prep-${order.id}`}>
+                            <i className="ph ph-clock mr-1 text-[var(--accent)] align-middle"></i>
+                            {t('Ready in')}
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const cur = order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20;
+                                handleSetPrepTime(order.id, Math.max(1, cur - 5));
+                              }}
+                              className="w-7 h-7 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] font-bold text-xs flex items-center justify-center cursor-pointer shrink-0"
+                              title={t('Subtract 5 minutes')}
+                            >-5</button>
                             <input
                               id={`prep-${order.id}`}
                               type="number"
                               min={1}
                               max={240}
-                              defaultValue={order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20}
+                              value={order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                if (val >= 1 && val <= 240) {
+                                  setOrders(prev => prev.map(o => o.id === order.id ? { ...o, estimated_prep_minutes: val } : o));
+                                }
+                              }}
                               onBlur={(e) => handleSetPrepTime(order.id, Number(e.target.value))}
-                              className="flex-1 h-9 px-3 rounded-[12px] bg-surface-2 border border-[var(--border)] text-[var(--text)] text-[13px] focus:border-[var(--accent)] focus:outline-none"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSetPrepTime(order.id, Number((e.target as HTMLInputElement).value));
+                              }}
+                              className="w-14 h-7 text-center rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-xs font-bold focus:border-[var(--accent)] focus:outline-none"
                             />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const cur = order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20;
+                                handleSetPrepTime(order.id, Math.min(240, cur + 5));
+                              }}
+                              className="w-7 h-7 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] font-bold text-xs flex items-center justify-center cursor-pointer shrink-0"
+                              title={t('Add 5 minutes')}
+                            >+5</button>
                             <span className="text-[12px] text-[var(--muted)]">{t('min')}</span>
                           </div>
-                          <button onClick={() => handleUpdateStatus(order.id, 'PREPARING')} className="w-full h-10 rounded-[12px] bg-blue-100 border border-blue-300 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-300 font-bold text-[13px] dark:hover:bg-blue-900/60">{t('Start Preparing')}</button>
-                        </>
+                        </div>
+                      )}
+                      {order.status === 'ACCEPTED' && (
+                        <button onClick={() => handleUpdateStatus(order.id, 'PREPARING')} className="w-full h-10 rounded-[12px] bg-blue-100 border border-blue-300 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-300 font-bold text-[13px] dark:hover:bg-blue-900/60">{t('Start Preparing')}</button>
                       )}
                       {order.status === 'PREPARING' && (
                         <button onClick={() => handleUpdateStatus(order.id, 'READY')} className="w-full h-10 rounded-[12px] bg-blue-100 border border-blue-300 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-300 font-bold text-[13px] dark:hover:bg-blue-900/60">{t('Mark Ready')}</button>
@@ -2680,21 +2784,51 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                             {order.special_instructions}
                                           </div>
                                         )}
-                                        {order.status === 'ACCEPTED' && (
+                                        {['PLACED', 'ACCEPTED', 'PREPARING'].includes(order.status) && (
                                           <div className="pt-2 flex items-center gap-2">
-                                            <label htmlFor={`prep-table-${order.id}`} className="text-[11px] text-[var(--muted)] shrink-0 font-medium">
+                                            <label htmlFor={`prep-table-${order.id}`} className="text-[11px] text-[var(--muted)] shrink-0 font-medium flex items-center gap-1">
+                                              <i className="ph ph-clock text-[var(--accent)]"></i>
                                               {t('Ready in')}
                                             </label>
-                                            <input
-                                              id={`prep-table-${order.id}`}
-                                              type="number"
-                                              min={1}
-                                              max={240}
-                                              defaultValue={order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20}
-                                              onBlur={(e) => handleSetPrepTime(order.id, Number(e.target.value))}
-                                              className="w-16 h-7 px-2 rounded-lg bg-surface border border-[var(--border)] text-[var(--text)] text-xs text-center focus:border-[var(--accent)] focus:outline-none"
-                                            />
-                                            <span className="text-[11px] text-[var(--muted)]">{t('min')}</span>
+                                            <div className="flex items-center gap-1">
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const cur = order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20;
+                                                  handleSetPrepTime(order.id, Math.max(1, cur - 5));
+                                                }}
+                                                className="w-6 h-6 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] font-bold text-[10px] flex items-center justify-center cursor-pointer shrink-0"
+                                                title={t('Subtract 5 minutes')}
+                                              >-5</button>
+                                              <input
+                                                id={`prep-table-${order.id}`}
+                                                type="number"
+                                                min={1}
+                                                max={240}
+                                                value={order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20}
+                                                onChange={(e) => {
+                                                  const val = Number(e.target.value);
+                                                  if (val >= 1 && val <= 240) {
+                                                    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, estimated_prep_minutes: val } : o));
+                                                  }
+                                                }}
+                                                onBlur={(e) => handleSetPrepTime(order.id, Number(e.target.value))}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') handleSetPrepTime(order.id, Number((e.target as HTMLInputElement).value));
+                                                }}
+                                                className="w-12 h-6 px-1 rounded bg-surface border border-[var(--border)] text-[var(--text)] text-xs text-center font-bold focus:border-[var(--accent)] focus:outline-none"
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const cur = order.estimated_prep_minutes ?? DEFAULT_PREP_MINUTES[order.order_type] ?? 20;
+                                                  handleSetPrepTime(order.id, Math.min(240, cur + 5));
+                                                }}
+                                                className="w-6 h-6 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] font-bold text-[10px] flex items-center justify-center cursor-pointer shrink-0"
+                                                title={t('Add 5 minutes')}
+                                              >+5</button>
+                                              <span className="text-[11px] text-[var(--muted)]">{t('min')}</span>
+                                            </div>
                                           </div>
                                         )}
                                       </div>
@@ -2865,14 +2999,29 @@ const handleSetPrepTime = async (orderId: number, minutes: number) => {
                                               </button>
                                             </>
                                           ) : (
-                                            <button
-                                              type="button"
-                                              onClick={() => handleUpdateStatus(order.id, 'CANCELLED', 'Customer never completed payment.')}
-                                              className="h-9 px-4 rounded-xl border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold text-xs inline-flex items-center gap-2 transition-colors cursor-pointer"
-                                            >
-                                              <i className="ph ph-x-circle text-base"></i>
-                                              <span>{t('Cancel Order')}</span>
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                              <button
+                                                type="button"
+                                                disabled={isApprovingPayment === order.id}
+                                                onClick={() => handleApprovePayment(order.latest_payment?.id, order.id, { payment_method: 'cash', notes: 'Paid in cash at counter' })}
+                                                className="h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                                              >
+                                                {isApprovingPayment === order.id ? (
+                                                  <i className="ph ph-spinner animate-spin text-base"></i>
+                                                ) : (
+                                                  <i className="ph ph-money text-base"></i>
+                                                )}
+                                                <span>{t('Mark Paid in Cash')}</span>
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleUpdateStatus(order.id, 'CANCELLED', 'Customer never completed payment.')}
+                                                className="h-9 px-3 rounded-xl border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                                              >
+                                                <i className="ph ph-x-circle text-base"></i>
+                                                <span>{t('Cancel Order')}</span>
+                                              </button>
+                                            </div>
                                           )}
                                         </>
                                       )}

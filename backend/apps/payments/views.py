@@ -866,13 +866,35 @@ class ApprovePaymentView(APIView):
                 if not payment:
                     payment = Payment.objects.select_related('order').filter(order_id=int(pk)).order_by('-created_at').first()
                 if not payment:
-                    raise Payment.DoesNotExist
+                    order = Order.objects.filter(pk=int(pk)).first()
+                    if order:
+                        payment = Payment.objects.create(
+                            order=order,
+                            tx_ref=f"TX-ORD-{order.id}-{int(time.time())}",
+                            payment_method='cash',
+                            amount_etb=order.total_amount_etb,
+                            currency='ETB',
+                            status='PENDING',
+                        )
+                    else:
+                        raise Payment.DoesNotExist
             else:
                 payment = Payment.objects.select_related('order').filter(tx_ref=str(pk)).first()
                 if not payment:
                     payment = Payment.objects.select_related('order').filter(order__order_number=str(pk)).order_by('-created_at').first()
                 if not payment:
-                    raise Payment.DoesNotExist
+                    order = Order.objects.filter(order_number=str(pk)).first()
+                    if order:
+                        payment = Payment.objects.create(
+                            order=order,
+                            tx_ref=f"TX-ORD-{order.id}-{int(time.time())}",
+                            payment_method='cash',
+                            amount_etb=order.total_amount_etb,
+                            currency='ETB',
+                            status='PENDING',
+                        )
+                    else:
+                        raise Payment.DoesNotExist
         except Payment.DoesNotExist:
             return Response({'error': 'Payment transaction not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -884,6 +906,10 @@ class ApprovePaymentView(APIView):
             }, status=status.HTTP_200_OK)
 
         notes = request.data.get('notes', '').strip()
+        payment_method = request.data.get('payment_method')
+        if payment_method:
+            payment.payment_method = payment_method
+
         payment.approved_by = request.user
         payment.approved_at = timezone.now()
         if notes:
