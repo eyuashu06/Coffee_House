@@ -813,7 +813,7 @@ export default function Home() {
                                         : (primaryLocation?.opening_hours || cafeSettings.opening_hours || '1:00 – 3:00')}
                                 </span>
                                 <span>·</span>
-                                <span className="truncate max-w-[200px]">{primaryLocation ? `${primaryLocation.name}, ${primaryLocation.city}` : `Piassa, ${t('Addis Ababa')}`}</span>
+                                <span className="truncate max-w-[200px]">{primaryLocation ? `${t(primaryLocation.name)}, ${t(primaryLocation.city)}` : `${t('Piassa')}, ${t('Addis Ababa')}`}</span>
                             </div>
                             <h1 className="mt-4 font-display text-[36px] xs:text-[42px] sm:text-[58px] lg:text-[68px] leading-[1.05] tracking-tight">
                                 {(cafeSettings.cafe_name || 'Buna Hub').split(' ').map((word, i) => (
@@ -821,17 +821,10 @@ export default function Home() {
                                 ))}
                             </h1>
                             <p className="mt-4 text-[15px] sm:text-[17px] lg:text-[19px] leading-relaxed text-[var(--muted)] max-w-[46ch]">
-                                {cafeSettings.description || t('Artisanal Ethiopian single origins, handcrafted roasts, and traditional buna ceremony in the heart of Addis Ababa.')}
+                                {t(cafeSettings.description || 'Artisanal Ethiopian single origins, handcrafted roasts, and traditional buna ceremony in the heart of Addis Ababa.')}
                             </p>
                             <div className="mt-7 flex flex-wrap items-center gap-3">
                                 <a href="#menu" className="h-12 px-7 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[15px] sm:text-[16px] font-semibold flex items-center gap-2 hover:brightness-110 transition-all shadow-[var(--shadow)]">{t('View the Menu')} <i className="ph ph-arrow-down text-[15px]"></i></a>
-                                {isStaff && (
-                                    <Link href="/manager" className="h-12 px-6 rounded-full bg-[var(--accent-soft)] border-2 border-[var(--accent)] text-[var(--accent)] font-bold text-[15px] sm:text-[16px] flex items-center gap-2 hover:bg-[var(--accent)] hover:text-[var(--accent-contrast)] transition-all shadow-sm">
-                                        <i className="ph ph-gauge text-[18px]"></i>
-                                        <span>{t('Admin / Manager Dashboard')}</span>
-                                        <i className="ph ph-arrow-right text-[15px]"></i>
-                                    </Link>
-                                )}
                             </div>
                             <Link href="/account" className="mt-5 inline-flex items-center gap-1.5 text-[14.5px] text-[var(--muted)] hover:text-[var(--accent)] transition-colors">{t('Track your order')} <i className="ph ph-arrow-right text-[13px]"></i></Link>
                         </div>
@@ -1229,8 +1222,8 @@ export default function Home() {
                                                 <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--accent)] block mb-1">
                                                     {primaryLocation?.is_primary ? t('Main Branch') : t('Primary Location')}
                                                 </span>
-                                                <p className="text-[15px] font-semibold text-[var(--text)]">{primaryLocation?.name}</p>
-                                                <p className="text-[14px] leading-relaxed text-[var(--muted)]">{primaryLocation?.address}<br />{primaryLocation?.city}</p>
+                                                <p className="text-[15px] font-semibold text-[var(--text)]">{t(primaryLocation?.name || '')}</p>
+                                                <p className="text-[14px] leading-relaxed text-[var(--muted)]">{t(primaryLocation?.address || '')}<br />{t(primaryLocation?.city || '')}</p>
                                                 <p className="mt-2 text-[14px]">{primaryLocation?.phone || cafeSettings.primary_phone}</p>
                                                 {primaryLocation?.email && (
                                                     <p className="text-[13.5px] text-[var(--muted)]">{primaryLocation.email}</p>
@@ -1245,8 +1238,8 @@ export default function Home() {
                                                     <div className="space-y-2.5">
                                                         {cafeLocations.filter(loc => loc.id !== primaryLocation?.id && loc.is_active).map(loc => (
                                                             <div key={loc.id} className="text-[13.5px]">
-                                                                <p className="font-semibold text-[var(--text)]">{loc.name}</p>
-                                                                <p className="text-[var(--muted)]">{loc.address}, {loc.city}</p>
+                                                                <p className="font-semibold text-[var(--text)]">{t(loc.name)}</p>
+                                                                <p className="text-[var(--muted)]">{t(loc.address)}, {t(loc.city)}</p>
                                                                 {loc.phone && <p className="text-[12.5px] text-[var(--accent)]">{loc.phone}</p>}
                                                             </div>
                                                         ))}
@@ -1411,7 +1404,7 @@ export default function Home() {
                                     <span className="font-display text-[23px]">{cafeSettings.cafe_name || 'Buna Hub'}</span>
                                 </div>
                                 <p className="mt-4 text-[15px] leading-relaxed text-[var(--muted)] max-w-[34ch]">
-                                    {cafeSettings.description || t('An Ethiopian coffee house in Piassa — ceremony buna, slow teas, and a kitchen that stays open late.')}
+                                    {t(cafeSettings.description || 'An Ethiopian coffee house in Piassa — ceremony buna, slow teas, and a kitchen that stays open late.')}
                                 </p>
                                 <div className="mt-5 flex items-center gap-3 text-[var(--muted)]">
                                     <a href="#" aria-label="Instagram" className="w-9 h-9 rounded-full border border-[var(--border)] flex items-center justify-center text-[17px] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"><i className="ph ph-instagram-logo"></i></a>
@@ -1436,8 +1429,8 @@ export default function Home() {
                                     <li className="flex gap-2.5">
                                         <i className="ph ph-map-pin text-[16px] mt-0.5"></i>
                                         <span>
-                                            <strong className="text-[var(--text)] block">{primaryLocation?.name}</strong>
-                                            {primaryLocation?.address}<br />{primaryLocation?.city}
+                                            <strong className="text-[var(--text)] block">{t(primaryLocation?.name || '')}</strong>
+                                            {t(primaryLocation?.address || '')}<br />{t(primaryLocation?.city || '')}
                                         </span>
                                     </li>
                                     <li className="flex gap-2.5 items-center">
@@ -1455,8 +1448,8 @@ export default function Home() {
                                             </span>
                                             {cafeLocations.filter(loc => loc.id !== primaryLocation?.id && loc.is_active).map(loc => (
                                                 <div key={loc.id} className="text-[13px] mb-1.5">
-                                                    <span className="font-medium text-[var(--text)]">{loc.name}: </span>
-                                                    <span>{loc.address}</span>
+                                                    <span className="font-medium text-[var(--text)]">{t(loc.name)}: </span>
+                                                    <span>{t(loc.address)}</span>
                                                 </div>
                                             ))}
                                         </li>
