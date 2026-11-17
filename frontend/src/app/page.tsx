@@ -8,6 +8,8 @@ import ItemModal from '../components/ItemModal';
 import AssistantChat from '../components/AssistantChat';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import LanguageToggle from '../components/LanguageToggle';
+import ThemeToggle from '../components/ThemeToggle';
 import { useMenu, MenuItem } from '../context/MenuContext';
 import Slideshow, { Slide } from '../components/Slideshow';
 import Reveal from '../components/Reveal';
