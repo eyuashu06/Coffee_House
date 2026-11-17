@@ -27,7 +27,7 @@ const PENDING_RESERVATION_KEY = 'artisanal-reserve:pending-reservation';
 export interface PendingReservationData {
     name: string;
     date_time: string;
-    party_size: number;
+    party_size: number | string;
     contact_phone: string;
     autoSubmit?: boolean;
 }
@@ -129,14 +129,13 @@ export default function Home() {
     const [postLoginRedirect, setPostLoginRedirect] = useState<string | null>(null);
     const [activeCat, setActiveCat] = useState('all');
     const [menuSearch, setMenuSearch] = useState('');
-    const [bookingData, setBookingData] = useState({ name: '', date_time: '', party_size: 2, contact_phone: '' });
+    const [bookingData, setBookingData] = useState<{ name: string; date_time: string; party_size: number | string; contact_phone: string }>({ name: '', date_time: '', party_size: 2, contact_phone: '' });
     const [bookingStatus, setBookingStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
     // Code of the booking just made, so a guest can keep it and track the table
     // without an account.
     const [bookingCode, setBookingCode] = useState<string | null>(null);
     const [bookingError, setBookingError] = useState<string | null>(null);
     const [minDateTime, setMinDateTime] = useState('');
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const isSubmittingReservationRef = useRef<boolean>(false);
     const [isOpenNow, setIsOpenNow] = useState<boolean>(true);
 
@@ -356,11 +355,15 @@ export default function Home() {
         setBookingStatus('LOADING');
         setBookingError(null);
         setBookingCode(null);
+        const payload = {
+            ...dataToSubmit,
+            party_size: Math.max(1, parseInt(String(dataToSubmit.party_size), 10) || 1),
+        };
         try {
             const res = await apiFetch('/api/v1/reservations/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dataToSubmit),
+                body: JSON.stringify(payload),
             });
             if (res.ok) {
                 setBookingStatus('SUCCESS');
@@ -771,11 +774,12 @@ export default function Home() {
                             ) : null}
                         </nav>
                         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                            <LanguageToggle className="hidden sm:flex h-9 px-2 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13px] sm:text-[13.5px] items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" />
+                            <ThemeToggle className="flex h-9 w-9 shrink-0 cursor-pointer" />
+                            <LanguageToggle className="flex h-9 px-2 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[12.5px] sm:text-[13.5px] items-center gap-1 sm:gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0 cursor-pointer" />
                             <button
                                 type="button"
                                 onClick={() => setIsCartOpen(true)}
-                                className="h-9 px-2.5 sm:px-4 rounded-full border border-[var(--border)] text-[13.5px] sm:text-[14px] flex items-center gap-1 sm:gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0 cursor-pointer"
+                                className="h-9 px-2.5 sm:px-4 rounded-full border border-[var(--border)] text-[13px] sm:text-[14px] flex items-center gap-1 sm:gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0 cursor-pointer"
                                 aria-label={t('Open cart')}
                             >
                                 <i className="ph ph-shopping-bag-open text-[16px]"></i>
@@ -786,116 +790,13 @@ export default function Home() {
                                     </span>
                                 )}
                             </button>
-                            <ThemeToggle className="flex h-9 w-9 shrink-0 cursor-pointer" />
                             <NotificationsDropdown />
                             <ProfileDropdown
                                 onOpenSignIn={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
                                 onOpenSignUp={() => { setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }}
                             />
-                            <button
-                                onClick={() => setIsMobileMenuOpen((open) => !open)}
-                                aria-label={isMobileMenuOpen ? t('Close menu') : t('Open menu')}
-                                aria-expanded={isMobileMenuOpen}
-                                className="md:hidden h-9 w-9 rounded-full border border-[var(--border)] text-[var(--muted)] flex items-center justify-center hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0"
-                            >
-                                <i className={`ph ${isMobileMenuOpen ? 'ph-x' : 'ph-list'} text-[19px]`}></i>
-                            </button>
                         </div>
                     </div>
-
-                    {/* Mobile menu — stacked links + profile actions */}
-                    {isMobileMenuOpen && (
-                        <div className="md:hidden border-t border-[var(--border)] px-4 py-4 space-y-3 bg-surface animate-fade-in shadow-xl">
-                            {/* Mobile Preferences (Language + Theme) */}
-                            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-                                <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">{t('Preferences')}</span>
-                                <div className="flex items-center gap-2">
-                                    <LanguageToggle className="h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13px] flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors" />
-                                    <ThemeToggle className="h-9 w-9 shrink-0" />
-                                </div>
-                            </div>
-
-                            {navLinks.map((link) => (
-                                <a
-                                    key={link.href}
-                                    href={link.href}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className="block py-2.5 px-3 rounded-xl text-[16px] font-medium text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--accent)] transition-colors"
-                                >
-                                    {link.label}
-                                </a>
-                            ))}
-                            <div className="pt-3 border-t border-[var(--border)]">
-                                {user ? (
-                                    <div className="space-y-2">
-                                        <div className="p-3 bg-surface-2 rounded-2xl flex items-center justify-between border border-[var(--border)]">
-                                            <div className="flex items-center gap-2.5 min-w-0">
-                                                <div className="w-8 h-8 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-xs flex items-center justify-center shrink-0">
-                                                    {(user.first_name?.[0] || user.username?.[0] || 'U').toUpperCase()}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-bold truncate text-[var(--text)]">{user.first_name || user.username}</p>
-                                                    <p className="text-[11px] text-[var(--muted)] truncate">{user.email}</p>
-                                                </div>
-                                            </div>
-                                            {user.role && user.role !== 'CUSTOMER' && (
-                                                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)] shrink-0">
-                                                    {user.role}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 text-xs">
-                                            <Link href="/account?tab=profile" onClick={() => setIsMobileMenuOpen(false)} className="h-10 px-3 rounded-xl border border-[var(--border)] flex items-center justify-center gap-1.5 font-medium hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
-                                                <i className="ph ph-user-gear text-[15px]"></i>
-                                                <span>{t('Edit Profile')}</span>
-                                            </Link>
-                                            <Link href="/account?tab=orders" onClick={() => setIsMobileMenuOpen(false)} className="h-10 px-3 rounded-xl border border-[var(--border)] flex items-center justify-center gap-1.5 font-medium hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
-                                                <i className="ph ph-receipt text-[15px]"></i>
-                                                <span>{t('My Orders')}</span>
-                                            </Link>
-                                            <Link href="/account?tab=reservations" onClick={() => setIsMobileMenuOpen(false)} className="h-10 px-3 rounded-xl border border-[var(--border)] flex items-center justify-center gap-1.5 font-medium hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
-                                                <i className="ph ph-calendar-check text-[15px]"></i>
-                                                <span>{t('Table Reservations')}</span>
-                                            </Link>
-                                            {(user.role === 'ADMIN' || user.role === 'MANAGER') ? (
-                                                <Link href="/manager" onClick={() => setIsMobileMenuOpen(false)} className="h-10 px-3 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] flex items-center justify-center gap-1.5 font-bold">
-                                                    <i className="ph ph-chart-line-up text-[15px]"></i>
-                                                    <span>{t('Manager Dashboard')}</span>
-                                                </Link>
-                                            ) : (
-                                                <Link href="/account?tab=addresses" onClick={() => setIsMobileMenuOpen(false)} className="h-10 px-3 rounded-xl border border-[var(--border)] flex items-center justify-center gap-1.5 font-medium hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
-                                                    <i className="ph ph-map-pin text-[15px]"></i>
-                                                    <span>{t('Delivery Addresses')}</span>
-                                                </Link>
-                                            )}
-                                        </div>
-                                        <button
-                                            onClick={async () => {
-                                                setIsMobileMenuOpen(false);
-                                                try {
-                                                    await logout();
-                                                } catch (e) {
-                                                    console.error('Logout error:', e);
-                                                }
-                                                if (typeof window !== 'undefined') {
-                                                    window.location.href = '/?welcome=1';
-                                                }
-                                            }}
-                                            className="w-full h-10 rounded-xl border border-red-500/30 text-red-500 hover:bg-red-500/10 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                                        >
-                                            <i className="ph ph-sign-out text-[15px]"></i>
-                                            <span>{t('Sign Out')}</span>
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-2">
-                                        <button onClick={() => { setIsMobileMenuOpen(false); setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }} className="flex-1 h-11 rounded-full border border-[var(--border)] text-[15px] flex items-center justify-center font-medium">{t('Sign In')}</button>
-                                        <button onClick={() => { setIsMobileMenuOpen(false); setInitialAuthMode('REGISTER'); setIsAuthModalOpen(true); }} className="flex-1 h-11 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold text-[15px] flex items-center justify-center">{t('Sign Up')}</button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
                 </header>
 
                 {/* ======================= HERO (text + slideshow side by side) ======================= */}
@@ -1374,7 +1275,55 @@ export default function Home() {
                                             </div>
                                             <div>
                                                 <label htmlFor="bk-party" className="block text-[14.5px] text-[var(--muted)] mb-2">{t('Party size')}</label>
-                                                <input id="bk-party" type="number" min="1" required value={bookingData.party_size} onChange={(e) => handleBookingFieldChange('party_size', parseInt(e.target.value) || 1)} placeholder="2 guests" className="field w-full h-12 px-4 text-[16px]" />
+                                                <div className="flex items-center rounded-xl border border-[var(--border)] bg-surface focus-within:border-[var(--accent)] overflow-hidden h-12">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const current = Number(bookingData.party_size) || 1;
+                                                            handleBookingFieldChange('party_size', Math.max(1, current - 1));
+                                                        }}
+                                                        disabled={Number(bookingData.party_size) <= 1}
+                                                        className="w-11 h-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:bg-surface-2 disabled:opacity-30 transition-colors shrink-0 cursor-pointer"
+                                                        aria-label="Decrease party size"
+                                                    >
+                                                        <i className="ph ph-minus font-bold text-base"></i>
+                                                    </button>
+                                                    <input
+                                                        id="bk-party"
+                                                        type="number"
+                                                        min="1"
+                                                        max="50"
+                                                        required
+                                                        value={bookingData.party_size}
+                                                        onChange={(e) => {
+                                                            const raw = e.target.value;
+                                                            if (raw === '') {
+                                                                handleBookingFieldChange('party_size', '');
+                                                            } else {
+                                                                const parsed = parseInt(raw, 10);
+                                                                handleBookingFieldChange('party_size', isNaN(parsed) ? '' : parsed);
+                                                            }
+                                                        }}
+                                                        onBlur={() => {
+                                                            if (!bookingData.party_size || Number(bookingData.party_size) < 1) {
+                                                                handleBookingFieldChange('party_size', 1);
+                                                            }
+                                                        }}
+                                                        placeholder="2"
+                                                        className="w-full h-full text-center text-[16px] font-bold text-[var(--text)] bg-transparent focus:outline-none px-1"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const current = Number(bookingData.party_size) || 1;
+                                                            handleBookingFieldChange('party_size', current + 1);
+                                                        }}
+                                                        className="w-11 h-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:bg-surface-2 transition-colors shrink-0 cursor-pointer"
+                                                        aria-label="Increase party size"
+                                                    >
+                                                        <i className="ph ph-plus font-bold text-base"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div className="sm:col-span-2">
                                                 <label htmlFor="bk-date" className="block text-[14.5px] text-[var(--muted)] mb-2">{t('Date & time')}</label>

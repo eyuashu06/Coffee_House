@@ -174,20 +174,6 @@ export default function AccountPage() {
   const { t, tItem, locale, language, toggleLanguage } = useLanguage();
   const birr = language === 'am' ? 'ብር' : 'ETB';
 
-  // Theme Lightness / Toggle
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  useEffect(() => {
-    setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-  }, []);
-
-  const handleSetTheme = (newTheme: 'light' | 'dark') => {
-    setTheme(newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-    try {
-      localStorage.setItem('theme', newTheme);
-    } catch {}
-  };
-
   // Cart Quick-View
   const { cart: serverCart, clearCart, setQuantity, removeLine } = useCart(!!user);
   const [localCart, setLocalCart] = useState<any[]>([]);
@@ -916,11 +902,12 @@ export default function AccountPage() {
             </Link>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <LanguageToggle className="hidden sm:flex h-9 px-2 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13px] sm:text-[13.5px] items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" />
+            <ThemeToggle className="flex h-9 w-9 shrink-0 cursor-pointer" />
+            <LanguageToggle className="flex h-9 px-2 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[12.5px] sm:text-[13.5px] items-center gap-1 sm:gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0 cursor-pointer" />
             <button
               type="button"
               onClick={() => setIsCartDrawerOpen(true)}
-              className="h-9 px-2.5 sm:px-4 rounded-full border border-[var(--border)] text-[13.5px] sm:text-[14px] flex items-center gap-1 sm:gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0 cursor-pointer"
+              className="h-9 px-2 sm:px-3.5 rounded-full border border-[var(--border)] text-[12.5px] sm:text-[14px] flex items-center gap-1 sm:gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0 cursor-pointer"
               aria-label={t('Open cart')}
             >
               <i className="ph ph-shopping-bag-open text-[16px]"></i>
@@ -931,7 +918,6 @@ export default function AccountPage() {
                 </span>
               )}
             </button>
-            <ThemeToggle className="flex h-9 w-9 shrink-0 cursor-pointer" />
             <Link href="/?welcome=1" className="h-9 px-3.5 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] hidden sm:flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" aria-label="Back to Storefront">
               <i className="ph ph-storefront text-[16px]"></i>
               <span>{t('Store')}</span>
@@ -981,135 +967,6 @@ export default function AccountPage() {
               {t('Confirming payment…')}
             </span>
           )}
-        </div>
-
-        {/* DASHBOARD PREFERENCES & CONTROLS (Consolidated Theme, Language & Cart Quick-View) */}
-        <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-surface-2 border border-[var(--border)] shadow-sm">
-          <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-[var(--border)]/70">
-            <span className="text-[12.5px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
-              <i className="ph ph-sliders text-[16px] text-[var(--accent)]"></i>
-              <span>{t('Preferences & Controls')}</span>
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-            {/* 1. Theme Lightness / Toggle */}
-            <div className="p-3.5 rounded-xl bg-surface border border-[var(--border)] flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
-                  <i className="ph ph-palette text-[16px] text-[var(--accent)]"></i>
-                  <span>{t('Theme')}</span>
-                </span>
-                <span className="text-[11px] font-bold uppercase text-[var(--accent)]">
-                  {theme === 'dark' ? t('Dark Mode') : t('Light Mode')}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleSetTheme('light')}
-                  className={`flex-1 h-9 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    theme === 'light'
-                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] font-bold'
-                      : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[17px]">light_mode</span>
-                  <span>{t('Light')}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetTheme('dark')}
-                  className={`flex-1 h-9 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    theme === 'dark'
-                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] font-bold'
-                      : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[17px]">dark_mode</span>
-                  <span>{t('Dark')}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* 2. Language Selector */}
-            <div className="p-3.5 rounded-xl bg-surface border border-[var(--border)] flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
-                  <i className="ph ph-translate text-[16px] text-[var(--accent)]"></i>
-                  <span>{t('Language')}</span>
-                </span>
-                <span className="text-[11px] font-bold uppercase text-[var(--accent)]">
-                  {language === 'am' ? 'አማርኛ' : 'English'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => language !== 'en' && toggleLanguage()}
-                  className={`flex-1 h-9 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    language === 'en'
-                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] font-bold'
-                      : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
-                  }`}
-                >
-                  <span>🇬🇧</span>
-                  <span>English</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => language !== 'am' && toggleLanguage()}
-                  className={`flex-1 h-9 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    language === 'am'
-                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] font-bold'
-                      : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
-                  }`}
-                >
-                  <span>🇪🇹</span>
-                  <span>አማርኛ</span>
-                </button>
-              </div>
-            </div>
-
-            {/* 3. Cart Quick-View */}
-            <div className="p-3.5 rounded-xl bg-surface border border-[var(--border)] flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
-                  <i className="ph ph-shopping-bag-open text-[16px] text-[var(--accent)]"></i>
-                  <span>{t('Cart Quick-View')}</span>
-                </span>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)]">
-                  {totalCartItems} {t('Items')}
-                </span>
-              </div>
-              {totalCartItems > 0 ? (
-                <div className="space-y-2">
-                  <div className="text-[12.5px] text-[var(--muted)] flex items-center justify-between">
-                    <span>{t('Total')}:</span>
-                    <strong className="text-[var(--accent)] font-bold">{cartTotalEtb} {birr}</strong>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsCartDrawerOpen(true)}
-                    className="w-full h-9 rounded-lg bg-[var(--accent)] text-[var(--accent-contrast)] text-xs font-bold flex items-center justify-center gap-1.5 hover:brightness-110 transition-all shadow-sm cursor-pointer"
-                  >
-                    <i className="ph ph-shopping-bag text-[15px]"></i>
-                    <span>{t('View & Edit Cart')}</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-[11.5px] text-[var(--muted)]">{t('Your cart is empty')}</p>
-                  <Link
-                    href="/#menu"
-                    className="w-full h-9 rounded-lg border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <i className="ph ph-book-open text-[15px]"></i>
-                    <span>{t('Browse Menu')}</span>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
         
         {/* TABS (Desktop Rail - hidden on mobile where bottom navigation is used) */}
@@ -1684,8 +1541,10 @@ export default function AccountPage() {
               
               <div className="mb-4">
                 <label className="block text-[12px] sm:text-[12.5px] text-[var(--muted)] uppercase tracking-wider mb-1.5 font-bold">{t('Username / Email')}</label>
-                <div className="h-11 bg-surface border border-[var(--border)] rounded-xl px-3.5 flex items-center text-[14px] sm:text-[15px] text-[var(--muted)] opacity-75 font-mono">
-                  {user.email || user.username}
+                <div className="h-11 bg-surface border border-[var(--border)] rounded-xl px-3.5 flex items-center text-[13.5px] sm:text-[14.5px] text-[var(--muted)] opacity-75 font-mono overflow-hidden">
+                  <span className="truncate w-full min-w-0 select-all" title={user.email || user.username}>
+                    {user.email || user.username}
+                  </span>
                 </div>
                 <p className="text-[var(--muted)] text-[11.5px] mt-1">{t('Username/email cannot be changed here.')}</p>
               </div>
