@@ -5,13 +5,20 @@ import { AuthProvider } from '../context/AuthContext';
 import { LanguageProvider } from '../context/LanguageContext';
 import { CafeProvider } from '../context/CafeContext';
 import { MenuProvider } from '../context/MenuContext';
+import { ThemeProvider, type Theme } from '../context/ThemeContext';
 import SWRegister from '../components/SWRegister';
 
 const LANGUAGE_COOKIE = 'app_lang';
+const THEME_COOKIE = 'app_theme';
 
 function readLanguageCookie(): 'en' | 'am' {
   const value = cookies().get(LANGUAGE_COOKIE)?.value;
   return value === 'am' ? 'am' : 'en';
+}
+
+function readThemeCookie(): Theme {
+  const value = cookies().get(THEME_COOKIE)?.value;
+  return value === 'light' ? 'light' : 'dark';
 }
 
 export const metadata: Metadata = {
@@ -32,13 +39,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // The chosen language comes from a cookie so the server can render it. Reading it
-  // from localStorage in the provider instead would make the first client render
-  // disagree with the server's, which React rejects as a hydration mismatch.
   const language = readLanguageCookie();
+  const theme = readThemeCookie();
 
   return (
-    <html lang={language} className="dark" suppressHydrationWarning>
+    <html lang={language} className={theme === 'dark' ? 'dark' : ''} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -58,20 +63,22 @@ export default function RootLayout({
             cream flash (and a light-mode user never sees espresso). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='light'){document.documentElement.classList.remove('dark');}else{document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}try{var sz=localStorage.getItem('preferred_text_size');if(sz){document.documentElement.setAttribute('data-text-size',sz);}}catch(e){}try{if(typeof window!=='undefined'&&(location.hostname==='localhost'||location.hostname==='127.0.0.1')){if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){for(var r of regs){r.unregister();}});}if('caches' in window){caches.keys().then(function(keys){for(var k of keys){caches.delete(k);}});}}}catch(e){}})();`,
+            __html: `(function(){try{var m=document.cookie.match(/(?:^|; )app_theme=([^;]*)/);var t=m?decodeURIComponent(m[1]):localStorage.getItem('theme');if(t==='light'){document.documentElement.classList.remove('dark');}else{document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}try{var sz=localStorage.getItem('preferred_text_size');if(sz){document.documentElement.setAttribute('data-text-size',sz);}}catch(e){}try{if(typeof window!=='undefined'&&(location.hostname==='localhost'||location.hostname==='127.0.0.1')){if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){for(var r of regs){r.unregister();}});}if('caches' in window){caches.keys().then(function(keys){for(var k of keys){caches.delete(k);}});}}}catch(e){}})();`,
           }}
         />
       </head>
       <body className="font-body min-h-screen flex flex-col selection:bg-[var(--accent-soft)] selection:text-[var(--text)] transition-colors duration-300">
-        <LanguageProvider initialLanguage={language}>
-          <AuthProvider>
-            <CafeProvider>
-              <MenuProvider>
-                {children}
-              </MenuProvider>
-            </CafeProvider>
-          </AuthProvider>
-        </LanguageProvider>
+        <ThemeProvider initialTheme={theme}>
+          <LanguageProvider initialLanguage={language}>
+            <AuthProvider>
+              <CafeProvider>
+                <MenuProvider>
+                  {children}
+                </MenuProvider>
+              </CafeProvider>
+            </AuthProvider>
+          </LanguageProvider>
+        </ThemeProvider>
         <SWRegister />
       </body>
     </html>
