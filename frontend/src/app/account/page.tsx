@@ -18,7 +18,6 @@ import EthiopianPhoneInput from '../../components/EthiopianPhoneInput';
 import AuthModal from '../../components/AuthModal';
 import { formatEthiopianTime } from '../../utils/ethiopianTime';
 import { formatOrderType } from '../../utils/translations';
-import { TextSize, getSavedTextSize, applyTextSize } from '../../utils/textSize';
 
 interface OrderItem {
   id: number;
@@ -273,23 +272,6 @@ export default function AccountPage() {
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [guestPayment, setGuestPayment] = useState<any>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-
-  // Display Text Size State
-  const [currentTextSize, setCurrentTextSize] = useState<TextSize>('normal');
-
-  useEffect(() => {
-    setCurrentTextSize(getSavedTextSize());
-    const handleSizeChange = (e: any) => {
-      if (e.detail?.size) setCurrentTextSize(e.detail.size);
-    };
-    window.addEventListener('text-size-change', handleSizeChange);
-    return () => window.removeEventListener('text-size-change', handleSizeChange);
-  }, []);
-
-  const handleSelectTextSize = (sz: TextSize) => {
-    setCurrentTextSize(sz);
-    applyTextSize(sz);
-  };
 
   const fetchOrders = useCallback(async (silent = false): Promise<boolean> => {
     if (!silent) setIsLoadingOrders(true);
@@ -1567,40 +1549,6 @@ export default function AccountPage() {
                     onChange={val => setPhone(val)}
                     className="h-11 text-[15px] sm:text-[16px]"
                   />
-                </div>
-
-                {/* Display Text Size Selector */}
-                <div className="pt-2 border-t border-[var(--border)]/60">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
-                      <i className="ph ph-text-aa text-[15px] text-[var(--accent)]"></i>
-                      <span>{t('Display Text Size')}</span>
-                    </label>
-                    <span className="text-[11px] font-bold text-[var(--accent)] uppercase">
-                      {t(currentTextSize.charAt(0).toUpperCase() + currentTextSize.slice(1))}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {[
-                      { id: 'small', label: t('Small') },
-                      { id: 'normal', label: t('Normal') },
-                      { id: 'medium', label: t('Medium') },
-                      { id: 'large', label: t('Large') },
-                    ].map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => handleSelectTextSize(opt.id as TextSize)}
-                        className={`h-9 px-2 rounded-xl border text-center transition-all flex items-center justify-center cursor-pointer text-[12px] font-bold ${
-                          currentTextSize === opt.id
-                            ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] ring-1 ring-[var(--accent)] shadow-sm'
-                            : 'bg-surface border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--text)]'
-                        }`}
-                      >
-                        <span className="truncate">{opt.label}</span>
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <button type="submit" className="mt-3 w-full sm:w-auto h-11 px-6 rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] text-[14px] font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer">
