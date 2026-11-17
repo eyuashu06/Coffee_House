@@ -205,7 +205,8 @@ export default function AuthModal({
             );
           }
           if (res.sms_note) {
-            setPhoneOtpHint((prev) => (prev ? `${prev} · ${res.sms_note}` : res.sms_note));
+            const note = res.sms_note;
+            setPhoneOtpHint((prev) => (prev ? `${prev} · ${note}` : note));
           }
           setSuccess(
             language === 'am'

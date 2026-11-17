@@ -38,8 +38,8 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
   });
 
   const fetchMenu = useCallback(async (forceRefresh = false) => {
-    const isCacheValid = cachedMenuItems && Date.now() - cacheTimestamp < CACHE_DURATION_MS;
-    if (!forceRefresh && isCacheValid && cachedMenuItems.length > 0) {
+    const isCacheValid = Boolean(cachedMenuItems && Date.now() - cacheTimestamp < CACHE_DURATION_MS);
+    if (!forceRefresh && isCacheValid && cachedMenuItems && cachedMenuItems.length > 0) {
       setItems(cachedMenuItems);
       setMenuStatus('ready');
       return;

@@ -119,7 +119,7 @@ export default function Home() {
     const isStaff = user?.role === 'ADMIN' || user?.role === 'MANAGER';
     const { t, language, tCategory, tItem, tItemDescription, locale } = useLanguage();
     const { settings: cafeSettings, locations: cafeLocations, primaryLocation } = useCafe();
-    const { items, menuStatus } = useMenu();
+    const { items, menuStatus, fetchMenu } = useMenu();
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
