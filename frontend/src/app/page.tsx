@@ -770,7 +770,23 @@ export default function Home() {
                                 <Link className="hover:text-[var(--accent)] transition-colors" href="/account">{t('Dashboard')}</Link>
                             ) : null}
                         </nav>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                            <LanguageToggle className="hidden sm:flex h-9 px-2 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13px] sm:text-[13.5px] items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" />
+                            <button
+                                type="button"
+                                onClick={() => setIsCartOpen(true)}
+                                className="h-9 px-2.5 sm:px-4 rounded-full border border-[var(--border)] text-[13.5px] sm:text-[14px] flex items-center gap-1 sm:gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0 cursor-pointer"
+                                aria-label={t('Open cart')}
+                            >
+                                <i className="ph ph-shopping-bag-open text-[16px]"></i>
+                                <span className="hidden sm:inline">{t('Cart')}</span>
+                                {totalCartCount > 0 && (
+                                    <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[11px] font-bold">
+                                        {totalCartCount}
+                                    </span>
+                                )}
+                            </button>
+                            <ThemeToggle className="flex h-9 w-9 shrink-0 cursor-pointer" />
                             <NotificationsDropdown />
                             <ProfileDropdown
                                 onOpenSignIn={() => { setInitialAuthMode('LOGIN'); setIsAuthModalOpen(true); }}
