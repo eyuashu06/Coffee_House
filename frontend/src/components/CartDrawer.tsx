@@ -526,7 +526,11 @@ export default function CartDrawer({
                             value={guestPhone.startsWith('+251') ? guestPhone.slice(4) : guestPhone.replace(/[^\d]/g, '')}
                             onChange={(e) => {
                               const digits = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
-                              setGuestPhone(digits ? `+251${digits}` : '+251');
+                              const fullPhone = digits ? `+251${digits}` : '+251';
+                              setGuestPhone(fullPhone);
+                              if (digits && digits.length >= 9 && typeof window !== 'undefined') {
+                                try { localStorage.setItem('last_customer_phone', fullPhone); } catch {}
+                              }
                               if (phoneError) setPhoneError(null);
                             }}
                             onFocus={() => {
@@ -583,7 +587,11 @@ export default function CartDrawer({
                             value={guestPhone.startsWith('+251') ? guestPhone.slice(4) : guestPhone.replace(/[^\d]/g, '')}
                             onChange={(e) => {
                               const digits = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
-                              setGuestPhone(digits ? `+251${digits}` : '+251');
+                              const fullPhone = digits ? `+251${digits}` : '+251';
+                              setGuestPhone(fullPhone);
+                              if (digits && digits.length >= 9 && typeof window !== 'undefined') {
+                                try { localStorage.setItem('last_customer_phone', fullPhone); } catch {}
+                              }
                               if (phoneError) setPhoneError(null);
                             }}
                             onFocus={() => {
@@ -739,6 +747,7 @@ export default function CartDrawer({
           orderId={activeOrder.id}
           orderNumber={activeOrder.orderNumber}
           totalAmountEtb={activeOrder.totalAmount}
+          initialPhone={user?.phone || guestPhone}
           onPaymentComplete={handlePaymentComplete}
         />
       )}

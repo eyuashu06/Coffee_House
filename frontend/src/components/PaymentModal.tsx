@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useCafe } from '../context/CafeContext';
+import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 import EthiopianPhoneInput from './EthiopianPhoneInput';
 
@@ -12,7 +13,17 @@ interface PaymentModalProps {
   orderId: number;
   orderNumber: string;
   totalAmountEtb: string;
+  initialPhone?: string;
   onPaymentComplete: (status: string, txRef: string, message: string) => void;
+}
+
+function getSavedCustomerPhone(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return localStorage.getItem('last_customer_phone') || '';
+  } catch {
+    return '';
+  }
 }
 
 /** The identifiers Chapa and cafe accounts accept, plus cash on delivery. */
@@ -51,12 +62,18 @@ export default function PaymentModal({
   orderId,
   orderNumber,
   totalAmountEtb,
+  initialPhone,
   onPaymentComplete,
 }: PaymentModalProps) {
   const { t, language } = useLanguage();
   const { settings: cafeSettings } = useCafe();
+  const { user } = useAuth();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('telebirr');
-  const [phone, setPhone] = useState('');
+
+  // Auto-detect and pre-populate phone number
+  const [phone, setPhone] = useState(() => {
+    return initialPhone || user?.phone || getSavedCustomerPhone();
+  });
   const [transactionRef, setTransactionRef] = useState('');
   const [proofMode, setProofMode] = useState<'FILE' | 'CODE'>('CODE');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -83,6 +100,12 @@ export default function PaymentModal({
       setExistingPaymentDetails(null);
       isSubmittingRef.current = false;
 
+      // Auto-detect phone number on modal open
+      const detected = initialPhone || user?.phone || getSavedCustomerPhone();
+      if (detected && (!phone || phone === '+251')) {
+        setPhone(detected);
+      }
+
       // Check current order payment state so customer doesn't pay again
       if (orderId) {
         apiFetch(`/api/v1/orders/${orderId}/`)
@@ -105,6 +128,13 @@ export default function PaymentModal({
             } else if (isSettling) {
               setExistingPaymentState('settling');
               setExistingPaymentDetails(data.latest_payment);
+            }
+
+            // Auto-detect phone from the order if not already set
+            const orderPhone = data.contact_phone || data.customer_phone || data.user_phone;
+            if (orderPhone && (!phone || phone === '+251')) {
+              setPhone(orderPhone);
+              try { localStorage.setItem('last_customer_phone', orderPhone); } catch {}
             }
           })
           .catch(() => {});
@@ -587,7 +617,12 @@ export default function PaymentModal({
                 </label>
                 <EthiopianPhoneInput
                   value={phone}
-                  onChange={setPhone}
+                  onChange={(val) => {
+                    setPhone(val);
+                    if (val && typeof window !== 'undefined') {
+                      try { localStorage.setItem('last_customer_phone', val); } catch {}
+                    }
+                  }}
                   required
                 />
               </div>
