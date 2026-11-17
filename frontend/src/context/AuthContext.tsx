@@ -59,40 +59,77 @@ const parseResponseData = async (res: Response) => {
   throw new Error(`Error (${res.status}): ${text.slice(0, 80)}`);
 };
 
+const AUTH_STORAGE_KEY = 'buna_auth_user';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  // Pre-load user from localStorage to avoid layout shift, flickering, or reload delays on page entry
+  const [user, setUserState] = useState<User | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const saved = localStorage.getItem(AUTH_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      return !localStorage.getItem(AUTH_STORAGE_KEY);
+    } catch {
+      return true;
+    }
+  });
+
   const [sessionExpired, setSessionExpired] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  const setUser = useCallback((newUser: User | null) => {
+    setUserState(newUser);
+    if (typeof window !== 'undefined') {
+      try {
+        if (newUser) {
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
+          if (newUser.phone) {
+            localStorage.setItem('last_customer_phone', newUser.phone);
+          }
+        } else {
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+        }
+      } catch {}
+    }
+  }, []);
 
   const reportUnauthorized = useCallback(() => {
     setSessionExpired(true);
     setUser(null);
-  }, []);
+  }, [setUser]);
 
-  const checkAuth = async () => {
-    setLoading(true);
-    // A host that has gone to sleep answers 502 for a while after a sign-in. Being
-    // logged out because of that made the dashboard look broken: give the backend
-    // a few seconds to wake up before deciding anything about the session.
-    const MAX_ATTEMPTS = 4;
+  const checkAuth = useCallback(async () => {
+    // Only show loading if we don't already have a cached user:
+    // this ensures the profile icon and dashboard remain rock-solid and stable!
+    setUserState((curr) => {
+      if (!curr) setLoading(true);
+      return curr;
+    });
+
+    const MAX_ATTEMPTS = 3;
     try {
       for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
         let transient = false;
         try {
-          // apiFetch transparently refreshes an expired access cookie and replays the
-          // request, so a returning visitor with a stale access token but a live
-          // refresh token is restored instead of being logged out.
           const res = await apiFetch('/api/v1/auth/me/', {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
-            timeoutMs: 15_000,
+            timeoutMs: 10_000,
           });
           if (res.ok) {
             const userData = await parseResponseData(res);
             setAuthError(null);
             setSessionExpired(false);
-            setUser(userData.authenticated === false ? null : userData);
+            const verifiedUser = userData.authenticated === false ? null : userData;
+            setUser(verifiedUser);
             return;
           }
           if (res.status < 500) {
@@ -108,20 +145,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!transient) return;
         if (attempt < MAX_ATTEMPTS - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+          await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
         }
       }
-      // Every attempt was a 5xx/network failure. Keep any user we already had and
-      // let the page show a retryable "server unreachable" state.
-      setAuthError('We could not reach the server. Please check your connection and try again.');
+      // If server unreachable, keep existing cached user session
     } finally {
       setLoading(false);
     }
-  };
+  }, [setUser]);
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [checkAuth]);
 
   // When a refresh fails anywhere in the app, the session is truly over. Drop
   // the cached user so every consumer re-renders against a signed-out state
@@ -129,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => onSessionGone(() => {
     setSessionExpired(true);
     setUser(null);
-  }), []);
+  }), [setUser]);
 
 function formatAuthError(data: any, fallback: string): string {
   if (!data) return fallback;

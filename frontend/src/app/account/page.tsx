@@ -526,10 +526,14 @@ export default function AccountPage() {
   const userKey = user?.id || user?.username;
   useEffect(() => {
     if (!userKey) return;
-    const interval = setInterval(reconcileUnsettled, 8000);
     reconcileUnsettled();
+    // Only poll in background if an order is actively settling or pending payment
+    const hasSettling = orders.some((o) => o.payment_state === 'settling' || o.status === 'PENDING_PAYMENT');
+    if (!hasSettling) return;
+
+    const interval = setInterval(reconcileUnsettled, 30000);
     return () => clearInterval(interval);
-  }, [userKey, reconcileUnsettled]);
+  }, [userKey, orders, reconcileUnsettled]);
 
   const fetchAddresses = useCallback(async () => {
     try {
@@ -612,7 +616,7 @@ export default function AccountPage() {
       }
     };
 
-    const interval = setInterval(tick, 10000);
+    const interval = setInterval(tick, 45000);
     return () => {
       clearInterval(interval);
       if (paymentTimerRef.current) window.clearTimeout(paymentTimerRef.current);
@@ -1831,6 +1835,7 @@ export default function AccountPage() {
           orderId={payOrder.id}
           orderNumber={payOrder.order_number}
           totalAmountEtb={payOrder.total_amount_etb}
+          initialPhone={payOrder.contact_phone || user?.phone}
           onPaymentComplete={handlePaymentComplete}
         />
       )}

@@ -89,7 +89,7 @@ export default function NotificationsDropdown() {
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      const interval = setInterval(fetchNotifications, 12000); // Poll every 12s
+      const interval = setInterval(fetchNotifications, 60000); // Gentle 60s background check
       return () => clearInterval(interval);
     }
   }, [user, fetchNotifications]);

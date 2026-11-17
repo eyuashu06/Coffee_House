@@ -173,7 +173,7 @@ export default function Home() {
         };
 
         checkStoreStatus();
-        const timer = setInterval(checkStoreStatus, 60000);
+        const timer = setInterval(checkStoreStatus, 300000); // Check every 5 minutes
         return () => clearInterval(timer);
     }, []);
 

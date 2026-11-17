@@ -26,26 +26,60 @@ interface MenuContextType {
 
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
 
+const MENU_CACHE_KEY = 'buna_cached_menu_items';
+const MENU_CACHE_TIME_KEY = 'buna_cached_menu_time';
+const CACHE_DURATION_MS = 15 * 60 * 1000; // 15 minutes fresh cache
+
+function readStoredMenu(): MenuItem[] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(MENU_CACHE_KEY) || localStorage.getItem(MENU_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function readStoredMenuTime(): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const raw = sessionStorage.getItem(MENU_CACHE_TIME_KEY) || localStorage.getItem(MENU_CACHE_TIME_KEY);
+    return raw ? Number(raw) : 0;
+  } catch {
+    return 0;
+  }
+}
+
 // In-memory module-level cache for instant rendering without re-fetching or skeleton spinners
 let cachedMenuItems: MenuItem[] | null = null;
 let cacheTimestamp = 0;
-const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes fresh cache
 
 export function MenuProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<MenuItem[]>(() => cachedMenuItems || []);
+  const [items, setItems] = useState<MenuItem[]>(() => {
+    if (!cachedMenuItems) {
+      cachedMenuItems = readStoredMenu();
+      cacheTimestamp = readStoredMenuTime();
+    }
+    return cachedMenuItems || [];
+  });
+
   const [menuStatus, setMenuStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(() => {
+    if (!cachedMenuItems) {
+      cachedMenuItems = readStoredMenu();
+      cacheTimestamp = readStoredMenuTime();
+    }
     return cachedMenuItems && cachedMenuItems.length > 0 ? 'ready' : 'idle';
   });
 
   const fetchMenu = useCallback(async (forceRefresh = false) => {
-    const isCacheValid = Boolean(cachedMenuItems && Date.now() - cacheTimestamp < CACHE_DURATION_MS);
+    const isCacheValid = Boolean(cachedMenuItems && cachedMenuItems.length > 0 && Date.now() - cacheTimestamp < CACHE_DURATION_MS);
     if (!forceRefresh && isCacheValid && cachedMenuItems && cachedMenuItems.length > 0) {
       setItems(cachedMenuItems);
       setMenuStatus('ready');
       return;
     }
 
-    // Only show loading if we don't have cached data yet
+    // Only show loading spinner if we don't have cached data yet
     setMenuStatus((prev) => (cachedMenuItems && cachedMenuItems.length > 0 ? 'ready' : 'loading'));
 
     try {
@@ -58,6 +92,13 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
       cachedMenuItems = availableList;
       cacheTimestamp = Date.now();
 
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem(MENU_CACHE_KEY, JSON.stringify(availableList));
+          sessionStorage.setItem(MENU_CACHE_TIME_KEY, String(cacheTimestamp));
+        } catch {}
+      }
+
       setItems(availableList);
       setMenuStatus('ready');
     } catch (e) {
@@ -69,7 +110,9 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!cachedMenuItems || cachedMenuItems.length === 0) {
+    // Only fetch if cache is empty or expired
+    const isCacheValid = Boolean(cachedMenuItems && cachedMenuItems.length > 0 && Date.now() - cacheTimestamp < CACHE_DURATION_MS);
+    if (!isCacheValid) {
       void fetchMenu();
     }
   }, [fetchMenu]);
