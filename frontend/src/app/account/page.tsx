@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import OrderTracker from '../../components/OrderTracker';
 import ReceiptModal from '../../components/ReceiptModal';
 import PaymentModal from '../../components/PaymentModal';
+import CartDrawer, { CartItem } from '../../components/CartDrawer';
+import { useCart, readLocalCart } from '../../lib/cart';
 import Link from 'next/link';
 import ThemeToggle from '../../components/ThemeToggle';
 import LanguageToggle from '../../components/LanguageToggle';
@@ -169,8 +171,89 @@ interface Banner {
 
 export default function AccountPage() {
   const { user, loading, checkAuth, logout, sessionExpired, authError, reportUnauthorized } = useAuth();
-  const { t, tItem, locale, language } = useLanguage();
+  const { t, tItem, locale, language, toggleLanguage } = useLanguage();
   const birr = language === 'am' ? 'ብር' : 'ETB';
+
+  // Theme Lightness / Toggle
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  useEffect(() => {
+    setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+  }, []);
+
+  const handleSetTheme = (newTheme: 'light' | 'dark') => {
+    setTheme(newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    try {
+      localStorage.setItem('theme', newTheme);
+    } catch {}
+  };
+
+  // Cart Quick-View
+  const { cart: serverCart, clearCart, setQuantity, removeLine } = useCart(!!user);
+  const [localCart, setLocalCart] = useState<any[]>([]);
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setLocalCart(readLocalCart());
+  }, []);
+
+  const totalCartItems = user
+    ? (serverCart?.item_count || 0)
+    : localCart.reduce((acc, item) => acc + (item.quantity || 1), 0);
+
+  const cartTotalEtb = user
+    ? (serverCart?.total_etb || '0.00')
+    : localCart.reduce((sum, item) => sum + (Number(item.coffee?.price || 0) * (item.quantity || 1)), 0).toFixed(2);
+
+  const drawerCartItems: CartItem[] = user && serverCart?.items
+    ? serverCart.items.map((line) => ({
+        lineKey: `server-${line.id}`,
+        serverLineId: line.id,
+        coffee: {
+          id: line.menu_item,
+          name: line.menu_item_name,
+          price: line.unit_price_etb,
+          image_url: '',
+        },
+        quantity: line.quantity,
+        temperature: line.temperature,
+        milk: line.milk_choice,
+      }))
+    : localCart.map((item, idx) => ({
+        lineKey: item.lineKey || `local-${idx}`,
+        coffee: {
+          id: item.coffee?.id || idx,
+          name: item.coffee?.name || 'Coffee',
+          price: item.coffee?.price || 0,
+          image_url: item.coffee?.image_url || '',
+        },
+        quantity: item.quantity || 1,
+        temperature: item.temperature || 'Hot',
+        milk: item.milk || '',
+      }));
+
+  const handleDrawerUpdateQty = (index: number, delta: number) => {
+    const item = drawerCartItems[index];
+    if (user && item?.serverLineId) {
+      const newQty = item.quantity + delta;
+      if (newQty <= 0) {
+        void removeLine(item.serverLineId);
+      } else {
+        void setQuantity(item.serverLineId, newQty);
+      }
+    }
+  };
+
+  const handleDrawerRemoveItem = (index: number) => {
+    const item = drawerCartItems[index];
+    if (user && item?.serverLineId) {
+      void removeLine(item.serverLineId);
+    }
+  };
+
+  const handleDrawerClearCart = () => {
+    void clearCart();
+  };
   const [activeTab, setActiveTab] = useState<'orders' | 'reservations' | 'addresses' | 'profile'>('orders');
   const [highlightCode, setHighlightCode] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -828,17 +911,13 @@ export default function AccountPage() {
               <span className="font-display text-[19px] sm:text-[21px] tracking-wide truncate">Buna Hub</span>
             </Link>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-            <LanguageToggle className="hidden sm:flex h-9 px-2 sm:px-3 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13px] sm:text-[13.5px] items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" />
-            <Link href="/?welcome=1" className="h-9 px-3.5 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] hidden sm:flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" aria-label="Back to Home">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <Link href="/?welcome=1" className="h-9 px-3.5 rounded-full border border-[var(--border)] text-[var(--muted)] text-[13.5px] hidden sm:flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors shrink-0" aria-label="Back to Storefront">
               <i className="ph ph-storefront text-[16px]"></i>
               <span>{t('Store')}</span>
             </Link>
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              <ThemeToggle className="flex h-9 w-9 shrink-0 cursor-pointer" />
-              <NotificationsDropdown />
-              <ProfileDropdown />
-            </div>
+            <NotificationsDropdown />
+            <ProfileDropdown />
           </div>
         </div>
       </header>
@@ -882,6 +961,135 @@ export default function AccountPage() {
               {t('Confirming payment…')}
             </span>
           )}
+        </div>
+
+        {/* DASHBOARD PREFERENCES & CONTROLS (Consolidated Theme, Language & Cart Quick-View) */}
+        <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-surface-2 border border-[var(--border)] shadow-sm">
+          <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-[var(--border)]/70">
+            <span className="text-[12.5px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
+              <i className="ph ph-sliders text-[16px] text-[var(--accent)]"></i>
+              <span>{t('Preferences & Controls')}</span>
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            {/* 1. Theme Lightness / Toggle */}
+            <div className="p-3.5 rounded-xl bg-surface border border-[var(--border)] flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
+                  <i className="ph ph-palette text-[16px] text-[var(--accent)]"></i>
+                  <span>{t('Theme')}</span>
+                </span>
+                <span className="text-[11px] font-bold uppercase text-[var(--accent)]">
+                  {theme === 'dark' ? t('Dark Mode') : t('Light Mode')}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSetTheme('light')}
+                  className={`flex-1 h-9 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    theme === 'light'
+                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] font-bold'
+                      : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[17px]">light_mode</span>
+                  <span>{t('Light')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetTheme('dark')}
+                  className={`flex-1 h-9 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    theme === 'dark'
+                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] font-bold'
+                      : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[17px]">dark_mode</span>
+                  <span>{t('Dark')}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Language Selector */}
+            <div className="p-3.5 rounded-xl bg-surface border border-[var(--border)] flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
+                  <i className="ph ph-translate text-[16px] text-[var(--accent)]"></i>
+                  <span>{t('Language')}</span>
+                </span>
+                <span className="text-[11px] font-bold uppercase text-[var(--accent)]">
+                  {language === 'am' ? 'አማርኛ' : 'English'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => language !== 'en' && toggleLanguage()}
+                  className={`flex-1 h-9 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    language === 'en'
+                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] font-bold'
+                      : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  <span>🇬🇧</span>
+                  <span>English</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => language !== 'am' && toggleLanguage()}
+                  className={`flex-1 h-9 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    language === 'am'
+                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] font-bold'
+                      : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  <span>🇪🇹</span>
+                  <span>አማርኛ</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Cart Quick-View */}
+            <div className="p-3.5 rounded-xl bg-surface border border-[var(--border)] flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
+                  <i className="ph ph-shopping-bag-open text-[16px] text-[var(--accent)]"></i>
+                  <span>{t('Cart Quick-View')}</span>
+                </span>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)]">
+                  {totalCartItems} {t('Items')}
+                </span>
+              </div>
+              {totalCartItems > 0 ? (
+                <div className="space-y-2">
+                  <div className="text-[12.5px] text-[var(--muted)] flex items-center justify-between">
+                    <span>{t('Total')}:</span>
+                    <strong className="text-[var(--accent)] font-bold">{cartTotalEtb} {birr}</strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCartDrawerOpen(true)}
+                    className="w-full h-9 rounded-lg bg-[var(--accent)] text-[var(--accent-contrast)] text-xs font-bold flex items-center justify-center gap-1.5 hover:brightness-110 transition-all shadow-sm cursor-pointer"
+                  >
+                    <i className="ph ph-shopping-bag text-[15px]"></i>
+                    <span>{t('View & Edit Cart')}</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-[11.5px] text-[var(--muted)]">{t('Your cart is empty')}</p>
+                  <Link
+                    href="/#menu"
+                    className="w-full h-9 rounded-lg border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <i className="ph ph-book-open text-[15px]"></i>
+                    <span>{t('Browse Menu')}</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
         
         {/* TABS (Desktop Rail - hidden on mobile where bottom navigation is used) */}
@@ -1610,6 +1818,16 @@ export default function AccountPage() {
           onPaymentComplete={handlePaymentComplete}
         />
       )}
+
+      {/* CART DRAWER */}
+      <CartDrawer
+        isOpen={isCartDrawerOpen}
+        onClose={() => setIsCartDrawerOpen(false)}
+        cartItems={drawerCartItems}
+        onUpdateQty={handleDrawerUpdateQty}
+        onRemoveItem={handleDrawerRemoveItem}
+        onClearCart={handleDrawerClearCart}
+      />
     </div>
   );
 }

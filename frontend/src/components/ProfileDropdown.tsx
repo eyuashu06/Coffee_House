@@ -235,17 +235,6 @@ export default function ProfileDropdown({
   return (
     <>
       <div className={`flex items-center gap-1.5 sm:gap-2 shrink-0 ${className}`}>
-        {isStaff && !isManagerPage && (
-          <Link
-            href="/manager"
-            className="hidden md:flex h-9.5 px-3 sm:px-3.5 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-[12.5px] sm:text-[13px] items-center gap-1.5 shadow-sm hover:brightness-110 transition-all shrink-0 cursor-pointer"
-            title={t('Manager / Admin Dashboard')}
-          >
-            <i className="ph ph-gauge text-[16px]"></i>
-            <span>{t('Dashboard')}</span>
-          </Link>
-        )}
-
         <div className="relative shrink-0" ref={dropdownRef}>
           {/* Trigger Button */}
           <button
@@ -368,19 +357,16 @@ export default function ProfileDropdown({
 
             {/* Quick Menu Links */}
             <div className="px-1.5 py-1 space-y-0.5">
-              {/* Edit Profile Action */}
+              {/* Account Dashboard */}
               <button
                 type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  setIsEditModalOpen(true);
-                }}
+                onClick={() => handleNavigate('/account')}
                 className="w-full text-left px-3 py-2 rounded-xl text-[13.5px] text-[var(--text)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] transition-colors flex items-center gap-2.5 font-medium group cursor-pointer"
               >
                 <span className="w-7 h-7 rounded-lg bg-surface border border-[var(--border)] flex items-center justify-center text-[var(--muted)] group-hover:text-[var(--accent)] group-hover:border-[var(--accent)] transition-colors">
-                  <i className="ph ph-user-gear text-[16px]"></i>
+                  <i className="ph ph-user text-[16px]"></i>
                 </span>
-                <span>{t('Edit Profile')}</span>
+                <span>{t('My Account')}</span>
               </button>
 
               {/* For Customers or when outside manager page */}
