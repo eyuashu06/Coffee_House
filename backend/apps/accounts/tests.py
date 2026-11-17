@@ -448,3 +448,53 @@ class PhoneLoginTests(TestCase):
         self.assertEqual(res2.data['user']['id'], res.data['user']['id'])
         self.assertEqual(res2.data['user']['first_name'], 'Solomon')
 
+    def test_phone_otp_send_and_verify_flow(self):
+        from .models import PhoneOTP
+
+        # 1. Request OTP
+        send_res = self.client.post('/api/v1/auth/phone-otp/send/', {
+            'phone': '+251912345678',
+            'name': 'Tewodros Kassahun',
+        }, format='json')
+        self.assertEqual(send_res.status_code, status.HTTP_200_OK)
+        self.assertTrue(send_res.data['success'])
+
+        otp_entry = PhoneOTP.objects.filter(phone='+251912345678', is_verified=False).first()
+        self.assertIsNotNone(otp_entry)
+        self.assertEqual(len(otp_entry.otp_code), 6)
+        self.assertTrue(otp_entry.otp_code.isdigit())
+
+        # 2. Try wrong OTP code
+        fail_res = self.client.post('/api/v1/auth/phone-otp/verify/', {
+            'phone': '+251912345678',
+            'otp_code': '000000',
+        }, format='json')
+        self.assertEqual(fail_res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', fail_res.data)
+
+        # 3. Verify with correct OTP code
+        verify_res = self.client.post('/api/v1/auth/phone-otp/verify/', {
+            'phone': '+251912345678',
+            'otp_code': otp_entry.otp_code,
+        }, format='json')
+        self.assertEqual(verify_res.status_code, status.HTTP_200_OK)
+        self.assertTrue(verify_res.data['success'])
+        self.assertIn('access_token', verify_res.cookies)
+        self.assertIn('refresh_token', verify_res.cookies)
+        self.assertEqual(verify_res.data['user']['role'], 'CUSTOMER')
+        self.assertEqual(verify_res.data['user']['first_name'], 'Tewodros')
+        self.assertEqual(verify_res.data['user']['last_name'], 'Kassahun')
+
+        # 4. Attempt to reuse verified OTP fails
+        reuse_res = self.client.post('/api/v1/auth/phone-otp/verify/', {
+            'phone': '+251912345678',
+            'otp_code': otp_entry.otp_code,
+        }, format='json')
+        self.assertEqual(reuse_res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_phone_otp_invalid_phone_rejected(self):
+        res = self.client.post('/api/v1/auth/phone-otp/send/', {
+            'phone': '12345',
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+

@@ -1,9 +1,89 @@
 import re
+import json
+import logging
+import urllib.request
+import urllib.error
 from django.db import models
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from .models import normalize_ethiopian_phone
 
+logger = logging.getLogger(__name__)
+
 User = get_user_model()
+
+
+def send_otp_sms(phone, otp_code, sender_id=None):
+    """
+    Dispatches a 6-digit OTP verification SMS via eSMS Africa (https://sms.esmsafrica.io/).
+    Authenticates with the eSMS API key and sends to the recipient's phone number.
+    """
+    norm_phone = normalize_ethiopian_phone(phone)
+    if not norm_phone:
+        return False, {'error': 'Invalid phone number format.'}
+
+    if not norm_phone.startswith('+'):
+        norm_phone = f"+{norm_phone}"
+
+    # Determine sender ID / phone
+    if not sender_id:
+        try:
+            from apps.menu.models import CafeSettings
+            cafe_settings = CafeSettings.objects.first()
+            if cafe_settings and cafe_settings.primary_phone:
+                sender_id = cafe_settings.primary_phone.strip()
+        except Exception:
+            pass
+
+    if not sender_id:
+        sender_id = getattr(settings, 'ESMS_SENDER_ID', 'BunaHub')
+
+    api_key = getattr(settings, 'ESMS_API_KEY', 'esms_live_1634eb3a37c43f6d08531e703f0a55aa')
+    api_url = getattr(settings, 'ESMS_API_URL', 'https://sms.esmsafrica.io/api/messages/send')
+
+    message_text = f"Your Buna Hub verification code is: {otp_code}. Valid for 5 minutes."
+
+    payload = {
+        'to': norm_phone,
+        'text': message_text,
+        'sender_id': sender_id,
+    }
+
+    req = urllib.request.Request(
+        api_url,
+        data=json.dumps(payload).encode('utf-8'),
+        headers={
+            'Authorization': f"Bearer {api_key}",
+            'Content-Type': 'application/json',
+            'User-Agent': 'BunaHub-OTP/1.0',
+        },
+        method='POST',
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=12) as response:
+            resp_bytes = response.read()
+            resp_data = json.loads(resp_bytes.decode('utf-8', errors='ignore'))
+            logger.info("eSMS Africa OTP dispatched to %s: %s", norm_phone, resp_data)
+            return True, resp_data
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode('utf-8', errors='ignore')
+        try:
+            err_data = json.loads(err_body)
+        except Exception:
+            err_data = {'raw_error': err_body, 'code': e.code}
+
+        logger.warning(
+            "eSMS Africa HTTP %s for %s: %s",
+            e.code,
+            norm_phone,
+            err_data,
+        )
+        return False, err_data
+    except Exception as exc:
+        logger.error("eSMS Africa network exception for %s: %s", norm_phone, exc)
+        return False, {'error': str(exc)}
+
 
 
 def get_or_create_customer_by_phone(phone, name='', email=''):

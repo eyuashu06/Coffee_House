@@ -398,6 +398,11 @@ REQUIRE_EMAIL_MX = os.environ.get('REQUIRE_EMAIL_MX', 'True').lower() in ('1', '
 
 # links.et Ethiopian Bank & Mobile Money Verifier API
 LINKS_ET_API_KEY = os.environ.get('LINKS_ET_API_KEY', 'vk_live_GjM1JhdXLtd-yy3-DHLWtlSYeRgovWyd').strip()
+
+# eSMS Africa SMS Gateway (https://sms.esmsafrica.io/) for Phone OTP Verification
+ESMS_API_KEY = os.environ.get('ESMS_API_KEY', 'esms_live_1634eb3a37c43f6d08531e703f0a55aa').strip()
+ESMS_API_URL = os.environ.get('ESMS_API_URL', 'https://sms.esmsafrica.io/api/messages/send').strip()
+ESMS_SENDER_ID = os.environ.get('ESMS_SENDER_ID', 'BunaHub').strip()
 LINKS_ET_API_URL = os.environ.get('LINKS_ET_API_URL', 'https://links.et').rstrip('/')
 LINKS_ET_TIMEOUT = int(os.environ.get('LINKS_ET_TIMEOUT', '25'))
 

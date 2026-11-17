@@ -11,6 +11,8 @@ from .views import (
     PasswordResetConfirmView,
     NotificationViewSet,
     PhoneLoginView,
+    PhoneOTPSendView,
+    PhoneOTPVerifyView,
 )
 
 class OptionalSlashRouter(DefaultRouter):
@@ -23,6 +25,10 @@ router.register(r'addresses', AddressViewSet, basename='address')
 router.register(r'auth/notifications', NotificationViewSet, basename='notification')
 
 urlpatterns = [
+    path('auth/phone-otp/send/', PhoneOTPSendView.as_view(), name='auth-phone-otp-send'),
+    path('auth/phone-otp/send', PhoneOTPSendView.as_view(), name='auth-phone-otp-send-noslash'),
+    path('auth/phone-otp/verify/', PhoneOTPVerifyView.as_view(), name='auth-phone-otp-verify'),
+    path('auth/phone-otp/verify', PhoneOTPVerifyView.as_view(), name='auth-phone-otp-verify-noslash'),
     path('auth/phone-login/', PhoneLoginView.as_view(), name='auth-phone-login'),
     path('auth/phone-login', PhoneLoginView.as_view(), name='auth-phone-login-noslash'),
     path('auth/register/', RegisterView.as_view(), name='auth-register'),

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Address, PasswordResetOTP
+from .models import User, Address, PasswordResetOTP, PhoneOTP
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -22,3 +22,10 @@ class PasswordResetOTPAdmin(admin.ModelAdmin):
     list_display = ('user', 'otp_code', 'created_at', 'expires_at', 'is_used')
     list_filter = ('is_used', 'created_at')
     search_fields = ('user__email', 'user__username', 'otp_code')
+
+
+@admin.register(PhoneOTP)
+class PhoneOTPAdmin(admin.ModelAdmin):
+    list_display = ('phone', 'otp_code', 'full_name', 'created_at', 'expires_at', 'is_verified', 'attempts')
+    list_filter = ('is_verified', 'created_at')
+    search_fields = ('phone', 'otp_code', 'full_name')

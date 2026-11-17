@@ -100,3 +100,23 @@ class PasswordResetOTP(models.Model):
 
     def __str__(self):
         return f"OTP for {self.user.email}: {self.otp_code} (Used: {self.is_used})"
+
+
+class PhoneOTP(models.Model):
+    phone = models.CharField(max_length=20, db_index=True)
+    otp_code = models.CharField(max_length=6, db_index=True)
+    full_name = models.CharField(max_length=150, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_verified = models.BooleanField(default=False)
+    attempts = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def is_valid(self):
+        from django.utils import timezone
+        return not self.is_verified and timezone.now() < self.expires_at and self.attempts < 5
+
+    def __str__(self):
+        return f"PhoneOTP for {self.phone}: {self.otp_code} (Verified: {self.is_verified})"

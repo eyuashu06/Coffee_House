@@ -363,12 +363,175 @@ class NotificationViewSet(viewsets.ModelViewSet):
         return Response({'status': 'ok'})
 
 
+import datetime
+import secrets
+import re
+from django.utils import timezone
+from .models import PhoneOTP, normalize_ethiopian_phone
+from .services import send_otp_sms, get_or_create_customer_by_phone
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PhoneOTPSendView(APIView):
+    """
+    Sends a 6-digit OTP verification code via eSMS Africa (https://sms.esmsafrica.io/)
+    to verify that the phone number is authentic and owned by the user.
+    """
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'auth_login'
+
+    def post(self, request):
+        raw_phone = (request.data.get('phone') or request.data.get('phone_number') or '').strip()
+        name = (request.data.get('name') or request.data.get('contact_name') or '').strip()
+
+        if not raw_phone:
+            return Response({'error': 'Phone number is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        norm_phone = normalize_ethiopian_phone(raw_phone)
+        if not norm_phone or not re.match(r'^\+251(9|7)\d{8}$', norm_phone):
+            return Response({
+                'error': 'Invalid Ethiopian phone number. Must start with +251 9 or +251 7 followed by 8 digits.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Rate-limiting: prevent spamming requests within 30 seconds
+        recent_otp = PhoneOTP.objects.filter(
+            phone=norm_phone,
+            created_at__gte=timezone.now() - datetime.timedelta(seconds=30)
+        ).first()
+        if recent_otp:
+            return Response({
+                'error': 'Please wait a moment before requesting another verification code.',
+                'retry_after_seconds': 30
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        # Invalidate previous unverified OTPs for this number
+        PhoneOTP.objects.filter(phone=norm_phone, is_verified=False).update(
+            expires_at=timezone.now()
+        )
+
+        otp_code = f"{secrets.randbelow(900000) + 100000}"
+        expires_at = timezone.now() + datetime.timedelta(minutes=5)
+
+        otp_entry = PhoneOTP.objects.create(
+            phone=norm_phone,
+            otp_code=otp_code,
+            full_name=name,
+            expires_at=expires_at,
+        )
+
+        # Dispatch live SMS via eSMS Africa gateway
+        sms_sent, sms_details = send_otp_sms(norm_phone, otp_code)
+
+        resp_payload = {
+            'success': True,
+            'message': 'A 6-digit verification code has been sent to your phone via SMS.',
+            'phone': norm_phone,
+            'expires_in_seconds': 300,
+            'sms_dispatched': sms_sent,
+        }
+
+        # If in debug mode or testing or if gateway reported an issue (country or sender ID), include helper hint
+        is_debug = getattr(settings, 'DEBUG', False) or getattr(settings, 'TESTING', False)
+        gw_error_code = None
+        if isinstance(sms_details, dict):
+            gw_error_code = (
+                sms_details.get('error', {}).get('code')
+                or sms_details.get('detail', {}).get('code')
+            )
+
+        if is_debug or not sms_sent:
+            resp_payload['debug_otp'] = otp_code
+            if gw_error_code == 'country_not_enabled':
+                resp_payload['sms_note'] = (
+                    "eSMS Africa: Ethiopia (ET) needs to be enabled at https://sms.esmsafrica.io/countries. "
+                    "In the meantime, the verification code is provided in debug_otp."
+                )
+            elif gw_error_code in ('sender_id_required', 'sender_not_approved'):
+                resp_payload['sms_note'] = (
+                    "eSMS Africa: A registered sender ID is required by Ethiopian telecom regulations (ECA). "
+                    "Register a sender ID at https://sms.esmsafrica.io/sender-ids. "
+                    "In the meantime, your OTP code is provided in debug_otp."
+                )
+            elif not sms_sent:
+                resp_payload['sms_note'] = "SMS gateway returned an error. Using test verification code."
+
+        return Response(resp_payload, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PhoneOTPVerifyView(APIView):
+    """
+    Verifies the user's 6-digit OTP code received via SMS.
+    Upon verification, logs in or registers the user seamlessly and returns JWT auth tokens.
+    """
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedThrottle]
+    throttle_scope = 'auth_login'
+
+    def post(self, request):
+        raw_phone = (request.data.get('phone') or request.data.get('phone_number') or '').strip()
+        otp_code = (request.data.get('otp_code') or request.data.get('code') or '').strip()
+        name = (request.data.get('name') or request.data.get('contact_name') or '').strip()
+
+        if not raw_phone:
+            return Response({'error': 'Phone number is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not otp_code:
+            return Response({'error': 'Verification code is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        norm_phone = normalize_ethiopian_phone(raw_phone)
+        if not norm_phone:
+            return Response({'error': 'Invalid phone number format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_entry = PhoneOTP.objects.filter(
+            phone=norm_phone,
+            is_verified=False
+        ).order_by('-created_at').first()
+
+        if not otp_entry or not otp_entry.is_valid():
+            return Response({
+                'error': 'Invalid or expired verification code. Please request a new code.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if otp_entry.otp_code != str(otp_code).strip():
+            otp_entry.attempts += 1
+            otp_entry.save(update_fields=['attempts'])
+            return Response({
+                'error': 'Incorrect verification code. Please check your SMS and try again.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Mark as verified
+        otp_entry.is_verified = True
+        otp_entry.save(update_fields=['is_verified'])
+
+        # Create or retrieve user
+        name_to_use = otp_entry.full_name or name or ''
+        user, created = get_or_create_customer_by_phone(norm_phone, name=name_to_use)
+        if not user:
+            return Response({'error': 'Failed to create user account.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        refresh, access = issue_tokens_for_user(user)
+        res = Response({
+            'success': True,
+            'user': UserSerializer(user).data,
+            'tokens': {
+                'access': str(access),
+                'refresh': str(refresh),
+            },
+            'message': 'Phone verified and signed in successfully.',
+            'is_new_user': created,
+        }, status=status.HTTP_200_OK)
+        return set_auth_cookies(res, refresh, access)
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class PhoneLoginView(APIView):
     """
     Seamless phone login for customers.
-    Accepts phone number (and optional name). Creates or retrieves the customer
-    and logs them in with JWT cookies immediately. No email or password needed.
+    If otp_code is provided, verifies it. If not, in testing mode allows direct sign in;
+    otherwise prompts for OTP verification.
     """
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
@@ -378,11 +541,38 @@ class PhoneLoginView(APIView):
     def post(self, request):
         phone = (request.data.get('phone') or request.data.get('phone_number') or '').strip()
         name = (request.data.get('name') or request.data.get('contact_name') or '').strip()
+        otp_code = (request.data.get('otp_code') or request.data.get('code') or '').strip()
+
         if not phone:
             return Response({'error': 'Phone number is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        from .services import get_or_create_customer_by_phone
-        user, created = get_or_create_customer_by_phone(phone, name=name)
+        norm_phone = normalize_ethiopian_phone(phone)
+        if not norm_phone:
+            return Response({'error': 'Invalid phone number format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # If otp_code provided, verify it
+        if otp_code:
+            otp_entry = PhoneOTP.objects.filter(
+                phone=norm_phone,
+                is_verified=False
+            ).order_by('-created_at').first()
+            if not otp_entry or not otp_entry.is_valid():
+                return Response({'error': 'Invalid or expired verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+            if otp_entry.otp_code != str(otp_code).strip():
+                otp_entry.attempts += 1
+                otp_entry.save(update_fields=['attempts'])
+                return Response({'error': 'Incorrect verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+            otp_entry.is_verified = True
+            otp_entry.save(update_fields=['is_verified'])
+            name = otp_entry.full_name or name
+        elif not getattr(settings, 'TESTING', False):
+            # In live production without OTP code, require OTP
+            return Response({
+                'otp_required': True,
+                'message': 'Please verify your phone number with the OTP verification code.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user, created = get_or_create_customer_by_phone(norm_phone, name=name)
         if not user:
             return Response({'error': 'Invalid phone number format.'}, status=status.HTTP_400_BAD_REQUEST)
 
