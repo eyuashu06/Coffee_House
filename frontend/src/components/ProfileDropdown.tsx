@@ -394,43 +394,39 @@ export default function ProfileDropdown({
                 <span>{t('My Account')}</span>
               </button>
 
-              {/* For Customers or when outside manager page */}
-              {!isManagerPage && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleNavigate('/account?tab=orders')}
-                    className="w-full text-left px-3 py-2 rounded-xl text-[13.5px] text-[var(--text)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] transition-colors flex items-center gap-2.5 font-medium group cursor-pointer"
-                  >
-                    <span className="w-7 h-7 rounded-lg bg-surface border border-[var(--border)] flex items-center justify-center text-[var(--muted)] group-hover:text-[var(--accent)] group-hover:border-[var(--accent)] transition-colors">
-                      <i className="ph ph-receipt text-[16px]"></i>
-                    </span>
-                    <span>{t('My Orders')}</span>
-                  </button>
+              {/* My Orders (Customer-style orders view for all users, including admins) */}
+              <button
+                type="button"
+                onClick={() => handleNavigate('/account?tab=orders')}
+                className="w-full text-left px-3 py-2 rounded-xl text-[13.5px] text-[var(--text)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] transition-colors flex items-center gap-2.5 font-medium group cursor-pointer"
+              >
+                <span className="w-7 h-7 rounded-lg bg-surface border border-[var(--border)] flex items-center justify-center text-[var(--muted)] group-hover:text-[var(--accent)] group-hover:border-[var(--accent)] transition-colors">
+                  <i className="ph ph-receipt text-[16px]"></i>
+                </span>
+                <span>{isManagerPage ? t('My Personal Orders', 'የእኔ የግል ትዕዛዞች') : t('My Orders')}</span>
+              </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleNavigate('/account?tab=reservations')}
-                    className="w-full text-left px-3 py-2 rounded-xl text-[13.5px] text-[var(--text)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] transition-colors flex items-center gap-2.5 font-medium group cursor-pointer"
-                  >
-                    <span className="w-7 h-7 rounded-lg bg-surface border border-[var(--border)] flex items-center justify-center text-[var(--muted)] group-hover:text-[var(--accent)] group-hover:border-[var(--accent)] transition-colors">
-                      <i className="ph ph-calendar-check text-[16px]"></i>
-                    </span>
-                    <span>{t('Table Reservations')}</span>
-                  </button>
+              <button
+                type="button"
+                onClick={() => handleNavigate('/account?tab=reservations')}
+                className="w-full text-left px-3 py-2 rounded-xl text-[13.5px] text-[var(--text)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] transition-colors flex items-center gap-2.5 font-medium group cursor-pointer"
+              >
+                <span className="w-7 h-7 rounded-lg bg-surface border border-[var(--border)] flex items-center justify-center text-[var(--muted)] group-hover:text-[var(--accent)] group-hover:border-[var(--accent)] transition-colors">
+                  <i className="ph ph-calendar-check text-[16px]"></i>
+                </span>
+                <span>{t('Table Reservations')}</span>
+              </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleNavigate('/account?tab=addresses')}
-                    className="w-full text-left px-3 py-2 rounded-xl text-[13.5px] text-[var(--text)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] transition-colors flex items-center gap-2.5 font-medium group cursor-pointer"
-                  >
-                    <span className="w-7 h-7 rounded-lg bg-surface border border-[var(--border)] flex items-center justify-center text-[var(--muted)] group-hover:text-[var(--accent)] group-hover:border-[var(--accent)] transition-colors">
-                      <i className="ph ph-map-pin text-[16px]"></i>
-                    </span>
-                    <span>{t('Delivery Addresses')}</span>
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                onClick={() => handleNavigate('/account?tab=addresses')}
+                className="w-full text-left px-3 py-2 rounded-xl text-[13.5px] text-[var(--text)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] transition-colors flex items-center gap-2.5 font-medium group cursor-pointer"
+              >
+                <span className="w-7 h-7 rounded-lg bg-surface border border-[var(--border)] flex items-center justify-center text-[var(--muted)] group-hover:text-[var(--accent)] group-hover:border-[var(--accent)] transition-colors">
+                  <i className="ph ph-map-pin text-[16px]"></i>
+                </span>
+                <span>{t('Delivery Addresses')}</span>
+              </button>
 
               {/* Manager Dashboard (Staff only, when not already on manager page) */}
               {isStaff && !isManagerPage && (

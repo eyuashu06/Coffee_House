@@ -170,6 +170,7 @@ interface Banner {
 
 export default function AccountPage() {
   const { user, loading, checkAuth, logout, sessionExpired, authError, reportUnauthorized } = useAuth();
+  const isStaff = user?.role === 'ADMIN' || user?.role === 'MANAGER';
   const { t, tItem, locale, language, toggleLanguage } = useLanguage();
   const birr = language === 'am' ? 'ብር' : 'ETB';
 
@@ -904,6 +905,12 @@ export default function AccountPage() {
               <i className="ph ph-storefront text-[16px]"></i>
               <span>{t('Store')}</span>
             </Link>
+            {isStaff && (
+              <Link href="/manager" className="h-9 px-3 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] font-bold text-[12.5px] sm:text-[13px] flex items-center gap-1.5 hover:bg-[var(--accent)] hover:text-[var(--accent-contrast)] transition-all shrink-0" title={t('Manager Dashboard')}>
+                <i className="ph ph-gauge text-[15px]"></i>
+                <span className="hidden sm:inline">{t('Dashboard')}</span>
+              </Link>
+            )}
             <NotificationsDropdown />
             <ProfileDropdown />
           </div>

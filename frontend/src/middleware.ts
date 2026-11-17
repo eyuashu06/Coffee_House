@@ -61,12 +61,9 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // ── Customer pages: customers only (staff go to their dashboard) ───────
+  // ── Customer pages: authenticated users only ───────
   if (pathname.startsWith('/account') || pathname.startsWith('/profile')) {
     if (!isAuthenticated) return loginRedirect(pathname);
-    if (isStaff) {
-      return NextResponse.redirect(new URL('/manager', request.url));
-    }
   }
 
   // ── Staff must never land on the customer welcome page ─────────────────
