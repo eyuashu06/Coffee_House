@@ -168,10 +168,7 @@ class Payment(models.Model):
             now = timezone.now()
             order.placed_at = now
             order.step_started_at = now
-            order.save()
             order.rejection_reason = ''
-            if not order.placed_at:
-                order.placed_at = timezone.now()
             order.save()
             OrderStatusHistory.objects.create(
                 order=order,
