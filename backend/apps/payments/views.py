@@ -859,54 +859,60 @@ class ApprovePaymentView(APIView):
 
     def post(self, request, pk):
         from django.utils import timezone
+        import uuid
 
-        try:
-            if str(pk).isdigit():
-                payment = Payment.objects.select_related('order').filter(pk=int(pk)).first()
-                if not payment:
-                    payment = Payment.objects.select_related('order').filter(order_id=int(pk)).order_by('-created_at').first()
-                if not payment:
-                    order = Order.objects.filter(pk=int(pk)).first()
-                    if order:
-                        payment = Payment.objects.create(
-                            order=order,
-                            tx_ref=f"TX-ORD-{order.id}-{int(time.time())}",
-                            payment_method='cash',
-                            amount_etb=order.total_amount_etb,
-                            currency='ETB',
-                            status='PENDING',
-                        )
-                    else:
-                        raise Payment.DoesNotExist
-            else:
-                payment = Payment.objects.select_related('order').filter(tx_ref=str(pk)).first()
-                if not payment:
-                    payment = Payment.objects.select_related('order').filter(order__order_number=str(pk)).order_by('-created_at').first()
-                if not payment:
-                    order = Order.objects.filter(order_number=str(pk)).first()
-                    if order:
-                        payment = Payment.objects.create(
-                            order=order,
-                            tx_ref=f"TX-ORD-{order.id}-{int(time.time())}",
-                            payment_method='cash',
-                            amount_etb=order.total_amount_etb,
-                            currency='ETB',
-                            status='PENDING',
-                        )
-                    else:
-                        raise Payment.DoesNotExist
-        except Payment.DoesNotExist:
-            return Response({'error': 'Payment transaction not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if payment.status == 'SUCCESS':
-            return Response({
-                'message': 'Payment is already approved and confirmed.',
-                'payment': PaymentSerializer(payment).data,
-                'order_status': payment.order.status,
-            }, status=status.HTTP_200_OK)
-
-        notes = request.data.get('notes', '').strip()
+        order_id = request.data.get('order_id')
         payment_method = request.data.get('payment_method')
+        notes = request.data.get('notes', '').strip()
+
+        order = None
+        payment = None
+
+        # 1. If explicit order_id was provided, resolve the order directly
+        if order_id and str(order_id).isdigit():
+            order = Order.objects.filter(pk=int(order_id)).first()
+
+        # 2. If pk was provided in URL
+        if str(pk).isdigit():
+            pk_int = int(pk)
+            # Check if pk is a Payment pk
+            payment_candidate = Payment.objects.select_related('order').filter(pk=pk_int).first()
+            if payment_candidate:
+                if not order or payment_candidate.order_id == order.id:
+                    payment = payment_candidate
+                    order = payment.order
+
+            # If still no order, check if pk_int was an Order ID
+            if not order:
+                order = Order.objects.filter(pk=pk_int).first()
+        else:
+            # pk is string (tx_ref or order_number)
+            payment_candidate = Payment.objects.select_related('order').filter(tx_ref=str(pk)).first()
+            if payment_candidate:
+                payment = payment_candidate
+                order = payment.order
+            if not order:
+                order = Order.objects.filter(order_number=str(pk)).first()
+
+        if not order and not payment:
+            return Response({'error': 'Payment transaction or order not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not order and payment:
+            order = payment.order
+
+        # 3. Ensure order has an associated payment record
+        if not payment and order:
+            payment = Payment.objects.select_related('order').filter(order=order).order_by('-created_at').first()
+            if not payment:
+                payment = Payment.objects.create(
+                    order=order,
+                    tx_ref=f"TX-ORD-{order.id}-{uuid.uuid4().hex[:8]}",
+                    payment_method=payment_method or 'cash',
+                    amount_etb=order.total_amount_etb,
+                    currency='ETB',
+                    status='PENDING',
+                )
+
         if payment_method:
             payment.payment_method = payment_method
 
@@ -915,6 +921,28 @@ class ApprovePaymentView(APIView):
         if notes:
             payment.approval_notes = notes
 
+        if payment.status == 'SUCCESS':
+            # Check if order is stuck in PENDING_PAYMENT or EXPIRED and needs advancement
+            if order.status in ('PENDING_PAYMENT', 'EXPIRED'):
+                order.status = 'PLACED'
+                now = timezone.now()
+                if not order.placed_at:
+                    order.placed_at = now
+                order.step_started_at = now
+                order.rejection_reason = ''
+                order.save()
+                OrderStatusHistory.objects.create(
+                    order=order,
+                    status='PLACED',
+                    changed_by=request.user,
+                    notes=f'Payment confirmed ({payment.payment_method})',
+                )
+            return Response({
+                'message': f"Payment for Order #{order.order_number} confirmed and approved. Sent to kitchen.",
+                'payment': PaymentSerializer(payment).data,
+                'order_status': order.status,
+            }, status=status.HTTP_200_OK)
+
         ref = payment.transaction_reference or f"APPROVED_{request.user.username}_{int(time.time())}"
         payment.mark_as_success(
             chapa_ref=ref,
@@ -922,10 +950,27 @@ class ApprovePaymentView(APIView):
             gateway_status='approved'
         )
 
+        # Guarantee that order status is PLACED if it was in PENDING_PAYMENT or EXPIRED
+        order.refresh_from_db()
+        if order.status in ('PENDING_PAYMENT', 'EXPIRED'):
+            order.status = 'PLACED'
+            now = timezone.now()
+            if not order.placed_at:
+                order.placed_at = now
+            order.step_started_at = now
+            order.rejection_reason = ''
+            order.save()
+            OrderStatusHistory.objects.create(
+                order=order,
+                status='PLACED',
+                changed_by=request.user,
+                notes=f'Payment confirmed ({payment.payment_method})',
+            )
+
         return Response({
-            'message': f"Payment for Order #{payment.order.order_number} confirmed and approved. Sent to kitchen.",
+            'message': f"Payment for Order #{order.order_number} confirmed and approved. Sent to kitchen.",
             'payment': PaymentSerializer(payment).data,
-            'order_status': payment.order.status,
+            'order_status': order.status,
         }, status=status.HTTP_200_OK)
 
 

@@ -50,7 +50,8 @@ class User(AbstractUser):
         super().save(*args, **kwargs)
 
     def is_manager_or_admin(self):
-        return self.role in ['MANAGER', 'ADMIN'] or self.is_superuser
+        role = (self.role or '').upper()
+        return role in ['MANAGER', 'ADMIN'] or self.is_superuser or self.is_staff
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"

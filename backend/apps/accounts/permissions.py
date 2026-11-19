@@ -9,13 +9,18 @@ class IsCustomer(permissions.BasePermission):
 
 class IsManager(permissions.BasePermission):
     """
-    Permission allowing access only to users with role 'MANAGER', 'ADMIN', or superuser.
+    Permission allowing access only to users with role 'MANAGER', 'ADMIN', staff, or superuser.
     """
     def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        role = getattr(user, 'role', '')
+        if isinstance(role, str) and role.upper() in ['MANAGER', 'ADMIN']:
+            return True
         return bool(
-            request.user and
-            request.user.is_authenticated and
-            (request.user.role in ['MANAGER', 'ADMIN'] or request.user.is_superuser)
+            getattr(user, 'is_staff', False) or
+            getattr(user, 'is_superuser', False)
         )
 
 class IsAdminUser(permissions.BasePermission):

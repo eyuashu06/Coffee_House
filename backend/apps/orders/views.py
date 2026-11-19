@@ -269,6 +269,16 @@ class OrderViewSet(viewsets.ModelViewSet):
                 order.placed_at = timezone.now()
             if not order.step_started_at:
                 order.step_started_at = timezone.now()
+            # If manager manually confirms order to PLACED, mark pending payment as success if exists
+            pending_pay = order.payments.filter(status='PENDING').order_by('-created_at').first()
+            if pending_pay:
+                pending_pay.approved_by = request.user
+                pending_pay.approved_at = timezone.now()
+                pending_pay.mark_as_success(
+                    chapa_ref=f"MANUAL_PLACED_{request.user.username}_{int(time.time())}",
+                    raw_data=f"Approved via update_status by {request.user.username}",
+                    gateway_status='approved'
+                )
         if new_status in ['REJECTED', 'CANCELLED']:
             reason = request.data.get('rejection_reason') or request.data.get('notes')
             if reason:
