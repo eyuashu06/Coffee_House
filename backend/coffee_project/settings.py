@@ -230,6 +230,9 @@ if use_sqlite_forced:
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
+            'OPTIONS': {
+                'timeout': 30,
+            },
         }
     }
 else:
@@ -323,6 +326,9 @@ else:
                 'default': {
                     'ENGINE': 'django.db.backends.sqlite3',
                     'NAME': _sqlite_path,
+                    'OPTIONS': {
+                        'timeout': 30,
+                    },
                 }
             }
         else:
@@ -340,6 +346,33 @@ else:
                     }
                 }
             }
+
+# Optimize SQLite concurrency with WAL mode and busy timeout when SQLite is used
+from django.db.backends.signals import connection_created
+from django.dispatch import receiver
+
+@receiver(connection_created)
+def _configure_sqlite_wal(sender, connection, **kwargs):
+    if connection.vendor == 'sqlite':
+        try:
+            cursor = connection.cursor()
+            cursor.execute('PRAGMA journal_mode = WAL;')
+            cursor.execute('PRAGMA synchronous = NORMAL;')
+            cursor.execute('PRAGMA busy_timeout = 30000;')
+        except Exception:
+            pass
+
+# In-memory cache for high-frequency catalog and public reads
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'buna-hub-cache',
+        'TIMEOUT': 300,
+        'OPTIONS': {
+            'MAX_ENTRIES': 2000,
+        }
+    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -497,6 +530,7 @@ SIMPLE_JWT = {
 }
 
 REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'coffee_project.exceptions.custom_exception_handler',
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'apps.accounts.authentication.JWTCookieAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',

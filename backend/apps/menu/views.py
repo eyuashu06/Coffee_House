@@ -3,6 +3,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db import models
+from django.core.cache import cache
 from .models import Category, MenuItem, CafeSettings, CafeLocation
 from .serializers import (
     CategorySerializer,
@@ -22,6 +23,31 @@ class CategoryViewSet(viewsets.ModelViewSet):
             return [IsManager()]
         return [permissions.AllowAny()]
 
+    def list(self, request, *args, **kwargs):
+        cache_key = "categories_list"
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            resp = Response(cached_data)
+            resp['Cache-Control'] = 'public, max-age=120'
+            return resp
+        response = super().list(request, *args, **kwargs)
+        if response.status_code == 200:
+            cache.set(cache_key, response.data, timeout=120)
+            response['Cache-Control'] = 'public, max-age=120'
+        return response
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        cache.clear()
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        cache.clear()
+
+    def perform_destroy(self, instance):
+        super().perform_destroy(instance)
+        cache.clear()
+
 
 class MenuItemViewSet(viewsets.ModelViewSet):
     """
@@ -31,12 +57,19 @@ class MenuItemViewSet(viewsets.ModelViewSet):
     """
     serializer_class = MenuItemSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
-    queryset = MenuItem.objects.select_related('category').order_by('category__display_order', 'name')
+    queryset = (
+        MenuItem.objects.select_related('category')
+        .prefetch_related('variants', 'add_ons')
+        .order_by('category__display_order', 'name')
+    )
 
     def get_queryset(self):
-        qs = MenuItem.objects.select_related('category')
+        qs = (
+            MenuItem.objects.select_related('category')
+            .prefetch_related('variants', 'add_ons')
+        )
         category = self.request.query_params.get('category')
-        search = self.request.query_params.get('search')
+        search = (self.request.query_params.get('search') or '').strip()[:100]
         available = self.request.query_params.get('available')
         if category and category != 'all':
             qs = qs.filter(category__slug=category)
@@ -50,6 +83,35 @@ class MenuItemViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsManager()]
         return [permissions.AllowAny()]
+
+    def list(self, request, *args, **kwargs):
+        query_string = request.META.get('QUERY_STRING', '')
+        cache_key = f"menu_items_list_{query_string}"
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            resp = Response(cached_data)
+            resp['Cache-Control'] = 'public, max-age=60'
+            resp['X-Cache'] = 'HIT'
+            return resp
+
+        response = super().list(request, *args, **kwargs)
+        if response.status_code == 200:
+            cache.set(cache_key, response.data, timeout=60)
+            response['Cache-Control'] = 'public, max-age=60'
+            response['X-Cache'] = 'MISS'
+        return response
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        cache.clear()
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        cache.clear()
+
+    def perform_destroy(self, instance):
+        super().perform_destroy(instance)
+        cache.clear()
 
 
 class CafeSettingsView(APIView):

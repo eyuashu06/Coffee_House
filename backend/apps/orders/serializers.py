@@ -1,4 +1,5 @@
 import time
+import uuid
 from rest_framework import serializers
 from decimal import Decimal
 from django.utils import timezone
@@ -43,6 +44,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
     add_ons = OrderItemAddOnSerializer(many=True, required=False)
     item_name = serializers.CharField(required=False, allow_blank=True)
     unit_price_etb = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    quantity = serializers.IntegerField(min_value=1, max_value=100, default=1)
     # Backend always computes this — never required from frontend
     subtotal_etb = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     temperature = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -223,6 +225,12 @@ class OrderSerializer(serializers.ModelSerializer):
         items = attrs.get('items')
         if items is not None and not items:
             raise serializers.ValidationError({'items': ['Your cart is empty.']})
+        if items and len(items) > 50:
+            raise serializers.ValidationError({'items': ['An order cannot contain more than 50 items.']})
+
+        notes = attrs.get('notes')
+        if notes and len(notes) > 1000:
+            attrs['notes'] = notes[:1000]
 
         return attrs
 
@@ -262,7 +270,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         # Generate unique order number
         timestamp_part = time.strftime('%Y%m%d')
-        random_suffix = str(int(time.time() * 1000))[-4:]
+        random_suffix = f"{int(time.time() * 1000) % 10000:04d}-{uuid.uuid4().hex[:4].upper()}"
         validated_data['order_number'] = f"ORD-{timestamp_part}-{random_suffix}"
 
         # Promise a prep time from the lines actually in the order, so a food-heavy

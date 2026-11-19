@@ -55,7 +55,8 @@ class AssistantMessageView(APIView):
         query = request.data.get('query') or request.data.get('message') or ''
         session_id = request.data.get('session_id') or request.headers.get('X-Assistant-Session')
 
-        if not str(query).strip():
+        query_text = str(query).strip()
+        if not query_text:
             return Response({
                 'answer': "**English 🇬🇧**\n\nPlease type a question first.\n\n**አማርኛ 🇪🇹**\n\nእባክዎን መጀመሪያ ጥያቄዎን ይጻፉ።",
                 'answer_en': 'Please type a question first.',
@@ -65,9 +66,13 @@ class AssistantMessageView(APIView):
                 'engine': 'deterministic',
             }, status=status.HTTP_200_OK)
 
+        # Truncate oversized prompts to prevent memory or regex exhaustion under abuse
+        if len(query_text) > 2000:
+            query_text = query_text[:2000]
+
         try:
             user = request.user if request.user and request.user.is_authenticated else None
-            result = answer_query(str(query), session_id=session_id, user=user)
+            result = answer_query(query_text, session_id=session_id, user=user)
             return Response(result, status=status.HTTP_200_OK)
         except DatabaseError:
             logger.exception('Assistant database error')

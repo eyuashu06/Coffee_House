@@ -62,7 +62,20 @@ class OrderViewSet(viewsets.ModelViewSet):
                           'Our opening hours are ' + venue.opening_hours},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-        response = super().create(request, *args, **kwargs)
+
+        # Retry briefly with exponential backoff if database file lock contends under burst
+        max_retries = 3
+        response = None
+        for attempt in range(max_retries):
+            try:
+                response = super().create(request, *args, **kwargs)
+                break
+            except Exception as exc:
+                if 'locked' in str(exc).lower() and attempt < max_retries - 1:
+                    import random
+                    time.sleep(0.05 * (attempt + 1) + random.uniform(0.01, 0.05))
+                    continue
+                raise
         if response.status_code == status.HTTP_201_CREATED and response.data:
             order_id = response.data.get('id')
             if order_id:
@@ -131,7 +144,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         # The footer's order tracker looks an order up by its code, and the manager
         # panel will want the same. Scoped to whatever get_queryset() already allows,
         # so a customer can never search their way into someone else's order.
-        search = self.request.query_params.get('search', '').strip()
+        search = (self.request.query_params.get('search', '') or '').strip()[:100]
         if search:
             queryset = queryset.filter(
                 models.Q(order_number__icontains=search)

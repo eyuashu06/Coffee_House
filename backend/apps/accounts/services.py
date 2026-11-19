@@ -127,8 +127,17 @@ def get_or_create_customer_by_phone(phone, name='', email=''):
             role='CUSTOMER'
         )
         user.set_unusable_password()
-        user.save()
-        created = True
+        try:
+            user.save()
+            created = True
+        except Exception as e:
+            # Concurrency race condition: parallel thread inserted user with same username/phone
+            user = User.objects.filter(
+                models.Q(phone=norm_phone) |
+                models.Q(username=norm_phone) |
+                models.Q(username=clean_digits)
+            ).first()
+            created = False
     else:
         fields_to_update = []
         name_clean = (name or '').strip()
