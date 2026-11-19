@@ -1198,6 +1198,7 @@ export default function ManagerDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          order_id: orderId,
           notes: options?.notes || 'Verified and approved by manager portal',
           payment_method: options?.payment_method || undefined,
         }),
@@ -1206,6 +1207,29 @@ export default function ManagerDashboard() {
         const data = await res.json();
         setActionMsg(`✅ ${data.message || t('Payment approved and order sent to kitchen!')}`);
         setTimeout(() => setActionMsg(null), 3500);
+        if (orderId) {
+          setOrders(prev => prev.map(o => {
+            if (o.id === orderId) {
+              return {
+                ...o,
+                status: 'PLACED',
+                payment_state: 'paid',
+                latest_payment: o.latest_payment ? {
+                  ...o.latest_payment,
+                  status: 'SUCCESS',
+                  payment_method: options?.payment_method || o.latest_payment.payment_method || 'cash',
+                } : {
+                  id: 0,
+                  tx_ref: `TX-ORD-${orderId}`,
+                  status: 'SUCCESS',
+                  payment_method: options?.payment_method || 'cash',
+                  created_at: new Date().toISOString(),
+                },
+              };
+            }
+            return o;
+          }));
+        }
         await fetchOrders();
         fetchAnalytics();
       } else {
@@ -1999,7 +2023,7 @@ export default function ManagerDashboard() {
                                 <button
                                   type="button"
                                   disabled={isApprovingPayment === order.id}
-                                  onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
+                                  onClick={() => handleApprovePayment(order.latest_payment?.id, order.id, { payment_method: 'cash', notes: 'Cash collected by staff' })}
                                   className="flex-1 h-9 rounded-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[12px] flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
                                 >
                                   {isApprovingPayment === order.id ? (
@@ -2545,7 +2569,7 @@ export default function ManagerDashboard() {
                                           <button
                                             type="button"
                                             disabled={isApprovingPayment === order.id}
-                                            onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
+                                            onClick={() => handleApprovePayment(order.latest_payment?.id, order.id, { payment_method: 'cash', notes: 'Cash collected by staff' })}
                                             className="h-8 w-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-xs cursor-pointer disabled:opacity-50 transition-all shrink-0"
                                             title={t('Approve Cash Received')}
                                           >
@@ -2582,7 +2606,7 @@ export default function ManagerDashboard() {
                                           <button
                                             type="button"
                                             disabled={isApprovingPayment === order.id}
-                                            onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
+                                            onClick={() => handleApprovePayment(order.latest_payment?.id, order.id, { notes: 'Payment verified by staff' })}
                                             className="h-8 w-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-xs cursor-pointer disabled:opacity-50 transition-all shrink-0"
                                             title={t('Approve Payment')}
                                           >
@@ -2942,8 +2966,9 @@ export default function ManagerDashboard() {
                                               <button
                                                 type="button"
                                                 disabled={isApprovingPayment === order.id}
-                                                onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
+                                                onClick={() => handleApprovePayment(order.latest_payment?.id, order.id, { payment_method: 'cash', notes: 'Cash collected by staff' })}
                                                 className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                                                title={t('Approve Cash Received')}
                                               >
                                                 {isApprovingPayment === order.id ? (
                                                   <i className="ph ph-spinner animate-spin text-base"></i>
@@ -2979,8 +3004,9 @@ export default function ManagerDashboard() {
                                               <button
                                                 type="button"
                                                 disabled={isApprovingPayment === order.id}
-                                                onClick={() => handleApprovePayment(order.latest_payment?.id, order.id)}
+                                                onClick={() => handleApprovePayment(order.latest_payment?.id, order.id, { notes: 'Transfer verified by staff' })}
                                                 className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                                                title={t('Approve Payment')}
                                               >
                                                 {isApprovingPayment === order.id ? (
                                                   <i className="ph ph-spinner animate-spin text-base"></i>
