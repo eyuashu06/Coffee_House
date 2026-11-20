@@ -443,7 +443,12 @@ class PhoneOTPSendView(APIView):
 
         if is_debug or not sms_sent:
             resp_payload['debug_otp'] = otp_code
-            if gw_error_code == 'country_not_enabled':
+            if isinstance(sms_details, dict) and 'DEFAULT_CAMPAIGN_RECIPIENT_NOT_WHITELISTED' in str(sms_details):
+                resp_payload['sms_note'] = (
+                    "SMSEthiopia: This starter campaign delivers to numbers verified in your dashboard at https://smsethiopia.com/dashboard. "
+                    "In the meantime, the verification code is provided in debug_otp."
+                )
+            elif gw_error_code == 'country_not_enabled':
                 resp_payload['sms_note'] = (
                     "eSMS Africa: Ethiopia (ET) needs to be enabled at https://sms.esmsafrica.io/countries. "
                     "In the meantime, the verification code is provided in debug_otp."
