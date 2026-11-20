@@ -180,7 +180,7 @@ export default function AuthModal({
           return;
         }
       }
-      if (!username.trim() || username.trim().length < 3) {
+      if (username.trim() && username.trim().length < 3) {
         setError(t('Username must be at least 3 characters long.'));
         return;
       }
@@ -605,22 +605,6 @@ export default function AuthModal({
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder={language === 'am' ? 'ለምሳሌ አበበ ቢቂላ' : 'e.g. Abebe Bikila'}
-                  className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
-                  {t('Username')} <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="username"
-                  autoComplete="username"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder={language === 'am' ? 'ልዩ የተጠቃሚ ስም ይምረጡ' : 'Choose a unique username'}
                   className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be]"
                 />
               </div>

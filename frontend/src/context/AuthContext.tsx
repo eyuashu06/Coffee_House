@@ -257,7 +257,7 @@ function formatAuthError(data: any, fallback: string): string {
   };
 
   const register = async (reqData: {
-    username: string;
+    username?: string;
     email?: string;
     phone?: string;
     password: string;

@@ -29,6 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
         return value.lower()
 
 class RegisterSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=6)
     phone = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
@@ -66,6 +67,27 @@ class RegisterSerializer(serializers.ModelSerializer):
         elif not (first_name or last_name):
             raise serializers.ValidationError({'full_name': 'Full name is required.'})
 
+        # Auto-derive a unique username if not explicitly provided
+        if not attrs.get('username'):
+            import re
+            base_username = ''
+            if attrs.get('email'):
+                base_username = attrs['email'].split('@')[0]
+            elif attrs.get('phone'):
+                base_username = re.sub(r'[^0-9]', '', attrs['phone'])
+            elif attrs.get('first_name'):
+                base_username = f"{attrs['first_name']}{attrs.get('last_name', '')}".lower()
+            else:
+                base_username = 'customer'
+
+            base_username = re.sub(r'[^a-zA-Z0-9_]', '', base_username) or 'customer'
+            candidate = base_username
+            idx = 1
+            while User.objects.filter(username__iexact=candidate).exists():
+                candidate = f"{base_username}{idx}"
+                idx += 1
+            attrs['username'] = candidate
+
         return attrs
 
     def validate_phone(self, value):
@@ -78,7 +100,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_username(self, value):
         value = (value or '').strip()
         if not value:
-            raise serializers.ValidationError('Username is required.')
+            return ''
         if len(value) < 3:
             raise serializers.ValidationError('Username must be at least 3 characters long.')
         if User.objects.filter(username__iexact=value).exists():
