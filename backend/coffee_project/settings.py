@@ -432,6 +432,13 @@ REQUIRE_EMAIL_MX = os.environ.get('REQUIRE_EMAIL_MX', 'True').lower() in ('1', '
 # links.et Ethiopian Bank & Mobile Money Verifier API
 LINKS_ET_API_KEY = os.environ.get('LINKS_ET_API_KEY', 'vk_live_GjM1JhdXLtd-yy3-DHLWtlSYeRgovWyd').strip()
 
+# TextBee (https://textbee.dev/) Android SMS Gateway
+TEXTBEE_API_KEY = os.environ.get(
+    'TEXTBEE_API_KEY',
+    os.environ.get('APPTESTBEE_API_KEY', 'txb_8YlrCxV1gXLIIlMskNtAOBTlk77gSghl')
+).strip()
+TEXTBEE_API_URL = os.environ.get('TEXTBEE_API_URL', 'https://api.textbee.dev/api/v1/gateway/send-sms').strip()
+
 # SMSEthiopia (https://smsethiopia.com/) for Phone OTP Verification (Primary)
 SMSETHIOPIA_API_KEY = os.environ.get(
     'SMSETHIOPIA_API_KEY',

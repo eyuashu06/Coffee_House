@@ -15,9 +15,10 @@ User = get_user_model()
 
 def send_otp_sms(phone, otp_code, sender_id=None):
     """
-    Dispatches a 6-digit OTP verification SMS.
-    Uses SMSEthiopia (https://smsethiopia.com/api/sms/send) as the primary provider,
-    with automatic fallback to eSMS Africa (https://sms.esmsafrica.io/).
+    Dispatches a 6-digit OTP verification SMS via a cascading multi-gateway engine:
+    1. TextBee (https://textbee.dev) - Sends via linked Android phone/SIM card.
+    2. SMSEthiopia (https://smsethiopia.com) - Direct Ethiopian telecom gateway.
+    3. eSMS Africa (https://sms.esmsafrica.io) - Secondary fallback aggregator.
     """
     norm_phone = normalize_ethiopian_phone(phone)
     if not norm_phone:
@@ -31,12 +32,48 @@ def send_otp_sms(phone, otp_code, sender_id=None):
     elif not msisdn.startswith('251'):
         msisdn = '251' + msisdn
 
-    # E.164 with '+' for eSMS Africa (e.g. +251911234567)
+    # E.164 with '+' for TextBee / eSMS Africa (e.g. +251911234567)
     plus_phone = f"+{msisdn}"
 
     message_text = f"Your Buna Hub verification code is: {otp_code}. Valid for 5 minutes."
 
-    # 1. Primary: SMSEthiopia (https://smsethiopia.com/api/sms/send)
+    # 1. Primary: TextBee (https://textbee.dev) Android SIM Gateway
+    textbee_key = getattr(settings, 'TEXTBEE_API_KEY', '').strip()
+    textbee_url = getattr(settings, 'TEXTBEE_API_URL', 'https://api.textbee.dev/api/v1/gateway/send-sms').strip()
+
+    if textbee_key:
+        tb_payload = {
+            'recipients': [plus_phone],
+            'message': message_text,
+        }
+        req = urllib.request.Request(
+            textbee_url,
+            data=json.dumps(tb_payload).encode('utf-8'),
+            headers={
+                'x-api-key': textbee_key,
+                'Content-Type': 'application/json',
+                'User-Agent': 'BunaHub-OTP/1.0',
+            },
+            method='POST',
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                resp_bytes = response.read()
+                resp_data = json.loads(resp_bytes.decode('utf-8', errors='ignore'))
+                logger.info("TextBee OTP dispatched to %s: %s", plus_phone, resp_data)
+                if resp_data.get('success', False) or response.status == 200:
+                    return True, resp_data
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode('utf-8', errors='ignore')
+            try:
+                err_data = json.loads(err_body)
+            except Exception:
+                err_data = {'raw_error': err_body, 'code': e.code}
+            logger.warning("TextBee HTTP %s for %s: %s", e.code, plus_phone, err_data)
+        except Exception as exc:
+            logger.error("TextBee network exception for %s: %s", plus_phone, exc)
+
+    # 2. Secondary: SMSEthiopia (https://smsethiopia.com/api/sms/send)
     smsethiopia_key = getattr(settings, 'SMSETHIOPIA_API_KEY', '').strip()
     smsethiopia_url = getattr(settings, 'SMSETHIOPIA_API_URL', 'https://smsethiopia.com/api/sms/send').strip()
 
