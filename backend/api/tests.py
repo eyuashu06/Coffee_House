@@ -37,8 +37,11 @@ class ReservationAvailabilityTests(TestCase):
         )
         self.client.force_authenticate(self.customer)
         # Venue-local wall clock: bookings are stored and compared in cafe time
-        # (Africa/Addis_Ababa), so fixtures must be local too.
-        self.when = timezone.localtime(timezone.now() + timedelta(days=3)).replace(microsecond=0)
+        # (Africa/Addis_Ababa), so fixtures must be local and pinned to an open
+        # daytime slot rather than whatever hour the test runner happens to start at.
+        self.when = timezone.localtime(timezone.now() + timedelta(days=3)).replace(
+            hour=14, minute=0, second=0, microsecond=0,
+        )
 
     def _payload(self, **overrides):
         payload = {
@@ -167,6 +170,17 @@ class ReservationAvailabilityTests(TestCase):
         payload.pop('contact_phone', None)
         res = self.client.post('/api/v1/reservations/', payload, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(TableReservation.objects.exists())
+
+    def test_booking_outside_operating_hours_is_rejected(self):
+        after_hours = self.when.replace(hour=23, minute=0)
+        res = self.client.post(
+            '/api/v1/reservations/',
+            self._payload(date_time=after_hours.isoformat()),
+            format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(res.data.get('reason'), 'outside_hours')
         self.assertFalse(TableReservation.objects.exists())
 
 
