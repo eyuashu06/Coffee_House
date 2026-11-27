@@ -462,6 +462,16 @@ class Command(BaseCommand):
             ItemVariant.objects.filter(menu_item=water_item).delete()
             AddOn.objects.filter(menu_item=water_item).delete()
 
+        # Clear missing/untracked legacy media path (menu_items/EA.png) when an image_url fallback exists
+        for item_with_missing_img in MenuItem.objects.exclude(image='').exclude(image__isnull=True):
+            try:
+                has_file = item_with_missing_img.image.storage.exists(item_with_missing_img.image.name)
+            except Exception:
+                has_file = False
+            if (not has_file or item_with_missing_img.image.name == 'menu_items/EA.png') and item_with_missing_img.image_url:
+                item_with_missing_img.image = ''
+                item_with_missing_img.save(update_fields=['image'])
+
         # Remove any previously seeded alcoholic items so only soft drinks & water remain
         MenuItem.objects.filter(
             slug__in=[
