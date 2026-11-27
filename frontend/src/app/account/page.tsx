@@ -260,6 +260,7 @@ export default function AccountPage() {
   const [payOrder, setPayOrder] = useState<Order | null>(null);
   const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
   const [reorderingId, setReorderingId] = useState<number | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
   const ordersRef = useRef<Order[]>([]);
   ordersRef.current = orders;
   const initialFetchDone = useRef<string | null>(null);
@@ -599,6 +600,28 @@ export default function AccountPage() {
     };
   }, [user, fetchOrders]);
 
+  const handleCancelOrder = async (orderId: number) => {
+    setCancellingOrderId(orderId);
+    try {
+      const res = await apiFetch(`/api/v1/orders/${orderId}/cancel/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setBanner({ type: 'error', message: data.error || t('Could not cancel this order.') });
+        return;
+      }
+      setBanner({ type: 'success', message: t('Order cancelled successfully.') });
+      await fetchOrders(true);
+    } catch {
+      setBanner({ type: 'error', message: t('Could not cancel this order.') });
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
+
   const handlePaymentComplete = (payStatus: string, _txRef: string, message: string) => {
     setPayOrder(null);
     if (payStatus === 'SUCCESS') {
@@ -888,7 +911,7 @@ export default function AccountPage() {
             </Link>
             <Link href="/?welcome=1" className="flex items-center gap-2.5 group min-w-0">
               <span className="w-8 h-8 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px] group-hover:scale-105 transition-transform shrink-0"><i className="ph ph-coffee-bean"></i></span>
-              <span className="font-display text-[19px] sm:text-[21px] tracking-wide truncate">Buna Hub</span>
+              <span className="font-display text-[19px] sm:text-[21px] tracking-wide truncate">{t('Buna Hub')}</span>
             </Link>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -1259,6 +1282,31 @@ export default function AccountPage() {
                                   <span>{t('Receipt after payment')}</span>
                                 </span>
                               )}
+                              {(() => {
+                                const canCancel = order.status === 'PENDING_PAYMENT' || order.status === 'PLACED';
+                                return (
+                                  <button
+                                    type="button"
+                                    disabled={!canCancel || cancellingOrderId === order.id}
+                                    onClick={() => canCancel && handleCancelOrder(order.id)}
+                                    title={canCancel ? t('Cancel Order') : t('Once preparing, contact support to cancel')}
+                                    className={`flex-1 sm:flex-initial h-9 sm:h-9.5 px-3 rounded-lg sm:rounded-xl border text-[12px] sm:text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                                      canCancel
+                                        ? 'border-red-500/40 text-red-500 hover:bg-red-500/10 cursor-pointer active:scale-[0.98]'
+                                        : 'border-[var(--border)]/60 bg-surface/40 text-[var(--muted)] opacity-60 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    <i className={`ph ${cancellingOrderId === order.id ? 'ph-spinner-gap animate-spin' : 'ph-x-circle'} text-[15px]`}></i>
+                                    <span>
+                                      {cancellingOrderId === order.id
+                                        ? t('Cancelling...')
+                                        : canCancel
+                                          ? t('Cancel')
+                                          : t('Contact support to cancel')}
+                                    </span>
+                                  </button>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>

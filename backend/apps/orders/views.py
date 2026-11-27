@@ -319,6 +319,48 @@ class OrderViewSet(viewsets.ModelViewSet):
         )
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def cancel(self, request, pk=None):
+        """
+        Customer cancellation window: only PENDING_PAYMENT and PLACED orders can
+        be cancelled online; once ACCEPTED / PREPARING, customer must contact support.
+        """
+        order = self.get_object()
+        if not request.user.is_manager_or_admin() and order.customer != request.user:
+            return Response(
+                {'error': 'You do not have permission to cancel this order.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if order.status not in ('PENDING_PAYMENT', 'PLACED'):
+            return Response(
+                {'error': 'Once preparing, contact support to cancel.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            assert_transition(order.status, 'CANCELLED')
+        except InvalidTransition as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        reason = (request.data.get('reason') or 'Cancelled by customer').strip()[:255]
+        order.status = 'CANCELLED'
+        order.step_started_at = timezone.now()
+        order.rejection_reason = reason
+        order.save(update_fields=['status', 'step_started_at', 'rejection_reason'])
+
+        OrderStatusHistory.objects.create(
+            order=order,
+            status='CANCELLED',
+            changed_by=request.user,
+            notes=reason,
+        )
+
+        return Response(
+            OrderSerializer(order, context={'request': request}).data,
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def reorder(self, request, pk=None):
         """
         One-tap reorder (SRS FR-O8).

@@ -10,6 +10,8 @@
 
 export const translations: Record<string, string> = {
   // ── Navigation & Brand ────────────────────────────────────────────────
+  'Buna Hub': 'ቡና ሀብ',
+  'BunaHub': 'ቡና ሀብ',
   'Home': 'መነሻ',
   'Menu': 'ሜኑ',
   'Browse Menu': 'ሜኑን ይመልከቱ',
@@ -232,7 +234,7 @@ export const translations: Record<string, string> = {
   'Explore Reserve Menu': 'የሜኑ ምርጫዎችን ይመልከቱ',
   'Ask AI Sommelier': 'የቡና ረዳት ጠይቅ',
   'Ask Buna': 'ቡናን ጠይቅ',
-  'Buna Hub Assistant': 'የቡና ሁብ ረዳት',
+  'Buna Hub Assistant': 'የቡና ሀብ ረዳት',
   'Menu & reservations help': 'ስለ ሜኑ እና ቦታ ማስያዝ እርዳታ',
   'Start a new conversation': 'አዲስ ውይይት ጀምር',
   'Checking the menu…': 'ሜኑውን በመፈለግ ላይ…',
@@ -378,7 +380,7 @@ export const translations: Record<string, string> = {
   'We could not check that code right now. Please try again.': 'ኮዱን አሁን ማረጋገጥ አልተቻለም። እባክዎ እንደገና ይሞክሩ።',
   'We could not check that order right now. Please try again.': 'ትዕዛዙን አሁን ማረጋገጥ አልተቻለም። እባክዎ እንደገና ይሞክሩ።',
   '© 2026 Buna Hub · Buna tetu — come, drink coffee':
-    '© 2026 ቡና ሁብ · ቡና ጠጡ — ይግቡ፣ ቡና ይጠጡ',
+    '© 2026 ቡና ሀብ · ቡና ጠጡ — ይግቡ፣ ቡና ይጠጡ',
   'Photography: Pexels & Unsplash contributors':
     'ፎቶግራፍ፦ Pexels እና Unsplash',
 
@@ -1293,6 +1295,13 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Verification code sent to': 'ኮድ የተላከበት ስልክ ቁጥር',
   '6-Digit SMS Verification Code (OTP)': 'ባለ 6-አሃዝ የኤስኤምኤስ ማረጋገጫ ኮድ (OTP)',
   'Change Phone': 'ስልክ ቀይር',
+  'For parties larger than 6, please call us directly at': 'ከ6 በላይ ለሆኑ እንግዶች፣ እባክዎ በቀጥታ በዚህ ስልክ ይደውሉልን፦',
+  'Cancelling...': 'በመሰረዝ ላይ...',
+  'Order cancelled successfully.': 'ትዕዛዝዎ በተሳካ ሁኔታ ተሰርዟል።',
+  'Could not cancel this order.': 'ይህን ትዕዛዝ መሰረዝ አልተቻለም።',
+  'Once preparing, contact support to cancel': 'ትዕዛዙ መዘጋጀት ከጀመረ በኋላ ለመሰረዝ እባክዎ ድጋፍ ሰጪን ያግኙ',
+  'Contact support to cancel': 'ለመሰረዝ ድጋፍ ሰጪን ያግኙ',
+  'Cancel': 'ሰርዝ',
 };
 
 /**

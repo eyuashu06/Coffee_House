@@ -50,7 +50,7 @@ const lineTotal = (item: OrderItem) =>
 export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
   const { t, tItem, locale, language } = useLanguage();
   const { settings: cafeSettings, primaryLocation } = useCafe();
-  const cafeName = cafeSettings.cafe_name || 'Buna Hub';
+  const cafeName = t(cafeSettings.cafe_name || 'Buna Hub');
   const birr = language === 'am' ? 'ብር' : 'ETB';
 
   if (!order) return null;

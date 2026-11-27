@@ -337,6 +337,15 @@ export default function Home() {
             savePendingReservation({ ...next, autoSubmit: false });
             return next;
         });
+        if (field === 'party_size') {
+            const count = Number(val);
+            const phone = primaryLocation?.phone || cafeSettings.primary_phone || '+251 11 555 0148';
+            if (!isNaN(count) && count > 6) {
+                setBookingError(`${t('For parties larger than 6, please call us directly at')} ${phone}.`);
+            } else if (bookingError && bookingError.includes(t('For parties larger than 6, please call us directly at'))) {
+                setBookingError(null);
+            }
+        }
         if (field === 'date_time') {
             if (val) {
                 const chosen = new Date(val);
@@ -461,6 +470,12 @@ export default function Home() {
         const chosen = new Date(bookingData.date_time);
         if (isNaN(chosen.getTime()) || chosen.getTime() < Date.now()) {
             setBookingError(t('Reservation time cannot be in the past. Please select an upcoming time.'));
+            setBookingStatus('ERROR');
+            return;
+        }
+        if (Number(bookingData.party_size) > 6) {
+            const phone = primaryLocation?.phone || cafeSettings.primary_phone || '+251 11 555 0148';
+            setBookingError(`${t('For parties larger than 6, please call us directly at')} ${phone}.`);
             setBookingStatus('ERROR');
             return;
         }
@@ -768,7 +783,7 @@ export default function Home() {
                     <div className="max-w-[1360px] mx-auto flex items-center justify-between gap-2 sm:gap-3 px-3.5 sm:px-6 h-16">
                         <Link href="/?welcome=1" className="flex items-center gap-2.5 min-w-0 group">
                             <span className="w-9 h-9 shrink-0 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px] group-hover:scale-105 transition-transform"><i className="ph ph-coffee-bean"></i></span>
-                            <span className="font-display text-[18px] sm:text-[21px] tracking-wide truncate max-w-[130px] xs:max-w-[180px] sm:max-w-none">{cafeSettings.cafe_name || 'Buna Hub'}</span>
+                            <span className="font-display text-[18px] sm:text-[21px] tracking-wide truncate max-w-[130px] xs:max-w-[180px] sm:max-w-none">{t(cafeSettings.cafe_name || 'Buna Hub')}</span>
                         </Link>
                         <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-[15px] font-medium text-[var(--muted)]">
                             {navLinks.map((link) => (
@@ -829,7 +844,7 @@ export default function Home() {
                                 <span className="truncate max-w-[200px]">{primaryLocation ? `${t(primaryLocation.name)}, ${t(primaryLocation.city)}` : `${t('Piassa')}, ${t('Addis Ababa')}`}</span>
                             </div>
                             <h1 className="mt-4 font-display text-[36px] xs:text-[42px] sm:text-[58px] lg:text-[68px] leading-[1.05] tracking-tight">
-                                {(cafeSettings.cafe_name || 'Buna Hub').split(' ').map((word, i) => (
+                                {t(cafeSettings.cafe_name || 'Buna Hub').split(' ').map((word, i) => (
                                     <span key={`${word}-${i}`} className="word-in mr-3 last:mr-0" style={{ animationDelay: `${0.15 + i * 0.18}s` }}>{word}</span>
                                 ))}
                             </h1>
@@ -1427,7 +1442,7 @@ export default function Home() {
                             <div>
                                 <div className="flex items-center gap-2.5">
                                     <span className="w-9 h-9 rounded-full bg-[var(--accent-soft)] border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] text-[16px]"><i className="ph ph-coffee-bean"></i></span>
-                                    <span className="font-display text-[23px]">{cafeSettings.cafe_name || 'Buna Hub'}</span>
+                                    <span className="font-display text-[23px]">{t(cafeSettings.cafe_name || 'Buna Hub')}</span>
                                 </div>
                                 <p className="mt-4 text-[15px] leading-relaxed text-[var(--muted)] max-w-[34ch]">
                                     {t(cafeSettings.description || 'An Ethiopian coffee house in Piassa — ceremony buna, slow teas, and a kitchen that stays open late.')}
@@ -1515,7 +1530,7 @@ export default function Home() {
                             </div>
                         </div>
                         <div className="mt-14 pt-6 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-2 text-[13.5px] text-[var(--muted)]">
-                            <span>© 2026 {cafeSettings.cafe_name || 'Buna Hub'} · {t('Buna tetu — come, drink coffee')}</span>
+                            <span>© 2026 {t(cafeSettings.cafe_name || 'Buna Hub')} · {t('Buna tetu — come, drink coffee')}</span>
                             <span>{t('Photography: Pexels & Unsplash contributors')}</span>
                         </div>
                     </div>

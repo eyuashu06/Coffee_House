@@ -64,7 +64,7 @@ const FALLBACK_QUICK_ACTIONS: QuickAction[] = [
   { id: 'reservation', label_en: 'Make Reservation', label_am: 'ቦታ ማስያዝ', icon: '📅', query_en: 'I want to reserve a table', query_am: 'ቦታ ማስያዝ እፈልጋለሁ' },
   { id: 'order', label_en: 'Start an Order', label_am: 'ትዕዛዝ ጀምር', icon: '🧾', query_en: 'I would like to place an order', query_am: 'ትዕዛዝ ለመስጠት እፈልጋለሁ' },
   { id: 'prices', label_en: 'Check Prices', label_am: 'ዋጋ ይመልከቱ', icon: '💰', query_en: 'How much is Masala Chai Latte?', query_am: 'Masala Chai Latte ዋጋው ስንት ነው?' },
-  { id: 'about', label_en: 'About Buna Hub', label_am: 'ስለ ቡና ሁብ', icon: 'ℹ️', query_en: 'What is Buna Hub?', query_am: 'ቡና ሁብ ምንድነው?' },
+  { id: 'about', label_en: 'About Buna Hub', label_am: 'ስለ ቡና ሀብ', icon: 'ℹ️', query_en: 'What is Buna Hub?', query_am: 'ቡና ሀብ ምንድነው?' },
 ];
 
 const GENERIC_ERROR = {
@@ -367,7 +367,7 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
                 <i className="ph ph-coffee-bean text-lg"></i>
               </span>
               <div className="min-w-0">
-                <p className="font-display text-[15px] font-bold text-[var(--text)] truncate">Buna Hub Assistant</p>
+                <p className="font-display text-[15px] font-bold text-[var(--text)] truncate">{t('Buna Hub Assistant')}</p>
                 <p className="text-[11px] text-[var(--muted)] truncate">
                   {language === 'am'
                     ? 'ስለ ሜኑ እና ቦታ ማስያዝ እርዳታ'

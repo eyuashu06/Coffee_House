@@ -316,7 +316,7 @@ export default function PaymentModal({
             </div>
             <div>
               <h3 className="font-display text-lg sm:text-xl font-bold text-[var(--accent)]">{t('Choose Payment Method')}</h3>
-              <p className="text-[12px] text-[var(--muted)]">Order #{orderNumber} • <strong className="text-[var(--text)]">{birr} {totalAmountEtb}</strong></p>
+              <p className="text-[12px] text-[var(--muted)]">{t('Order')} #{orderNumber} • <strong className="text-[var(--text)]">{birr} {totalAmountEtb}</strong></p>
             </div>
           </div>
           <button
