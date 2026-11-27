@@ -13,12 +13,6 @@ export default function HeroSection({ onOpenSommelier, onScrollToMenu }: HeroSec
 
   return (
     <section className="relative overflow-hidden px-4 sm:px-6 pt-24 pb-16 bg-gradient-to-br from-[#290d13] via-[#3b141c] to-[#4a1a24] text-on-surface">
-      {/* Radial Golden Ambient Glow */}
-      <div 
-        className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full pointer-events-none blur-3xl opacity-60" 
-        style={{ background: 'radial-gradient(circle, rgba(243, 150, 28, 0.3) 0%, rgba(59, 20, 28, 0) 70%)' }}
-      />
-
       <div className="max-w-6xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
         {/* Left Column: Text & Hero Details */}
         <div className="flex flex-col items-start gap-5">

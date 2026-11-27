@@ -84,7 +84,14 @@ class Command(BaseCommand):
         cat_shawarma, _ = Category.objects.get_or_create(name='Shawarma & Wraps',     defaults={'slug': 'shawarma-wraps',     'icon': 'kebab_dining',   'display_order': 6})
         cat_fastfood, _ = Category.objects.get_or_create(name='Fast Food Favourites', defaults={'slug': 'fast-food',          'icon': 'fastfood',       'display_order': 7})
         cat_pastry, _   = Category.objects.get_or_create(name='Bakery & Pastry',      defaults={'slug': 'bakery-pastry',      'icon': 'bakery_dining',  'display_order': 8})
-        cat_drinks, _   = Category.objects.get_or_create(name='Cold Drinks & Beverages', defaults={'slug': 'cold-drinks-beverages', 'icon': 'local_bar', 'display_order': 9})
+        cat_drinks, _   = Category.objects.get_or_create(
+            slug='cold-drinks-beverages',
+            defaults={'name': 'Soft Drinks & Water', 'icon': 'emoji_food_beverage', 'display_order': 9},
+        )
+        if cat_drinks.name != 'Soft Drinks & Water' or cat_drinks.icon != 'emoji_food_beverage':
+            cat_drinks.name = 'Soft Drinks & Water'
+            cat_drinks.icon = 'emoji_food_beverage'
+            cat_drinks.save(update_fields=['name', 'icon'])
 
         # ─────────────────────────────────────────────
         # 5. Menu Items
@@ -388,7 +395,7 @@ class Command(BaseCommand):
                 'variants': [('Single Slice', 0)],
                 'addons': [('Extra Cocoa Dusting', 20), ('Espresso Shot on Side', 70)],
             },
-            # ── COLD DRINKS, BEVERAGES & ALCOHOL ──────
+            # ── SOFT DRINKS & WATER ───────────────────
             {
                 'category': cat_drinks, 'name': 'Coca-Cola Classic',
                 'slug': 'coca-cola-classic',
@@ -439,37 +446,16 @@ class Command(BaseCommand):
                 'variants': [('500ml Bottle', 0), ('1 Litre Bottle', 15)],
                 'addons': [('Chilled with Lemon Slice', 0), ('Room Temperature', 0)],
             },
-            {
-                'category': cat_drinks, 'name': 'St. George Premium Beer',
-                'slug': 'st-george-premium-beer',
-                'description': 'Ethiopia’s legendary heritage lager (4.7% ABV), brewed since 1922. Crisp golden malt with a smooth balanced finish.',
-                'base_price_etb': Decimal('90.00'), 'is_signature': True,
-                'image_url': 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=800',
-                'tasting_notes': 'Golden Malt, Crisp Hops, Refreshing',
-                'variants': [('330ml Chilled Bottle', 0), ('Bucket of 3 Bottles', 170)],
-                'addons': [('Frosted Beer Glass', 0)],
-            },
-            {
-                'category': cat_drinks, 'name': 'Habesha Cold Gold Beer',
-                'slug': 'habesha-cold-gold-beer',
-                'description': 'Authentic Ethiopian rich lager (5% ABV), crafted with pure highland spring water and roasted barley malt.',
-                'base_price_etb': Decimal('95.00'), 'is_signature': True,
-                'image_url': 'https://images.unsplash.com/photo-1518176258769-f227c798150e?w=800',
-                'tasting_notes': 'Deep Gold, Rich Malt, Smooth',
-                'variants': [('330ml Chilled Bottle', 0), ('Bucket of 3 Bottles', 180)],
-                'addons': [('Frosted Beer Glass', 0)],
-            },
-            {
-                'category': cat_drinks, 'name': 'Rift Valley Reserve House Wine',
-                'slug': 'rift-valley-reserve-wine',
-                'description': 'Artisanal Ethiopian wine produced from Ziway vineyards in the Great Rift Valley. Vibrant berry aromas with gentle balanced tannins.',
-                'base_price_etb': Decimal('220.00'), 'is_signature': True,
-                'image_url': 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800',
-                'tasting_notes': 'Wild Berries, Plum, Oak, Velvety',
-                'variants': [('By the Glass (150ml)', 0), ('Full Bottle (750ml)', 850)],
-                'addons': [('Red Syrah / Cabernet', 0), ('Crisp White Sauvignon', 0)],
-            },
         ]
+
+        # Remove any previously seeded alcoholic items so only soft drinks & water remain
+        MenuItem.objects.filter(
+            slug__in=[
+                'st-george-premium-beer',
+                'habesha-cold-gold-beer',
+                'rift-valley-reserve-wine',
+            ]
+        ).delete()
 
         # ─────────────────────────────────────────────
         # 6. Create Menu Items + Variants + AddOns
@@ -522,6 +508,6 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             f'✔ Seeded {created_count} new menu items across 9 categories '
-            f'(Coffee, Espresso, Tea, Burgers, Pizza, Shawarma, Fast Food, Pastry, Cold Drinks & Beverages)'
+            f'(Coffee, Espresso, Tea, Burgers, Pizza, Shawarma, Fast Food, Pastry, Soft Drinks & Water)'
         ))
         self.stdout.write(self.style.SUCCESS('✅ Database seeding completed successfully!'))

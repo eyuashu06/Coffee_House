@@ -49,8 +49,6 @@
   --accent-soft: #f6d9d7;
   --gold: #96650f;
   --shadow: 0 18px 40px -22px rgba(80, 45, 25, 0.35);
-  --glow-a: rgba(196, 122, 74, 0.16);
-  --glow-b: rgba(164, 68, 63, 0.1);
   --overlay: rgba(255, 250, 244, 0.78);
   color-scheme: light;
 }
@@ -68,8 +66,6 @@
   --accent-soft: #3b141c;
   --gold: #fbbb50;
   --shadow: 0 22px 44px -20px rgba(0, 0, 0, 0.65);
-  --glow-a: rgba(251, 184, 110, 0.14);
-  --glow-b: rgba(247, 181, 190, 0.1);
   --overlay: rgba(20, 13, 11, 0.72);
   color-scheme: dark;
 }
@@ -134,16 +130,33 @@ html[data-text-size="large"] {
     font-family: 'Inter', 'Helvetica Neue', system-ui, sans-serif;
   }
 
-  /* Page backdrop: layered warm radial glows over a soft vertical gradient
-     instead of a flat near-black slab. */
+  /* Page backdrop: calm, warm cafe ambiance with zero harsh light rays or glare.
+     isolation: isolate keeps ::before (z-index: -1) above body's background
+     and cleanly behind every section, card, and sticky/fixed element. */
   .site-bg {
+    position: relative;
+    isolation: isolate;
+    background-color: transparent;
+  }
+
+  .site-bg::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background-image:
-      radial-gradient(42% 38% at 12% 8%, var(--glow-a), transparent 70%),
-      radial-gradient(38% 34% at 88% 22%, var(--glow-b), transparent 70%),
-      radial-gradient(50% 40% at 50% 100%, var(--glow-a), transparent 72%),
-      linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+      linear-gradient(180deg, rgba(246, 239, 230, 0.84) 0%, rgba(237, 224, 209, 0.91) 100%),
+      url('/images/ethiopian_cafe.jpg');
     background-repeat: no-repeat;
+    background-position: center;
     background-size: cover;
+  }
+
+  .dark .site-bg::before {
+    background-image:
+      linear-gradient(180deg, rgba(26, 18, 16, 0.82) 0%, rgba(18, 12, 10, 0.89) 100%),
+      url('/images/ethiopian_cafe.jpg');
   }
 
   .glass-bar {
@@ -268,24 +281,6 @@ html[data-text-size="large"] {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--gold);
-}
-
-.hero-haze {
-  background-image:
-    radial-gradient(38% 55% at 22% 30%, var(--glow-a), transparent 62%),
-    radial-gradient(45% 60% at 78% 68%, var(--glow-b), transparent 60%);
-  background-size: 280% 280%;
-  mix-blend-mode: screen;
-  animation: hazeDrift 16s ease-in-out infinite alternate;
-}
-
-@keyframes hazeDrift {
-  from {
-    background-position: 0% 0%;
-  }
-  to {
-    background-position: 100% 100%;
-  }
 }
 
 .dish-card {

@@ -895,8 +895,9 @@ export const categoryTranslations: Record<string, string> = {
   'Fast Food Favourites': 'ፈጣን ምግቦች',
   'Fast Food': 'ፈጣን ምግቦች',
   'Bakery & Pastry': 'ኬክና ኬክ ነክ ምግቦች',
-  'Cold Drinks & Beverages': 'ለስላሳና ሌሎች መጠጦች',
-  'Beverages & Drinks': 'ለስላሳና ሌሎች መጠጦች',
+  'Soft Drinks & Water': 'ለስላሳ መጠጦችና ውሃ',
+  'Cold Drinks & Beverages': 'ለስላሳ መጠጦችና ውሃ',
+  'Beverages & Drinks': 'ለስላሳ መጠጦችና ውሃ',
 };
 
 
@@ -947,15 +948,12 @@ export const itemTranslations: Record<string, string> = {
   'Croissant au Beurre': 'ክሩዋሳን',
   'Fresh Croissant': 'ፍሬሽ ክሩዋሳን',
   'Tiramisu Slice': 'ቲራሚሱ',
-  // Cold Drinks, Water & Alcohol
+  // Soft Drinks & Water
   'Coca-Cola Classic': 'ኮካ ኮላ',
   'Fanta Orange': 'ፋንታ ብርቱካን',
   'Sprite Crisp Lemon-Lime': 'ስፕራይት',
   'Ambo Mineral Water (Ambo Wuha)': 'አምቦ ውሃ',
   'Bottled Pure Spring Water': 'የታሸገ የተፈጥሮ ውሃ',
-  'St. George Premium Beer': 'ቅዱስ ጊዮርጊስ ቢራ',
-  'Habesha Cold Gold Beer': 'ሐበሻ ቢራ',
-  'Rift Valley Reserve House Wine': 'ሪፍት ቫሊ ወይን',
   'buna': 'ቡና',
   'Buna': 'ቡና',
   'Traditional Buna': 'ባህላዊ ቡና',
@@ -1129,7 +1127,7 @@ export const itemDescriptionTranslations: Record<string, string> = {
   // Cafe & Fallbacks
   'Single-origin micro-lots, signature espresso infusions, and AI RAG Coffee Sommelier recommendations.':
     'ልዩ የተመረጡ ቡናዎች፣ የኤስፕሬሶ መጠጦች እና የአይ-ኤ አጋዥ የቡና ምክሮች።',
-  // Traditional Coffee, Water, Soft Drinks & Alcohol
+  // Traditional Coffee, Water & Soft Drinks
   'Traditional Ethiopian Jebena Buna brewed fresh with rich roasted beans, served with aromatic incense and popcorn.':
     'በባህላዊ ጀበና የተፈላ ትኩስ የኢትዮጵያ ቡና፣ ከጥሩ ዕጣን እና ፈንዲሻ ጋር የሚቀርብ።',
   'Ethiopia’s iconic naturally sparkling highland mineral water from Senkele volcanic springs. Refreshing and rich in natural minerals.':
@@ -1142,12 +1140,6 @@ export const itemDescriptionTranslations: Record<string, string> = {
     'ጣፋጭና የሚያረካ የብርቱካን ጭማቂ ያለው ቀዝቃዛ ፋንታ ለስላሳ መጠጥ።',
   'Clean, crisp lemon-lime refreshment with 100% natural flavours, served over ice.':
     'ከተፈጥሯዊ የሎሚ ጣዕም የተዘጋጀ የሚያረካ ቀዝቃዛ ስፕራይት።',
-  'Ethiopia’s legendary heritage lager (4.7% ABV), brewed since 1922. Crisp golden malt with a smooth balanced finish.':
-    'ከ1914 ዓ.ም ጀምሮ የሚጠመቅ ታዋቂው የኢትዮጵያ ቅዱስ ጊዮርጊስ ቢራ (4.7% ABV)። ወርቃማ ብቅልና ለስላሳ ጣዕም ያለው።',
-  'Authentic Ethiopian rich lager (5% ABV), crafted with pure highland spring water and roasted barley malt.':
-    'ከተመረጠ የገብስ ብቅል እና ንፁህ የደጋ ምንጭ ውሃ የተጠመቀ እውነተኛ የኢትዮጵያ ሐበሻ ቢራ (5% ABV)።',
-  'Artisanal Ethiopian wine produced from Ziway vineyards in the Great Rift Valley. Vibrant berry aromas with gentle balanced tannins.':
-    'በስምጥ ሸለቆው ዝዋይ ወይን እርሻዎች የተመረተ ምርጥ የኢትዮጵያ ሪፍት ቫሊ ወይን። ልዩ የፍራፍሬ መዓዛ እና የተመጣጠነ ጣዕም ያለው።',
 
   // ── Order Fulfillment & Types ──────────────────────────────────────────
   'DELIVERY': 'ማድረሻ',

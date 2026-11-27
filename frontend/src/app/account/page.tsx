@@ -872,7 +872,7 @@ export default function AccountPage() {
   const pastOrders = orders.filter(o => PAST_STATUSES.includes(o.status));
 
   return (
-    <div className="bg-[var(--bg)] text-[var(--text)] font-body min-h-screen pb-28 md:pb-16">
+    <div className="site-bg text-[var(--text)] font-body min-h-screen pb-28 md:pb-16">
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-[var(--bg-deep)] border-b border-[var(--border)]/60">
         <div className="flex items-center justify-between px-3.5 sm:px-6 h-14">

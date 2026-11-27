@@ -351,9 +351,6 @@ export default function AuthModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-fade-in overflow-y-auto">
       {/* Dynamic responsive card size for all devices */}
       <div className="relative w-[95%] sm:w-full max-w-md my-auto bg-surface border border-[var(--border)] rounded-2xl shadow-2xl p-5 sm:p-7 text-[var(--text)] max-h-[90vh] overflow-y-auto">
-        {/* Ambient background glow */}
-        <div className="absolute -top-20 -right-20 w-36 h-36 bg-[var(--accent-soft)]/50 rounded-full pointer-events-none" />
-
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-[var(--border)]">
           <div className="flex items-center gap-2.5">
