@@ -24,12 +24,12 @@ EN_HEADER = '**English 🇬🇧**'
 AM_HEADER = '**አማርኛ 🇪🇹**'
 
 NOT_FOUND_EN = (
-    "I don't have that information in the Coffee House system. "
-    "Please ask our staff for confirmation."
+    "I don't have that information in the Coffee House system — I'm still learning! "
+    "Please call us at +251 11 555 0148 or browse the Menu tab."
 )
 NOT_FOUND_AM = (
-    "ይህ መረጃ በCoffee House ስርዓት ውስጥ የለኝም። "
-    "እባክዎን ከሰራተኞቻችን ያረጋግጡ።"
+    "ይህ መረጃ በCoffee House ስርዓት ውስጥ የለኝም — ገና እየተማርኩ ነው! "
+    "እባክዎ በ +251 11 555 0148 ይደውሉልን ወይም የሜኑ (Menu) ገጹን ይመልከቱ።"
 )
 
 
@@ -287,10 +287,10 @@ def _from_knowledge_base(text):
 
 
 def _out_of_scope():
-    en = ("I'm here to help with the Coffee House menu, food and drinks, prices, "
-          "opening hours and table reservations.")
-    am = ("እኔ ስለ Coffee House ሜኑ፣ ምግብና መጠጦች፣ ዋጋዎች፣ የመክፈቻ ሰዓት እና የቦታ ማስያዝ "
-          "መረጃ ለመስጠት እዚህ ነኝ።")
+    en = ("I'm still learning! I'm here to help with the Coffee House menu, food and drinks, "
+          "prices, opening hours, and table reservations. Please call us at +251 11 555 0148 or browse the Menu tab.")
+    am = ("ገና እየተማርኩ ነው! ስለ Coffee House ሜኑ፣ ምግብና መጠጦች፣ ዋጋዎች፣ የመክፈቻ ሰዓት እና የቦታ ማስያዝ "
+          "መረጃ ለመስጠት እዚህ ነኝ። እባክዎ በ +251 11 555 0148 ይደውሉልን ወይም የሜኑ (Menu) ገጹን ይመልከቱ።")
     return bilingual(en, am), []
 
 

@@ -74,16 +74,14 @@ class RegisterSerializer(serializers.ModelSerializer):
         elif not (first_name or last_name):
             raise serializers.ValidationError({'full_name': 'Full name is required.'})
 
-        # Auto-derive a unique username if not explicitly provided
+        # Auto-derive a unique username using Phone Number as primary unique identifier
         if not attrs.get('username'):
             import re
             base_username = ''
-            if attrs.get('email'):
-                base_username = attrs['email'].split('@')[0]
-            elif attrs.get('phone'):
+            if attrs.get('phone'):
                 base_username = re.sub(r'[^0-9]', '', attrs['phone'])
-            elif attrs.get('first_name'):
-                base_username = f"{attrs['first_name']}{attrs.get('last_name', '')}".lower()
+            elif attrs.get('email'):
+                base_username = attrs['email'].split('@')[0]
             else:
                 base_username = 'customer'
 

@@ -347,10 +347,10 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
           setUnread(0);
         }}
         aria-label={t('Buna Hub Assistant')}
-        className="fixed bottom-20 sm:bottom-6 left-4 sm:left-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-sm shadow-[0_10px_30px_rgba(0,0,0,0.3)] hover:brightness-110 active:scale-95 transition-all"
+        className="fixed bottom-20 sm:bottom-6 left-4 sm:left-6 z-40 flex items-center gap-2 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-xs sm:text-sm shadow-[0_10px_30px_rgba(0,0,0,0.3)] hover:brightness-110 active:scale-95 transition-all"
       >
         <i className={`ph ${isOpen ? 'ph-x' : 'ph-chat-circle-dots'} text-xl`}></i>
-        <span className="hidden sm:inline">{isOpen ? t('Close') : t('Ask Buna')}</span>
+        <span className="inline">{isOpen ? t('Close') : t('Ask Buna')}</span>
         {unread > 0 && !isOpen && (
           <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
             {unread}

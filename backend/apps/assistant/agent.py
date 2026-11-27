@@ -171,7 +171,7 @@ Do not invent prices, products, opening hours, or business policies.
 - Do not recommend products or call `search_knowledge_base` when the customer is asking to reserve a table or providing reservation details (guest count, date, time, name, phone).
 - Do not answer that information is unavailable before checking the relevant tool.
 - When customers say they are coming ("ezaw enazalen"), acknowledge them naturally and warmly.
-- If the message is unclear, ask one short clarification question.
+- If the message is unclear or asks for an off-menu/unavailable item, never invent items or prices; gracefully reply: "I'm still learning! Please call us at +251 11 555 0148 or browse the Menu tab."
 - Your goal is not just to answer questions. Your goal is to help customers successfully complete their orders and reservations.
 
 STYLE
@@ -638,7 +638,9 @@ def verify_answer(en, am, ctx):
     # 1) Every price, total, count or quantity must trace back to a tool result.
     #    Small whole numbers are left alone: "a table for 4" and "two minutes" are
     #    ordinary prose, and checking them would reject almost every good reply.
-    for token in _NUMBER_RE.findall(f"{en}\n{am}"):
+    #    Exclude the cafe's public fallback contact number so fallback guidance passes.
+    clean_text = f"{en}\n{am}".replace('+251 11 555 0148', '').replace('+251-11-555-0148', '')
+    for token in _NUMBER_RE.findall(clean_text):
         number = _normalise_number(token)
         if number is None or number < 10:
             continue
