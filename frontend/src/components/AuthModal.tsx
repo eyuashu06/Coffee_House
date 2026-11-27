@@ -175,6 +175,11 @@ export default function AuthModal({
         setError(language === 'am' ? 'ሙሉ ስም ማስገባት ግዴታ ነው።' : t('Full Name is strictly required.'));
         return;
       }
+      const cleanPhoneDigits = rawPhone.replace(/[\s\-\(\)\+]/g, '');
+      if (!cleanPhoneDigits || cleanPhoneDigits.length < 9) {
+        setError(language === 'am' ? 'እባክዎ ትክክለኛ የኢትዮጵያ ስልክ ቁጥር (ቢያንስ 9 አሃዝ) ያስገቡ።' : 'Please enter a valid Ethiopian phone number (at least 9 digits).');
+        return;
+      }
       if (email.trim()) {
         const emailError = validateSignupEmail(email);
         if (emailError) {
@@ -525,7 +530,7 @@ export default function AuthModal({
             <>
               <div>
                 <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
-                  {t('Username or Email')}
+                  {t('Phone, Username, or Email')}
                 </label>
                 <input
                   type="text"
@@ -534,7 +539,7 @@ export default function AuthModal({
                   required
                   value={usernameOrEmail}
                   onChange={(e) => setUsernameOrEmail(e.target.value)}
-                  placeholder={language === 'am' ? 'abebe@gmail.com ወይም አበበ' : 'abebe@gmail.com or Abebe'}
+                  placeholder={language === 'am' ? '0911223344 ወይም abebe@gmail.com' : '0911223344 or abebe@gmail.com'}
                   className="w-full px-3.5 py-2.5 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[#f7b5be] transition-colors"
                 />
               </div>
@@ -615,6 +620,18 @@ export default function AuthModal({
 
               <div>
                 <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
+                  {t('Phone Number')} <span className="text-red-500">*</span>
+                </label>
+                <EthiopianPhoneInput
+                  value={rawPhone}
+                  onChange={(val) => setRawPhone(val)}
+                  required
+                  inputClassName="py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                   {t('Email Address')} <span className="text-[10.5px] font-normal lowercase text-[var(--muted)]">({language === 'am' ? 'አማራጭ' : 'optional'})</span>
                 </label>
                 <input
@@ -629,17 +646,6 @@ export default function AuthModal({
                 <p className="text-[10.5px] text-[var(--muted)] mt-1 leading-relaxed">
                   {t('Optional: If provided, your receipt and payment confirmation will be sent here.')}
                 </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
-                  {t('Phone Number')}
-                </label>
-                <EthiopianPhoneInput
-                  value={rawPhone}
-                  onChange={(val) => setRawPhone(val)}
-                  inputClassName="py-2"
-                />
               </div>
 
               <div>

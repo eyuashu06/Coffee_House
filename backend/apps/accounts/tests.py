@@ -72,6 +72,32 @@ class AuthAndProfileAPITests(TestCase):
         res_ok = self.client.post('/api/v1/auth/register/', matched)
         self.assertEqual(res_ok.status_code, status.HTTP_201_CREATED)
 
+    def test_register_requires_phone_and_allows_optional_unique_email(self):
+        missing_phone = self.user_data.copy()
+        missing_phone.pop('phone')
+        res = self.client.post('/api/v1/auth/register/', missing_phone)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('phone', res.data)
+
+        phone_only = {
+            'full_name': 'Phone Only Customer',
+            'phone': '0911887766',
+            'password': 'Password123!',
+            'confirm_password': 'Password123!',
+        }
+        res_ok = self.client.post('/api/v1/auth/register/', phone_only)
+        self.assertEqual(res_ok.status_code, status.HTTP_201_CREATED)
+
+        dup_phone = {
+            'full_name': 'Duplicate Phone',
+            'phone': '+251911887766',
+            'password': 'Password123!',
+            'confirm_password': 'Password123!',
+        }
+        res_dup = self.client.post('/api/v1/auth/register/', dup_phone)
+        self.assertEqual(res_dup.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('phone', res_dup.data)
+
     def test_login_with_username_success(self):
         login_data = {
             'username_or_email': 'existinguser',

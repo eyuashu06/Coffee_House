@@ -262,6 +262,9 @@ export const translations: Record<string, string> = {
   'Add to Cart': 'ወደ ቅርጫት ጨምር',
   'Add to Order': 'ወደ ትዕዛዝ ጨምር',
   'Tap to customize': 'ዝርዝር ለማየት ይጫኑ',
+  'Ready to add': 'ወደ ቅርጫት ለመጨመር ዝግጁ',
+  'Customize & Add': 'አስተካክለው ይጨምሩ',
+  'Phone, Username, or Email': 'ስልክ፣ የተጠቃሚ ስም ወይም ኢሜይል',
   'Add': 'ጨምር',
 
   // ── Story ─────────────────────────────────────────────────────────────

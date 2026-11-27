@@ -1279,24 +1279,6 @@
     }
   },
   {
-    "model": "menu.itemvariant",
-    "pk": 66,
-    "fields": {
-      "menu_item": 41,
-      "name": "500ml Bottle",
-      "price_modifier_etb": "0.00"
-    }
-  },
-  {
-    "model": "menu.itemvariant",
-    "pk": 67,
-    "fields": {
-      "menu_item": 41,
-      "name": "1 Litre Bottle",
-      "price_modifier_etb": "15.00"
-    }
-  },
-  {
     "model": "menu.addon",
     "pk": 1,
     "fields": {
@@ -1923,24 +1905,6 @@
     "fields": {
       "menu_item": 40,
       "name": "Served Chilled with Ice",
-      "price_etb": "0.00"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 71,
-    "fields": {
-      "menu_item": 41,
-      "name": "Chilled with Lemon Slice",
-      "price_etb": "0.00"
-    }
-  },
-  {
-    "model": "menu.addon",
-    "pk": 72,
-    "fields": {
-      "menu_item": 41,
-      "name": "Room Temperature",
       "price_etb": "0.00"
     }
   },

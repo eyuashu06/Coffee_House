@@ -443,10 +443,16 @@ class Command(BaseCommand):
                 'base_price_etb': Decimal('30.00'), 'is_signature': False,
                 'image_url': 'https://images.unsplash.com/photo-1616118132534-381148898bb4?w=800',
                 'tasting_notes': 'Pure Spring Water, Crisp, Hydrating',
-                'variants': [('500ml Bottle', 0), ('1 Litre Bottle', 15)],
-                'addons': [('Chilled with Lemon Slice', 0), ('Room Temperature', 0)],
+                'variants': [],
+                'addons': [],
             },
         ]
+
+        # Keep Bottled Pure Spring Water as a direct 1-click item with no variants/add-ons
+        water_item = MenuItem.objects.filter(slug='bottled-spring-water').first()
+        if water_item:
+            ItemVariant.objects.filter(menu_item=water_item).delete()
+            AddOn.objects.filter(menu_item=water_item).delete()
 
         # Remove any previously seeded alcoholic items so only soft drinks & water remain
         MenuItem.objects.filter(

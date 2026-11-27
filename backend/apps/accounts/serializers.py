@@ -32,7 +32,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=6)
     confirm_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    phone = serializers.CharField(required=False, allow_blank=True)
+    phone = serializers.CharField(required=True, allow_blank=False)
     email = serializers.EmailField(required=False, allow_blank=True)
     full_name = serializers.CharField(required=False, allow_blank=True, write_only=True)
     first_name = serializers.CharField(required=False, allow_blank=True)
@@ -96,10 +96,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def validate_phone(self, value):
+        value = (value or '').strip()
         if not value:
-            return ''
+            raise serializers.ValidationError('Phone number is required.')
         norm = normalize_ethiopian_phone(value)
         validate_ethiopian_phone(norm)
+        if User.objects.filter(phone=norm).exists():
+            raise serializers.ValidationError('A user with this phone number already exists.')
         return norm
 
     def validate_username(self, value):

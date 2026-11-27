@@ -176,13 +176,19 @@ export default function AccountPage() {
   const birr = language === 'am' ? 'ብር' : 'ETB';
 
   // Cart Quick-View
-  const { cart: serverCart, clearCart, setQuantity, removeLine } = useCart(!!user);
+  const { cart: serverCart, clearCart, setQuantity, removeLine, syncGuestCart } = useCart(!!user);
   const [localCart, setLocalCart] = useState<any[]>([]);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 
   useEffect(() => {
     setLocalCart(readLocalCart());
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      void syncGuestCart().then(() => setLocalCart([]));
+    }
+  }, [user, syncGuestCart]);
 
   const totalCartItems = user
     ? (serverCart?.item_count || 0)

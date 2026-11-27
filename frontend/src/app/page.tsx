@@ -326,7 +326,9 @@ export default function Home() {
     // On sign-in the guest's local cart is merged into the account cart, so nothing
     // that was in the basket disappears. Runs on every transition into "signed in".
     useEffect(() => {
-        if (isSignedIn) void syncGuestCart();
+        if (isSignedIn) {
+            void syncGuestCart().then(() => setGuestCart([]));
+        }
     }, [isSignedIn, syncGuestCart]);
 
     const handleBookingFieldChange = (field: keyof typeof bookingData, val: any) => {
@@ -529,6 +531,13 @@ export default function Home() {
         }
     }, [user]);
 
+    const canCustomizeItem = (item: MenuItem) => {
+        const isBeverage = ['micro-lot-coffee', 'espresso-infusions', 'premium-tea'].includes(
+            (item.category_slug || '').toLowerCase()
+        );
+        return isBeverage || (item.variants?.length ?? 0) > 0 || (item.add_ons?.length ?? 0) > 0;
+    };
+
     const handleOpenItemModal = (item: MenuItem) => {
         setSelectedItem(item);
         setIsItemModalOpen(true);
@@ -579,9 +588,13 @@ export default function Home() {
                         (i.addOns || []).map(a => a.name).sort().join('|') ===
                             addOns.map(a => a.name).sort().join('|')
                 );
-                if (index === -1) return [...prev, newLine];
-                const next = [...prev];
-                next[index] = { ...next[index], quantity: next[index].quantity + quantity };
+                const next =
+                    index === -1
+                        ? [...prev, newLine]
+                        : prev.map((existing, idx) =>
+                              idx === index ? { ...existing, quantity: existing.quantity + quantity } : existing
+                          );
+                saveLocalCart(next as unknown as Parameters<typeof saveLocalCart>[0]);
                 return next;
             });
         }
@@ -1080,13 +1093,23 @@ export default function Home() {
                                                         </div>
 
                                                         <div className="mt-2.5 flex items-center justify-between">
-                                                            <span className="text-[10.5px] text-[var(--accent)] font-medium">
-                                                                {t('Tap to customize')}
-                                                            </span>
+                                                            {canCustomizeItem(item) ? (
+                                                                <span className="text-[10.5px] text-[var(--accent)] font-medium">
+                                                                    {t('Tap to customize')}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10.5px] text-[var(--muted)] font-medium">
+                                                                    {t('Ready to add')}
+                                                                </span>
+                                                            )}
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleOpenItemModal(item);
+                                                                    if (canCustomizeItem(item)) {
+                                                                        handleOpenItemModal(item);
+                                                                    } else {
+                                                                        handleConfirmAddToCart(item, 1, 'N/A', 'N/A', null, []);
+                                                                    }
                                                                 }}
                                                                 className="h-8 px-3 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] text-[12px] font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow-sm"
                                                             >
@@ -1162,12 +1185,16 @@ export default function Home() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            handleOpenItemModal(item);
+                                                            if (canCustomizeItem(item)) {
+                                                                handleOpenItemModal(item);
+                                                            } else {
+                                                                handleConfirmAddToCart(item, 1, 'N/A', 'N/A', null, []);
+                                                            }
                                                         }}
                                                         className="mt-3.5 w-full h-9 rounded-full border border-[var(--border)] text-[12.5px] sm:text-[13px] font-semibold text-[var(--text)] group-hover:border-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-contrast)] transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm"
                                                     >
                                                         <i className="ph ph-shopping-bag text-[14px]"></i>
-                                                        <span>{t('Add to Cart')}</span>
+                                                        <span>{canCustomizeItem(item) ? t('Customize & Add') : t('Add to Cart')}</span>
                                                     </button>
                                                 </div>
                                             );
