@@ -518,6 +518,14 @@ export const translations: Record<string, string> = {
   'Receipts are issued after payment': 'ደረሰኝ የሚሰጠው ከክፍያ በኋላ ነው',
   'Receipts are issued only after payment': 'ደረሰኝ የሚሰጠው ከክፍያ በኋላ ብቻ ነው',
   'Amount due:': 'የሚከፈለው መጠን፦',
+  'NOT PAID YET — choose a payment method below to complete your order so the kitchen can prepare it.':
+    'ክፍያው ገና አልተፈጸመም — ወጥ ቤቱ ትዕዛዝዎን ማዘጋጀት እንዲችል እባክዎን ከታች ካሉት የክፍያ አማራጮች አንዱን ይምረጡ።',
+  'NOT PAID YET': 'ክፍያው ገና አልተፈጸመም',
+  'Manager will verify your receipt document in the cafe account before the chef prepares your order.':
+    'ማናጀሩ ወጥ ቤቱ ትዕዛዝዎን ማዘጋጀት ከመጀመሩ በፊት የክፍያ ደረሰኝዎን በካፌው አካውንት ውስጥ ያረጋግጣል።',
+  'Sender Phone Number': 'የላኪው ስልክ ቁጥር',
+  'Transfer via Telebirr to 0921940725 and enter the transaction reference / SMS code below.':
+    'በቴሌብር ወደ 0921940725 ገንዘብ ያስተላልፉ እና የግብይት ቁጥሩን / የኤስኤምኤስ ኮዱን ከታች ያስገቡ።',
   'NOT PAID YET — you have not paid for this order, so the kitchen has not received it and no receipt can be issued.':
     'እስካሁን አልተከፈለም — ስለዚህ ትዕዛዙ ወደ ኩሽና አልደረሰም፣ ደረሰኝም አይወጣም።',
   'Last attempt failed': 'የመጨረሻው ሙከራ አልተሳካም',
@@ -948,6 +956,10 @@ export const itemTranslations: Record<string, string> = {
   'St. George Premium Beer': 'ቅዱስ ጊዮርጊስ ቢራ',
   'Habesha Cold Gold Beer': 'ሐበሻ ቢራ',
   'Rift Valley Reserve House Wine': 'ሪፍት ቫሊ ወይን',
+  'buna': 'ቡና',
+  'Buna': 'ቡና',
+  'Traditional Buna': 'ባህላዊ ቡና',
+  'Jebena Buna': 'ጀበና ቡና',
 };
 
 
@@ -1117,6 +1129,25 @@ export const itemDescriptionTranslations: Record<string, string> = {
   // Cafe & Fallbacks
   'Single-origin micro-lots, signature espresso infusions, and AI RAG Coffee Sommelier recommendations.':
     'ልዩ የተመረጡ ቡናዎች፣ የኤስፕሬሶ መጠጦች እና የአይ-ኤ አጋዥ የቡና ምክሮች።',
+  // Traditional Coffee, Water, Soft Drinks & Alcohol
+  'Traditional Ethiopian Jebena Buna brewed fresh with rich roasted beans, served with aromatic incense and popcorn.':
+    'በባህላዊ ጀበና የተፈላ ትኩስ የኢትዮጵያ ቡና፣ ከጥሩ ዕጣን እና ፈንዲሻ ጋር የሚቀርብ።',
+  'Ethiopia’s iconic naturally sparkling highland mineral water from Senkele volcanic springs. Refreshing and rich in natural minerals.':
+    'ከሰንቀሌ እሳተ ጎመራ ምንጮች የሚገኝ ተፈጥሯዊ ጋዝ ያለው ታዋቂ የኢትዮጵያ አምቦ ውሃ። የሚያረካና በተፈጥሮ ማዕድናት የበለፀገ።',
+  'Premium bottled natural still spring water, purified and crystal clear.':
+    'ንፁህ እና ጥርት ያለ የታሸገ የተፈጥሮ ምንጭ ውሃ።',
+  'Chilled original taste Coca-Cola, served ice-cold with optional lemon slice. The perfect refreshing companion for burgers and pizza.':
+    'ቀዝቃዛ ኮካ ኮላ፣ ከሎሚ ቁራጭ ጋር የሚቀርብ የሚያረካ ለስላሳ መጠጥ። ለበርገርና ፒዛ ተመራጭ።',
+  'Bright and bubbly orange soda with fruit juice, served refreshing and ice-cold.':
+    'ጣፋጭና የሚያረካ የብርቱካን ጭማቂ ያለው ቀዝቃዛ ፋንታ ለስላሳ መጠጥ።',
+  'Clean, crisp lemon-lime refreshment with 100% natural flavours, served over ice.':
+    'ከተፈጥሯዊ የሎሚ ጣዕም የተዘጋጀ የሚያረካ ቀዝቃዛ ስፕራይት።',
+  'Ethiopia’s legendary heritage lager (4.7% ABV), brewed since 1922. Crisp golden malt with a smooth balanced finish.':
+    'ከ1914 ዓ.ም ጀምሮ የሚጠመቅ ታዋቂው የኢትዮጵያ ቅዱስ ጊዮርጊስ ቢራ (4.7% ABV)። ወርቃማ ብቅልና ለስላሳ ጣዕም ያለው።',
+  'Authentic Ethiopian rich lager (5% ABV), crafted with pure highland spring water and roasted barley malt.':
+    'ከተመረጠ የገብስ ብቅል እና ንፁህ የደጋ ምንጭ ውሃ የተጠመቀ እውነተኛ የኢትዮጵያ ሐበሻ ቢራ (5% ABV)።',
+  'Artisanal Ethiopian wine produced from Ziway vineyards in the Great Rift Valley. Vibrant berry aromas with gentle balanced tannins.':
+    'በስምጥ ሸለቆው ዝዋይ ወይን እርሻዎች የተመረተ ምርጥ የኢትዮጵያ ሪፍት ቫሊ ወይን። ልዩ የፍራፍሬ መዓዛ እና የተመጣጠነ ጣዕም ያለው።',
 
   // ── Order Fulfillment & Types ──────────────────────────────────────────
   'DELIVERY': 'ማድረሻ',

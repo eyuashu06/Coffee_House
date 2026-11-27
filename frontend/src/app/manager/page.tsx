@@ -15,6 +15,7 @@ import { formatOrderType } from '../../utils/translations';
 
 import EthiopianPhoneInput from '../../components/EthiopianPhoneInput';
 import { useCafe, type CafeLocation } from '../../context/CafeContext';
+import AssistantChat from '../../components/AssistantChat';
 
 interface OrderItem {
   id: number;
@@ -5284,6 +5285,9 @@ export default function ManagerDashboard() {
           </div>
         </div>
       )}
+
+      {/* ASK BUNA ASSISTANT */}
+      <AssistantChat />
     </div>
   );
 }

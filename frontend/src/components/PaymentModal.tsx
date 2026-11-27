@@ -306,7 +306,7 @@ export default function PaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-fade-in">
       <div className="relative w-[95%] sm:w-full max-w-lg my-auto bg-surface-2 border border-[var(--border)] rounded-2xl shadow-2xl p-5 sm:p-6 text-[var(--text)] max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-[var(--border)]">
@@ -443,7 +443,7 @@ export default function PaymentModal({
 
                   {currentAccount.instructions && (
                     <p className="text-[11px] text-[var(--muted)] italic leading-relaxed">
-                      💡 {currentAccount.instructions}
+                      💡 {t(currentAccount.instructions)}
                     </p>
                   )}
                 </div>

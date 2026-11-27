@@ -18,6 +18,7 @@ import EthiopianPhoneInput from '../../components/EthiopianPhoneInput';
 import AuthModal from '../../components/AuthModal';
 import { formatEthiopianTime } from '../../utils/ethiopianTime';
 import { formatOrderType } from '../../utils/translations';
+import AssistantChat from '../../components/AssistantChat';
 
 interface OrderItem {
   id: number;
@@ -1663,6 +1664,9 @@ export default function AccountPage() {
         onRemoveItem={handleDrawerRemoveItem}
         onClearCart={handleDrawerClearCart}
       />
+
+      {/* ASK BUNA ASSISTANT */}
+      <AssistantChat onOpenCart={() => setIsCartDrawerOpen(true)} />
     </div>
   );
 }

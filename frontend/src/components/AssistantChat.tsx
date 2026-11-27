@@ -347,7 +347,7 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
           setUnread(0);
         }}
         aria-label={t('Buna Hub Assistant')}
-        className="fixed bottom-5 right-5 z-[70] flex items-center gap-2 px-4 py-3 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-sm shadow-[0_10px_30px_rgba(0,0,0,0.3)] hover:brightness-110 active:scale-95 transition-all"
+        className="fixed bottom-20 sm:bottom-6 left-4 sm:left-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-sm shadow-[0_10px_30px_rgba(0,0,0,0.3)] hover:brightness-110 active:scale-95 transition-all"
       >
         <i className={`ph ${isOpen ? 'ph-x' : 'ph-chat-circle-dots'} text-xl`}></i>
         <span className="hidden sm:inline">{isOpen ? t('Close') : t('Ask Buna')}</span>
@@ -359,7 +359,7 @@ export default function AssistantChat({ onAddToCart, onOpenCart }: AssistantChat
       </button>
 
       {isOpen && (
-        <div className="fixed bottom-24 right-4 sm:right-5 z-[70] w-[calc(100vw-2rem)] sm:w-[420px] h-[70vh] max-h-[620px] bg-surface border border-[var(--border)] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed bottom-36 sm:bottom-24 left-4 sm:left-6 z-40 w-[calc(100vw-2rem)] sm:w-[420px] h-[70vh] max-h-[620px] bg-surface border border-[var(--border)] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
           <div className="px-4 py-3 bg-surface-2 border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">

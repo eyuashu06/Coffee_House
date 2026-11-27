@@ -302,7 +302,7 @@ export default function CartDrawer({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex justify-end">
+      <div className="fixed inset-0 z-[90] flex justify-end">
         {/* Overlay Backdrop */}
         <div 
           onClick={onClose}
