@@ -20,6 +20,8 @@ class UserSerializer(serializers.ModelSerializer):
         value = (value or '').strip()
         if not value:
             return value
+        if self.instance and (self.instance.email or '').lower() == value.lower():
+            return value.lower()
         validate_deliverable_email(value)
         qs = User.objects.filter(email__iexact=value.lower())
         if self.instance:

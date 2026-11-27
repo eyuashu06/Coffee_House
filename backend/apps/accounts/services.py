@@ -200,7 +200,7 @@ def get_or_create_customer_by_phone(phone, name='', email=''):
 
         email_to_use = (email or '').strip()
         if not email_to_use:
-            email_to_use = f"{clean_digits}@customer.artisanalreserve.com"
+            email_to_use = f"{clean_digits}@bunahub.com"
 
         user = User(
             username=clean_digits,
@@ -234,6 +234,9 @@ def get_or_create_customer_by_phone(phone, name='', email=''):
         if not user.phone:
             user.phone = norm_phone
             fields_to_update.append('phone')
+        if user.email and user.email.endswith('@customer.artisanalreserve.com'):
+            user.email = f"{clean_digits}@bunahub.com"
+            fields_to_update.append('email')
         if fields_to_update:
             user.save(update_fields=list(set(fields_to_update)))
 

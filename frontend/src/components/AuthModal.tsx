@@ -144,7 +144,7 @@ export default function AuthModal({
     }
     const domain = emailValue.split('@')[1].toLowerCase();
     const blocked = ['example.com', 'example.net', 'example.org', 'test.com', 'localhost',
-                     'artisanalreserve.com', 'artisanalcoffee.com', 'bunahub.et', 'mailinator.com'];
+                     'artisanalreserve.com', 'artisanalcoffee.com', 'bunahub.com', 'bunahub.et', 'mailinator.com'];
     if (blocked.includes(domain)) {
       return language === 'am'
         ? `«${domain}» መልእክት ሊቀበል አይችልም። በእውነት የራስዎ የሆነ አድራሻ ይጠቀሙ።`

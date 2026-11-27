@@ -21,6 +21,7 @@ NON_DELIVERABLE_EMAIL_DOMAINS = {
     'email.com',
     'artisanalreserve.com',
     'artisanalcoffee.com',
+    'bunahub.com',
     'bunahub.et',
     'company.com',
     'mailinator.com',

@@ -49,6 +49,14 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.NOTICE('ℹ Customer account already exists (password preserved)'))
 
+        # Migrate any legacy phone-signup placeholder emails to @bunahub.com
+        for legacy_user in User.objects.filter(email__iendswith='@customer.artisanalreserve.com'):
+            local_part = legacy_user.email.split('@', 1)[0]
+            new_email = f"{local_part}@bunahub.com"
+            if not User.objects.filter(email__iexact=new_email).exclude(pk=legacy_user.pk).exists():
+                legacy_user.email = new_email
+                legacy_user.save(update_fields=['email'])
+
         # ─────────────────────────────────────────────
         # 2. Restaurant Settings
         # ─────────────────────────────────────────────

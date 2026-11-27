@@ -924,9 +924,9 @@ export default function Home() {
                             <Reveal className="mt-14">
                                 <blockquote className="linen-sheet bg-[var(--surface)] border border-[var(--border)] px-6 sm:px-10 py-9">
                                     <p className="font-display italic text-[24px] sm:text-[27px] leading-[1.35]">
-                                        “{t('Buna dabo naw')}”
+                                        {language === 'am' ? '«ኑ ቡና እንጠጣ!»' : '“Nu buna enteta!”'}
                                         <span className="block mt-3 not-italic font-body text-[15px] text-[var(--muted)]">
-                                            {t('— “Coffee is our bread.” The first thing a guest is offered, the last thing they are rushed through.')}
+                                            {t('— “Come, let’s drink coffee!” The first hospitality offered to a guest, a celebration of love and friendship never rushed through.')}
                                         </span>
                                     </p>
                                 </blockquote>

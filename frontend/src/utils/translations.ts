@@ -191,8 +191,10 @@ export const translations: Record<string, string> = {
     'በቡና ሁብ ባህላዊውን የቡና ሥነ-ሥርዓት በውስጥ አዘጋጅተናል። በየከሰዓቱ ምጣዱ ይጣዳል፣ አዳራሹ በዕጣኑ ጢስ ይሞላል፤ በአቅራቢያው የተቀመጠ ሁሉ የመጀመሪያውን ጽዋ ያገኛል።',
   'The pour matters as much as the roast. The jebena is lifted high so the stream falls thin and steady into small handleless cups — sini — and the coffee arrives in three rounds, each weaker and sweeter than the last: abol, tona, and baraka, the blessing. Leaving before the third is bad manners; staying for it is how strangers become regulars.':
     'የቡናው አቀዳድ ልክ እንደ ቁሊቱ ትልቅ ዋጋ አለው። ጀበናው ከፍ ተደርጎ ወደ ሲኒው በለሰለሰ መስመር ይወርዳል፤ ቡናውም በሦስት ዙር ይቀርባል፦ አቦል፣ ቶና፣ እና በረካ። ከሦስተኛው ዙር በፊት መሄድ ስነ-ስርዓት አይደለም፤ እስከ መጨረሻው መቆየት ደግሞ እንግዶችን ቋሚ ወዳጅ ያደርጋል።',
+  '— “Come, let’s drink coffee!” The first hospitality offered to a guest, a celebration of love and friendship never rushed through.':
+    'ለእንግዳ የሚቀርብ የመጀመሪያው የክብር መስተንግዶ፣ በፍጥነት የማይሸኙበት የፍቅርና የወዳጅነት ክብረ-በዓል ነው።',
   '— “Coffee is our bread.” The first thing a guest is offered, the last thing they are rushed through.':
-    '— «ቡና ዳቦችን ነው»። ለእንግዳ የሚቀርብ የመጀመሪያው፣ በፍጥነት የማይሸኙበት የክብረ-በዓል መግለጫ።',
+    'ለእንግዳ የሚቀርብ የመጀመሪያው የክብር መስተንግዶ፣ በፍጥነት የማይሸኙበት የፍቅርና የወዳጅነት ክብረ-በዓል ነው።',
   'Confirming your payment with the gateway…': 'ክፍያዎን በክፍያ መንገዱ ማረጋገጥ ላይ…',
   'Payment is taking longer than usual. It will update here automatically — or refresh the page in a moment.':
     'ክፍያው ከወትሮው ረዘም ያለ ጊዜ እየወሰደ ነው። እዚህ በራሱ ይሻሻላል — ወይም ገጹን ከጥቂት ደቂቃ በኋላ ያድሱ።',
@@ -291,7 +293,8 @@ export const translations: Record<string, string> = {
     'ሦስት ዙር ቡና — አቦል፣ ቶና፣ እና በረካ — ከልዩ ስማሽ በርገርና ትኩስ ፒዛ ጋር ተጣምሮ። ሦስተኛውን ዙር መጠበቅ እንግዶች ቋሚ ደንበኛ የሚሆኑበት መንገድ ነው።',
   'Our own roastery sits behind the counter, while our kitchen prepares Addis Ababa comfort food with local prime ingredients.':
     'የቡና መቁያችን ከጀርባ ሲገኝ፣ ኩሽናችንም በአዲስ አበባ ምርጥ የምግብ ጣዕሞችን በጥራት ያቀርባል።',
-  'Buna dabo naw': 'ቡና ዳቦ ነው',
+  'Nu buna enteta!': '«ኑ ቡና እንጠጣ!»',
+  'Buna dabo naw': '«ኑ ቡና እንጠጣ!»',
   'Our own roastery sits behind the counter — a small drum that turns out eight kilos at a time, mostly Yirgacheffe and Guji lots we buy through two family exporters. The burger grill and the pizza oven came later, because a ceremony that lasts three hours makes people hungry.':
     'የራሳችን የቡና መቆያ ከተጋባዥው ጀርባ ይገኛል — በአንድ ጊዜ 8 ኪሎ የሚቆላ። በአብዛኛው ከይርጋጨፌ እና ከጉጂ የሚመጡ ቡናዎች ናቸው። በርገርና ፒዛ በኋላ የተጨመሩት የሦስት ሰዓት ቡና ጨዋታ ሰዎችን ስለሚያስርብ ነው!።',
 

@@ -479,6 +479,7 @@ class PhoneLoginTests(TestCase):
         self.assertEqual(res.data['user']['role'], 'CUSTOMER')
         self.assertEqual(res.data['user']['first_name'], 'Solomon')
         self.assertEqual(res.data['user']['last_name'], 'Desta')
+        self.assertEqual(res.data['user']['email'], '251911223344@bunahub.com')
 
         # Returning sign-in with same phone preserves the user
         res2 = self.client.post('/api/v1/auth/phone-login/', {
