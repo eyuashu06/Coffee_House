@@ -55,21 +55,21 @@ let cachedMenuItems: MenuItem[] | null = null;
 let cacheTimestamp = 0;
 
 export function MenuProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<MenuItem[]>(() => {
-    if (!cachedMenuItems) {
-      cachedMenuItems = readStoredMenu();
-      cacheTimestamp = readStoredMenuTime();
-    }
-    return cachedMenuItems || [];
-  });
+  // Start with deterministic SSR-safe defaults so initial hydration matches
+  // server HTML, then hydrate cached menu items on mount.
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [menuStatus, setMenuStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
 
-  const [menuStatus, setMenuStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(() => {
+  useEffect(() => {
     if (!cachedMenuItems) {
       cachedMenuItems = readStoredMenu();
       cacheTimestamp = readStoredMenuTime();
     }
-    return cachedMenuItems && cachedMenuItems.length > 0 ? 'ready' : 'idle';
-  });
+    if (cachedMenuItems && cachedMenuItems.length > 0) {
+      setItems(cachedMenuItems);
+      setMenuStatus('ready');
+    }
+  }, []);
 
   const fetchMenu = useCallback(async (forceRefresh = false) => {
     const isCacheValid = Boolean(cachedMenuItems && cachedMenuItems.length > 0 && Date.now() - cacheTimestamp < CACHE_DURATION_MS);

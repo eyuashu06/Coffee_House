@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch, onSessionGone } from '../lib/api';
 
 export interface User {
@@ -63,30 +63,17 @@ const parseResponseData = async (res: Response) => {
 const AUTH_STORAGE_KEY = 'buna_auth_user';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Pre-load user from localStorage to avoid layout shift, flickering, or reload delays on page entry
-  const [user, setUserState] = useState<User | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const [loading, setLoading] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    try {
-      return !localStorage.getItem(AUTH_STORAGE_KEY);
-    } catch {
-      return true;
-    }
-  });
+  // Start with deterministic SSR-safe defaults so server HTML and initial client
+  // hydration match cleanly; hydrate cached user from localStorage on mount.
+  const [user, setUserState] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const userRef = useRef<User | null>(null);
 
   const [sessionExpired, setSessionExpired] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   const setUser = useCallback((newUser: User | null) => {
+    userRef.current = newUser;
     setUserState(newUser);
     if (typeof window !== 'undefined') {
       try {
@@ -110,10 +97,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = useCallback(async () => {
     // Only show loading if we don't already have a cached user:
     // this ensures the profile icon and dashboard remain rock-solid and stable!
-    setUserState((curr) => {
-      if (!curr) setLoading(true);
-      return curr;
-    });
+    if (!userRef.current) {
+      setLoading(true);
+    }
 
     const MAX_ATTEMPTS = 3;
     try {
@@ -156,6 +142,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [setUser]);
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as User;
+        if (parsed) {
+          userRef.current = parsed;
+          setUserState(parsed);
+          setLoading(false);
+        }
+      }
+    } catch {}
     checkAuth();
   }, [checkAuth]);
 
