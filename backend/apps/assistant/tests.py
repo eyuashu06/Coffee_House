@@ -1426,7 +1426,7 @@ class EthiopianTimeAndReservationDialogueTests(AssistantTestBase):
         than matching a stopword ('at') in the coffee brewing knowledge base.
         """
         from apps.assistant.retriever import search_knowledge_base, _extract_name
-        from apps.assistant.agent import verify_answer
+        from apps.assistant.agent import verify_answer, ToolContext
 
         self.assertEqual(search_knowledge_base('2, tomorrow at 2 reserve'), [])
         self.assertIsNone(_extract_name('reserve'))
@@ -1439,7 +1439,7 @@ class EthiopianTimeAndReservationDialogueTests(AssistantTestBase):
             self.assertIn('14:00', r['answer_en'])
             self.assertNotIn('Geisha', r['answer_en'])
 
-        ctx = self.ctx_with([])
+        ctx = ToolContext(user=None)
         self.assertEqual(
             verify_answer('Tomorrow at 2:00 PM is available for 2 guests.',
                           'ነገ ከሰዓት 8 ሰዓት ለ2 ሰዎች ቦታ አለ።', ctx),
