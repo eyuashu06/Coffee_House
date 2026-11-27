@@ -31,6 +31,7 @@ class UserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=6)
+    confirm_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
     phone = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
     full_name = serializers.CharField(required=False, allow_blank=True, write_only=True)
@@ -39,7 +40,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'phone', 'password', 'first_name', 'last_name', 'full_name')
+        fields = ('id', 'username', 'email', 'phone', 'password', 'confirm_password', 'first_name', 'last_name', 'full_name')
 
     def validate_email(self, value):
         value = (value or '').strip()
@@ -55,6 +56,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         return normalized
 
     def validate(self, attrs):
+        confirm_password = attrs.pop('confirm_password', None)
+        if confirm_password is not None and attrs.get('password') != confirm_password:
+            raise serializers.ValidationError({'confirm_password': 'The passwords do not match.'})
+
         # Ensure full_name is provided or both first_name and last_name are provided
         full_name = attrs.get('full_name', '').strip()
         first_name = attrs.get('first_name', '').strip()

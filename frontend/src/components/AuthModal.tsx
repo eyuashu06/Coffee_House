@@ -60,6 +60,7 @@ export default function AuthModal({
   const [customerName, setCustomerName] = useState('');
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
@@ -91,6 +92,7 @@ export default function AuthModal({
       setPhoneOtpCode('');
       setPhoneOtpHint(null);
       setResendCountdown(0);
+      setConfirmPassword('');
       setError(null);
       setSuccess(null);
     }
@@ -188,6 +190,10 @@ export default function AuthModal({
         setError(t('Password must be at least 6 characters long.'));
         return;
       }
+      if (password !== confirmPassword) {
+        setError(language === 'am' ? 'የይለፍ ቃሎቹ አይዛመዱም።' : 'The passwords do not match.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -253,6 +259,7 @@ export default function AuthModal({
           email: email.trim() || undefined,
           phone: formattedPhone || undefined,
           password,
+          confirm_password: confirmPassword,
           full_name: fullName.trim(),
           first_name: firstName,
           last_name: lastName,
@@ -647,6 +654,22 @@ export default function AuthModal({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t('Enter your password')}
+                  className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[var(--accent)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
+                  {t('Confirm Password')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder={language === 'am' ? 'የይለፍ ቃሉን በድጋሚ ያስገቡ' : 'Re-enter your password'}
                   className="w-full px-3.5 py-2 rounded-lg bg-surface-2 border border-[var(--border)] text-[var(--text)] text-sm focus:outline-none focus:border-[var(--accent)]"
                 />
               </div>

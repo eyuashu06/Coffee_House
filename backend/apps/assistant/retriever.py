@@ -545,17 +545,27 @@ def _ensure_knowledge_base():
 
 def search_knowledge_base(text, limit=3):
     _ensure_knowledge_base()
-    tokens = set(tokenize(text))
+    raw_tokens = set(tokenize(text))
+    tokens = {
+        t for t in raw_tokens
+        if not t.isdigit()
+        and (not t.isascii() or len(t) >= 3)
+        and not (t.isascii() and t in STOPWORDS)
+        and t not in QUESTION_WORDS
+    }
     if not tokens:
         return []
     scored = []
     for doc in KnowledgeBase.objects.all():
+        title_tokens = set(tokenize(doc.title))
+        tag_tokens = set(tokenize(doc.tags))
         doc_tokens = set(tokenize(f"{doc.title} {doc.category} {doc.content} {doc.tags}"))
         overlap = len(tokens & doc_tokens)
-        title_hit = 2 if any(t in doc.title.lower() for t in tokens if len(t) >= 3) else 0
-        score = overlap + title_hit
-        if score:
-            scored.append((score, doc))
+        title_or_tag_hit = len(tokens & (title_tokens | tag_tokens))
+        if title_or_tag_hit == 0 and overlap < 2:
+            continue
+        score = overlap + (2 * title_or_tag_hit)
+        scored.append((score, doc))
     scored.sort(key=lambda kv: -kv[0])
     return [doc for _, doc in scored[:limit]]
 
@@ -809,8 +819,20 @@ def _extract_guests(text):
     if match:
         return int(match.group(1))
 
-    # 2) "table for 4" / "reservation for 4" / "party of 4" / "for 4 people" / "le 4 sewoch"
-    match = re.search(r'(?:table\s+for|reservation\s+for|booking\s+for|party\s+of|ለ|le)\s*(\d+)\s*(?:people|persons?|guests?|ሰዎች|ሰው|sewoch|sew)?\b', low)
+    # 2) "table for 4" / "reservation for 4" / "party of 4" / "for 4 people" / "for 2, tomorrow" / "le 4 sewoch"
+    match = re.search(
+        r'(?:table\s+for|reservation\s+for|booking\s+for|party\s+of|ለ|le)\s*(\d+)\s*(?:people|persons?|guests?|ሰዎች|ሰው|sewoch|sew)?\b',
+        low,
+    )
+    if match:
+        return int(match.group(1))
+
+    match = re.search(
+        r'(?<!\w)for\s+(\d{1,2})\s*(?:people|persons?|guests?|ሰዎች|ሰው|sewoch|sew)?'
+        r'(?=\s*(?:[,.;]|$|tomorrow|today|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|at\b|on\b|in\b|reserve|book|ነገ|ዛሬ))'
+        r'(?!\s*(?:am|pm|lt|seat|se\'at|morning|afternoon|evening|night|noon|minutes?|mins?|hours?|hrs?|etb|birr|ብር|:))',
+        low,
+    )
     if match:
         return int(match.group(1))
 
@@ -819,14 +841,29 @@ def _extract_guests(text):
         if re.search(r'\b' + re.escape(word) + r'\b', low) or word in low:
             return value
 
-    # 4) a lone digit is only a party size when the message carries no time
-    _, extracted_time = _extract_date_and_time(text)
-    if not extracted_time:
-        if not re.search(r'\b(?:us|u\.s\.|usa|lt|seat|se\'at|morning|night|evening|afternoon|ጠዋት|ማታ)\b', low):
-            digits = re.findall(r'\b(\d{1,2})\b', low)
-            for value in digits:
-                if 1 <= int(value) <= 50:
-                    return int(value)
+    # 4) A standalone party-size digit ("2, tomorrow at 2 reserve", "tomorrow at 2, 4"):
+    #    strip phone numbers, ISO dates, and time expressions first so clock digits
+    #    ("at 2", "6 PM", "18:30", "seat 2") are never mistaken for guests.
+    scrubbed = re.sub(r'(\+?251[\s\-]?[79]\d{8}|0[79]\d{8})', ' ', low)
+    scrubbed = re.sub(r'\b20\d{2}-\d{1,2}-\d{1,2}\b', ' ', scrubbed)
+    scrubbed = re.sub(r'(?<!\d)\d{1,2}[:.]\d{2}(?!\d)', ' ', scrubbed)
+    scrubbed = re.sub(
+        r'(?<!\d)(?:ከሰዓት|ሰዓት|ማታ|ጠዋት|ሌሊት|seat|se\'at)\s*(?:ከ\s*|በ\s*)?\d{1,2}(?!\d)',
+        ' ', scrubbed,
+    )
+    scrubbed = re.sub(
+        r'(?<!\d)\d{1,2}\s*(?:at\s+|in\s+(?:the\s+)?|on\s+)?(?:am|pm|morning|afternoon|evening|night|noon|midday|ጠዋት|ከሰዓት|ማታ|ሌሊት|ethiopian?|ethiopia|us|usa|lt|local\s*time|seat|se\'at)(?![a-z])',
+        ' ', scrubbed,
+    )
+    scrubbed = re.sub(
+        r'(?:at|on\s+the|on|by|around|make\s+it\s+(?:at\s+|on\s+(?:the\s+)?)?|ከ|በ)\s*\d{1,2}(?!\d|[:.])(?:\s*(?:in|at|on))?(?:\s*(?:am|pm|night|evening|morning|ጠዋት|ማታ|ሰዓት|ethiopian?|ethiopia|us|usa|lt|seat|se\'at))?',
+        ' ', scrubbed,
+    )
+    if not re.search(r'\b(?:us|u\.s\.|usa|lt|seat|se\'at)\b', scrubbed):
+        digits = re.findall(r'\b(\d{1,2})\b', scrubbed)
+        for value in digits:
+            if 1 <= int(value) <= 50:
+                return int(value)
     return None
 
 
@@ -839,13 +876,16 @@ def _extract_name(text):
         r'ስሜ\s*([^\s,.]{2,30})',
     ]
     INVALID_NAME_WORDS = {
-        'the', 'a', 'an', 'for', 'reservation', 'booking', 'table', 'people', 'guests',
-        'person', 'pax', 'wanna', 'want', 'make', 'today', 'tomorrow', 'tonight',
-        'order', 'food', 'drink', 'coffee', 'buna', 'at', 'on', 'with', 'please',
-        'hello', 'hi', 'hey', 'selam', 'ok', 'yes', 'no', 'pizza', 'burger',
+        'the', 'a', 'an', 'for', 'reservation', 'reserve', 'booking', 'book', 'booked',
+        'table', 'people', 'guests', 'person', 'pax', 'wanna', 'want', 'make', 'today',
+        'tomorrow', 'tonight', 'order', 'food', 'drink', 'drinks', 'coffee', 'buna',
+        'tea', 'water', 'menu', 'hours', 'open', 'close', 'location', 'address', 'price',
+        'cost', 'available', 'availability', 'check', 'status', 'cancel', 'cancelled',
+        'confirm', 'help', 'at', 'on', 'with', 'please', 'hello', 'hi', 'hey', 'selam',
+        'thanks', 'thank', 'bye', 'ok', 'okay', 'yes', 'no', 'pizza', 'burger',
         'pickup', 'pick', 'delivery', 'deliver', 'dine', 'dinein', 'dine-in', 'store',
-        'lunch', 'dinner', 'breakfast', 'brunch', 'us', 'me', 'two', 'three', 'four',
-        'five', 'six', 'seven', 'eight', 'nine', 'ten',
+        'lunch', 'dinner', 'breakfast', 'brunch', 'us', 'me', 'seat', 'two', 'three',
+        'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
         'ማስያዝ', 'ቦታ', 'ጠረጴዛ', 'ሰዎች', 'ሰው', 'ነገ', 'ዛሬ', 'ማታ', 'ጠዋት', 'ሰላም', 'አዎ', 'አይ'
     }
     for pattern in patterns:

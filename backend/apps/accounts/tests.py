@@ -58,6 +58,20 @@ class AuthAndProfileAPITests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', res.data)
 
+    def test_register_confirm_password_must_match_when_provided(self):
+        mismatched = self.user_data.copy()
+        mismatched['username'] = 'mismatchuser'
+        mismatched['email'] = TEST_EMAIL_ALT
+        mismatched['confirm_password'] = 'DifferentPassword123!'
+        res = self.client.post('/api/v1/auth/register/', mismatched)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('confirm_password', res.data)
+
+        matched = mismatched.copy()
+        matched['confirm_password'] = matched['password']
+        res_ok = self.client.post('/api/v1/auth/register/', matched)
+        self.assertEqual(res_ok.status_code, status.HTTP_201_CREATED)
+
     def test_login_with_username_success(self):
         login_data = {
             'username_or_email': 'existinguser',

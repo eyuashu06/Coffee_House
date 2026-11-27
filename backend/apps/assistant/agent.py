@@ -168,7 +168,7 @@ Do not invent prices, products, opening hours, or business policies.
 - Keep responses concise (2-3 sentences for simple questions).
 - Understand follow-up messages.
 - Do not repeat the welcome message unnecessarily.
-- Do not recommend products when the customer is asking to reserve a table.
+- Do not recommend products or call `search_knowledge_base` when the customer is asking to reserve a table or providing reservation details (guest count, date, time, name, phone).
 - Do not answer that information is unavailable before checking the relevant tool.
 - When customers say they are coming ("ezaw enazalen"), acknowledge them naturally and warmly.
 - If the message is unclear, ask one short clarification question.
@@ -214,7 +214,7 @@ def tool_declarations(include_private):
               'Opening hours, whether the cafe is open right now, address, phone, email, cafe background '
               'and the average preparation time.'),
         _tool('search_knowledge_base',
-              'Search the cafe knowledge base: brewing science (pour over, V60, Dutch cold drip, Jebena), coffee bean origins, and pastry pairings.',
+              'Search the cafe knowledge base ONLY for brewing science (pour over, V60, Dutch cold drip, Jebena), coffee bean origins, and pastry pairings. Never use for table reservations or orders.',
               {'query': {'type': 'string', 'description': 'Topic or keywords to search'}},
               ['query']),
         _tool('list_categories',
@@ -462,6 +462,11 @@ def execute_tool(name, args, ctx):
         ]}
 
     if name == 'check_table_availability':
+        if args.get('guests') is not None:
+            ctx.remember_number(args.get('guests'))
+        if args.get('time'):
+            for tok in _NUMBER_RE.findall(str(args.get('time'))):
+                ctx.remember_number(tok)
         available, detail = reservation_service.check_availability(
             args.get('date'), args.get('time'), args.get('guests'))
         if available:
@@ -606,9 +611,11 @@ def execute_tool(name, args, ctx):
 #: Numbers that are part of ordinary language, not a quoted price or quantity.
 _NUMBER_RE = re.compile(r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)(?![\w])')
 
-#: "20 minutes", "ከ20 ደቂቃ" - a duration is a claim about the venue, not prose.
+#: "20 minutes", "ከ20 ደቂቃ" - a wait/prep duration is a claim about the venue, not prose.
+#: Note: standalone "ሰዓት" is also Amharic for "o'clock" (e.g. "8 ሰዓት"), so only
+#: plural "ሰዓታት" (hours) counts as a duration claim here.
 _DURATION_RE = re.compile(
-    r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*(?:-\s*)?(?:minutes?|mins?|hours?|hrs?|ደቂቃ|ሰዓት)',
+    r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*(?:-\s*)?(?:minutes?|mins?|hours?|hrs?|ደቂቃ|ሰዓታት)',
     re.IGNORECASE)
 
 

@@ -33,10 +33,11 @@ interface AuthContextType {
   /** Call this when any API call answers 401 so polling can stop. */
   reportUnauthorized: () => void;
   register: (data: {
-    username: string;
+    username?: string;
     email?: string;
     phone?: string;
     password: string;
+    confirm_password?: string;
     full_name?: string;
     first_name?: string;
     last_name?: string;
@@ -261,6 +262,7 @@ function formatAuthError(data: any, fallback: string): string {
     email?: string;
     phone?: string;
     password: string;
+    confirm_password?: string;
     full_name?: string;
     first_name?: string;
     last_name?: string;

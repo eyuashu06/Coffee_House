@@ -598,6 +598,7 @@ export const translations: Record<string, string> = {
   'You haven\'t booked any tables with us.': 'ከእኛ ጋር ምንም ያስያዙት ጠረጴዛ የለም።',
   'Booked on': 'የተያዘበት ቀን',
   'Confirm': 'አረጋግጥ',
+  'Confirm Password': 'የይለፍ ቃሉን ያረጋግጡ',
   'Mark Completed': 'ተጠናቋል በል',
   'Add New Address': 'አዲስ አድራሻ ጨምር',
   'Street Address': 'የጎዳና / የቤት አድራሻ',

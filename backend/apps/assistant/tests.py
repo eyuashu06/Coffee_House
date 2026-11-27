@@ -1418,3 +1418,30 @@ class EthiopianTimeAndReservationDialogueTests(AssistantTestBase):
         self.assertEqual(r2['action']['action'], 'reservation_created')
         self.assertIn('4:00 PM', r2['answer_en'])
         self.assertIn('Dawit', r2['answer_en'])
+
+    def test_short_booking_with_leading_guest_count_does_not_hit_knowledge_base(self):
+        """
+        Queries like '2, tomorrow at 2 reserve' or '2, tomorrow at 2' carry a
+        guest count + date + time and must stay in the reservation flow rather
+        than matching a stopword ('at') in the coffee brewing knowledge base.
+        """
+        from apps.assistant.retriever import search_knowledge_base, _extract_name
+        from apps.assistant.agent import verify_answer
+
+        self.assertEqual(search_knowledge_base('2, tomorrow at 2 reserve'), [])
+        self.assertIsNone(_extract_name('reserve'))
+
+        for idx, query in enumerate(('2, tomorrow at 2 reserve', '2, tomorrow at 2', 'for 2, tomorrow at 2')):
+            r = self.ask(query, session_id=f'short-book-{idx}')
+            self.assertEqual(r['intent'], 'reservation_create')
+            self.assertEqual(r['action']['action'], 'collect_reservation_details')
+            self.assertIn('2 guests', r['answer_en'])
+            self.assertIn('14:00', r['answer_en'])
+            self.assertNotIn('Geisha', r['answer_en'])
+
+        ctx = self.ctx_with([])
+        self.assertEqual(
+            verify_answer('Tomorrow at 2:00 PM is available for 2 guests.',
+                          'ነገ ከሰዓት 8 ሰዓት ለ2 ሰዎች ቦታ አለ።', ctx),
+            [],
+        )
