@@ -129,7 +129,7 @@ export default function Home() {
     const { user, loading: authLoading, logout } = useAuth();
     const isStaff = user?.role === 'ADMIN' || user?.role === 'MANAGER';
     const { t, language, tCategory, tItem, tItemDescription, locale } = useLanguage();
-    const { settings: cafeSettings, locations: cafeLocations, primaryLocation } = useCafe();
+    const { settings: cafeSettings, locations: cafeLocations, events: liveEvents, primaryLocation } = useCafe();
     const { items, menuStatus, fetchMenu } = useMenu();
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
@@ -898,6 +898,82 @@ export default function Home() {
                 </section>
 
                 <main>
+                    {/* ======================= LIVE EVENTS, ADS & DISCOUNTS ======================= */}
+                    {liveEvents.length > 0 && (
+                        <section className="px-4 sm:px-6 pt-10 pb-2">
+                            <div className="max-w-[1360px] mx-auto">
+                                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                                    <div>
+                                        <Kicker>{t('Events & Special Offers')}</Kicker>
+                                        <h2 className="font-display text-[24px] sm:text-[30px] leading-tight mt-1">
+                                            {t("What's Happening at Buna Hub")}
+                                        </h2>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {liveEvents.map((ev) => (
+                                        <div
+                                            key={ev.id}
+                                            className="rounded-[18px] bg-[var(--surface)] border border-[var(--accent)]/40 overflow-hidden shadow-[var(--shadow)] flex flex-col justify-between"
+                                        >
+                                            {ev.image_url && (
+                                                <div className="h-44 w-full overflow-hidden border-b border-[var(--border)] bg-[var(--surface-2)]">
+                                                    <img
+                                                        src={ev.image_url}
+                                                        alt={ev.title}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            )}
+                                            <div className="p-5 flex-1 flex flex-col justify-between gap-4">
+                                                <div className="space-y-2">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[var(--accent)] text-[var(--accent-contrast)]">
+                                                            {ev.badge_text || (ev.discount_percent > 0 ? `${ev.discount_percent}% ${t('OFF')}` : t(ev.kind))}
+                                                        </span>
+                                                        {ev.discount_percent > 0 && (
+                                                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                                                                {ev.promo_code ? `${t('Code')}: ${ev.promo_code}` : t('Auto-applied at checkout')}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <h3 className="font-display text-[20px] leading-snug text-[var(--text)]">
+                                                        {ev.title}
+                                                    </h3>
+                                                    {ev.subtitle && (
+                                                        <p className="text-[13.5px] text-[var(--muted)] leading-relaxed">
+                                                            {ev.subtitle}
+                                                        </p>
+                                                    )}
+                                                    {Number(ev.min_order_etb || 0) > 0 && (
+                                                        <p className="text-[12px] text-[var(--gold)] font-medium">
+                                                            {t('Min. order')}: {Number(ev.min_order_etb).toFixed(0)} {language === 'am' ? 'ብር' : 'ETB'}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--border)]/60">
+                                                    {ev.ends_at ? (
+                                                        <span className="text-[11.5px] text-[var(--muted)]">
+                                                            {t('Ends')}: {new Date(ev.ends_at).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[11.5px] text-[var(--muted)]">{t('Limited time')}</span>
+                                                    )}
+                                                    <a
+                                                        href={ev.cta_href || '#menu'}
+                                                        className="px-4 py-1.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/40 text-[12.5px] font-bold hover:bg-[var(--accent)] hover:text-[var(--accent-contrast)] transition-all"
+                                                    >
+                                                        {t(ev.cta_label || 'Order Now')}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
                     {/* ======================= STORY (image + text, side by side) ======================= */}
                     <section id="story" className="scroll-mt-20 px-4 sm:px-6 py-16 sm:py-24">
                         <div className="max-w-[1360px] mx-auto">

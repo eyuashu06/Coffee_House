@@ -18,6 +18,7 @@ import {
   useCafe,
   type CafeLocation,
   type HomepageSlide,
+  type PromotionalEvent,
   DEFAULT_HERO_SLIDES,
   DEFAULT_DINING_SLIDES,
 } from '../../context/CafeContext';
@@ -296,6 +297,10 @@ export default function ManagerDashboard() {
     addLocation,
     updateLocation,
     deleteLocation,
+    fetchAllEvents,
+    createEvent,
+    updateEvent,
+    deleteEvent,
     refreshCafeData,
   } = useCafe();
   
@@ -523,6 +528,38 @@ export default function ManagerDashboard() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isApprovingPayment, setIsApprovingPayment] = useState<number | null>(null);
   const [isVerifyingBank, setIsVerifyingBank] = useState<number | null>(null);
+
+  // Events, Ads & Discounts State
+  const [eventsList, setEventsList] = useState<PromotionalEvent[]>([]);
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<PromotionalEvent | null>(null);
+  const [isSavingEvent, setIsSavingEvent] = useState(false);
+  const [eventForm, setEventForm] = useState({
+    title: '',
+    subtitle: '',
+    badge_text: '',
+    kind: 'EVENT' as 'EVENT' | 'DISCOUNT' | 'AD',
+    discount_percent: 0,
+    promo_code: '',
+    min_order_etb: '0',
+    cta_label: 'Order Now',
+    cta_href: '#menu',
+    image_url: '',
+    starts_at: '',
+    ends_at: '',
+    is_active: true,
+  });
+
+  const loadManagerEvents = useCallback(async () => {
+    const all = await fetchAllEvents();
+    setEventsList(all);
+  }, [fetchAllEvents]);
+
+  useEffect(() => {
+    if (user && (user.role === 'MANAGER' || user.role === 'ADMIN')) {
+      void loadManagerEvents();
+    }
+  }, [user, loadManagerEvents]);
   const [bankVerificationResults, setBankVerificationResults] = useState<Record<number, any>>({});
   const [viewingReceipt, setViewingReceipt] = useState<{
     order: Order;
@@ -1087,6 +1124,116 @@ export default function ManagerDashboard() {
     setIsSavingSlides(false);
     setActionMsg(success ? t('Homepage images reset to defaults!') : t('Failed to reset homepage images.'));
     setTimeout(() => setActionMsg(null), 3500);
+  };
+
+  const toDateTimeLocal = (iso: string | null | undefined) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const handleOpenAddEvent = () => {
+    setEditingEvent(null);
+    setEventForm({
+      title: '',
+      subtitle: '',
+      badge_text: '',
+      kind: 'EVENT',
+      discount_percent: 0,
+      promo_code: '',
+      min_order_etb: '0',
+      cta_label: 'Order Now',
+      cta_href: '#menu',
+      image_url: '',
+      starts_at: '',
+      ends_at: '',
+      is_active: true,
+    });
+    setIsEventModalOpen(true);
+  };
+
+  const handleOpenEditEvent = (ev: PromotionalEvent) => {
+    setEditingEvent(ev);
+    setEventForm({
+      title: ev.title,
+      subtitle: ev.subtitle || '',
+      badge_text: ev.badge_text || '',
+      kind: ev.kind,
+      discount_percent: ev.discount_percent || 0,
+      promo_code: ev.promo_code || '',
+      min_order_etb: String(ev.min_order_etb || '0'),
+      cta_label: ev.cta_label || 'Order Now',
+      cta_href: ev.cta_href || '#menu',
+      image_url: ev.image_url || '',
+      starts_at: toDateTimeLocal(ev.starts_at),
+      ends_at: toDateTimeLocal(ev.ends_at),
+      is_active: ev.is_active,
+    });
+    setIsEventModalOpen(true);
+  };
+
+  const handleEventBannerUpload = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const dataUrl = await compressSlideImage(file);
+      setEventForm((prev) => ({ ...prev, image_url: dataUrl }));
+    } catch {
+      setActionMsg(t('Could not process that image file. Try JPG, PNG, or WEBP.'));
+      setTimeout(() => setActionMsg(null), 3500);
+    }
+  };
+
+  const handleSaveEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventForm.title.trim()) return;
+    setIsSavingEvent(true);
+    const payload: Partial<PromotionalEvent> = {
+      title: eventForm.title.trim(),
+      subtitle: eventForm.subtitle.trim(),
+      badge_text: eventForm.badge_text.trim(),
+      kind: eventForm.kind,
+      discount_percent: Math.min(90, Math.max(0, Number(eventForm.discount_percent) || 0)),
+      promo_code: eventForm.promo_code.trim().toUpperCase(),
+      min_order_etb: String(Math.max(0, Number(eventForm.min_order_etb) || 0)),
+      cta_label: eventForm.cta_label.trim() || 'Order Now',
+      cta_href: eventForm.cta_href.trim() || '#menu',
+      image_url: eventForm.image_url.trim(),
+      starts_at: eventForm.starts_at ? new Date(eventForm.starts_at).toISOString() : null,
+      ends_at: eventForm.ends_at ? new Date(eventForm.ends_at).toISOString() : null,
+      is_active: eventForm.is_active,
+    };
+    const result = editingEvent
+      ? await updateEvent(editingEvent.id, payload)
+      : await createEvent(payload);
+    setIsSavingEvent(false);
+    if (result) {
+      setIsEventModalOpen(false);
+      await loadManagerEvents();
+      setActionMsg(editingEvent ? t('Event / offer updated!') : t('Event / offer created!'));
+    } else {
+      setActionMsg(t('Failed to save event / offer.'));
+    }
+    setTimeout(() => setActionMsg(null), 3500);
+  };
+
+  const handleToggleEventActive = async (ev: PromotionalEvent) => {
+    const updated = await updateEvent(ev.id, { is_active: !ev.is_active });
+    if (updated) {
+      await loadManagerEvents();
+      setActionMsg(updated.is_active ? t('Event / offer activated!') : t('Event / offer paused.'));
+      setTimeout(() => setActionMsg(null), 3000);
+    }
+  };
+
+  const handleDeleteEvent = async (ev: PromotionalEvent) => {
+    const ok = await deleteEvent(ev.id);
+    if (ok) {
+      await loadManagerEvents();
+      setActionMsg(t('Event / offer deleted.'));
+      setTimeout(() => setActionMsg(null), 3000);
+    }
   };
 
   const handleOpenAddBranch = () => {
@@ -4096,6 +4243,128 @@ export default function ManagerDashboard() {
               </div>
             </div>
 
+            {/* EVENTS, ADS & DISCOUNTS */}
+            <div className="bg-surface-2 border border-[var(--border)] rounded-[20px] p-6 shadow-sm space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center">
+                      <i className="ph ph-megaphone text-lg"></i>
+                    </div>
+                    <h3 className="font-display text-[20px] text-[var(--text)]">
+                      {t('Events, Ads & Discounts', 'ዝግጅቶች፣ ማስታወቂያዎች እና ቅናሾች')}
+                    </h3>
+                  </div>
+                  <p className="text-[13px] text-[var(--muted)] mt-1">
+                    {t(
+                      'Publish special events, cafe announcements, or percentage discounts (auto-applied or via promo code) as events happen.',
+                      'ልዩ ዝግጅቶችን፣ የካፌ ማስታወቂያዎችን ወይም የፐርሰንት ቅናሾችን ይፍጠሩ እና ያስተዳድሩ።'
+                    )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddEvent}
+                  className="h-10 px-5 rounded-[12px] bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-[13.5px] flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-sm shrink-0 cursor-pointer"
+                >
+                  <i className="ph ph-plus-circle text-lg"></i>
+                  <span>{t('Create Event / Discount', 'ዝግጅት / ቅናሽ ፍጠር')}</span>
+                </button>
+              </div>
+
+              {eventsList.length === 0 ? (
+                <div className="py-8 text-center text-[var(--muted)] bg-surface rounded-[14px] border border-[var(--border)]">
+                  <p className="text-[13.5px]">
+                    {t('No events or discount offers created yet. Click above to launch a holiday promo, happy hour, or announcement banner.')}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {eventsList.map((ev) => (
+                    <div
+                      key={ev.id}
+                      className={`rounded-[16px] bg-surface border overflow-hidden flex flex-col justify-between transition-all ${
+                        ev.is_live_now
+                          ? 'border-[var(--accent)] shadow-xs'
+                          : 'border-dashed border-[var(--border)] opacity-75'
+                      }`}
+                    >
+                      {ev.image_url && (
+                        <div className="h-32 w-full overflow-hidden border-b border-[var(--border)] bg-surface-2">
+                          <img src={ev.image_url} alt={ev.title} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <div className="p-4 space-y-2.5 flex-1 flex flex-col justify-between">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30">
+                              {ev.badge_text || (ev.discount_percent > 0 ? `${ev.discount_percent}% OFF` : ev.kind)}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
+                              ev.is_live_now
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                : ev.is_active
+                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                                : 'bg-stone-500/15 text-[var(--muted)]'
+                            }`}>
+                              {ev.is_live_now ? t('Live Now') : ev.is_active ? t('Scheduled / Ended') : t('Paused')}
+                            </span>
+                          </div>
+                          <h4 className="font-display text-[17px] text-[var(--text)] leading-snug">{ev.title}</h4>
+                          {ev.subtitle && (
+                            <p className="text-[12.5px] text-[var(--muted)] line-clamp-2">{ev.subtitle}</p>
+                          )}
+                          <div className="flex flex-wrap gap-1.5 pt-1 text-[11px] font-mono text-[var(--muted)]">
+                            {ev.discount_percent > 0 && (
+                              <span className="px-2 py-0.5 rounded bg-surface-2 border border-[var(--border)] text-emerald-600 dark:text-emerald-400 font-bold">
+                                -{ev.discount_percent}% {ev.promo_code ? `(${ev.promo_code})` : `(${t('Auto')})`}
+                              </span>
+                            )}
+                            {Number(ev.min_order_etb || 0) > 0 && (
+                              <span className="px-2 py-0.5 rounded bg-surface-2 border border-[var(--border)]">
+                                Min {Number(ev.min_order_etb).toFixed(0)} {birr}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-3 border-t border-[var(--border)]/60">
+                          <button
+                            type="button"
+                            onClick={() => void handleToggleEventActive(ev)}
+                            className={`px-2.5 py-1 rounded-lg text-[11.5px] font-semibold border cursor-pointer transition-colors ${
+                              ev.is_active
+                                ? 'border-amber-500/40 text-amber-600 dark:text-amber-300 hover:bg-amber-500/10'
+                                : 'border-emerald-500/40 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500/10'
+                            }`}
+                          >
+                            {ev.is_active ? t('Pause') : t('Activate')}
+                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditEvent(ev)}
+                              className="px-2.5 py-1 rounded-lg border border-[var(--border)] text-[11.5px] font-semibold text-[var(--text)] hover:border-[var(--accent)] cursor-pointer"
+                            >
+                              {t('Edit')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteEvent(ev)}
+                              className="w-7 h-7 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 flex items-center justify-center cursor-pointer"
+                              aria-label="Delete event"
+                            >
+                              <i className="ph ph-trash text-xs"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* HOMEPAGE IMAGES & SLIDESHOWS */}
             <div className="bg-surface-2 border border-[var(--border)] rounded-[20px] p-6 shadow-sm space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
@@ -5606,6 +5875,210 @@ export default function ManagerDashboard() {
                 <span>{t('View Customer Site')}</span>
               </Link>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* EVENT / AD / DISCOUNT MODAL */}
+      {isEventModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setIsEventModalOpen(false)}
+        >
+          <div
+            className="bg-surface-2 border border-[var(--border)] rounded-[22px] max-w-lg w-full p-6 shadow-2xl space-y-4 my-auto max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+              <h3 className="font-display text-[20px] text-[var(--text)]">
+                {editingEvent ? t('Edit Event / Discount', 'ዝግጅት / ቅናሽ አርትዕ') : t('Create Event / Discount', 'አዲስ ዝግጅት / ቅናሽ ፍጠር')}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEventModalOpen(false)}
+                className="w-8 h-8 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] cursor-pointer"
+              >
+                <i className="ph ph-x text-base"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEvent} className="space-y-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                    {t('Type')}
+                  </label>
+                  <select
+                    value={eventForm.kind}
+                    onChange={(e) => setEventForm({ ...eventForm, kind: e.target.value as 'EVENT' | 'DISCOUNT' | 'AD' })}
+                    className="w-full h-10 px-3 rounded-[10px] bg-surface border border-[var(--border)] text-[var(--text)] text-[13.5px]"
+                  >
+                    <option value="EVENT">{t('Event')}</option>
+                    <option value="DISCOUNT">{t('Discount Offer')}</option>
+                    <option value="AD">{t('Announcement / Ad')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                    {t('Badge Label')}
+                  </label>
+                  <input
+                    type="text"
+                    value={eventForm.badge_text}
+                    onChange={(e) => setEventForm({ ...eventForm, badge_text: e.target.value })}
+                    placeholder="e.g. 20% OFF, LIVE JAZZ"
+                    className="w-full h-10 px-3 rounded-[10px] bg-surface border border-[var(--border)] text-[var(--text)] text-[13.5px]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                  {t('Title')} *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={eventForm.title}
+                  onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                  placeholder="e.g. Weekend Buna Ceremony & 15% Off"
+                  className="w-full h-10 px-3 rounded-[10px] bg-surface border border-[var(--border)] text-[var(--text)] text-[13.5px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                  {t('Description / Ad Copy')}
+                </label>
+                <textarea
+                  rows={2}
+                  value={eventForm.subtitle}
+                  onChange={(e) => setEventForm({ ...eventForm, subtitle: e.target.value })}
+                  placeholder="Details shown on homepage banner..."
+                  className="w-full p-3 rounded-[10px] bg-surface border border-[var(--border)] text-[var(--text)] text-[13px] resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                    {t('Discount %')}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="90"
+                    value={eventForm.discount_percent}
+                    onChange={(e) => setEventForm({ ...eventForm, discount_percent: Number(e.target.value) || 0 })}
+                    className="w-full h-10 px-3 rounded-[10px] bg-surface border border-[var(--border)] text-[var(--text)] text-[13.5px]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                    {t('Promo Code')}
+                  </label>
+                  <input
+                    type="text"
+                    value={eventForm.promo_code}
+                    onChange={(e) => setEventForm({ ...eventForm, promo_code: e.target.value.toUpperCase() })}
+                    placeholder={t('Blank = auto-apply')}
+                    className="w-full h-10 px-3 rounded-[10px] bg-surface border border-[var(--border)] text-[var(--text)] text-[13px] font-mono uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                    {t('Min Order (ETB)')}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={eventForm.min_order_etb}
+                    onChange={(e) => setEventForm({ ...eventForm, min_order_etb: e.target.value })}
+                    className="w-full h-10 px-3 rounded-[10px] bg-surface border border-[var(--border)] text-[var(--text)] text-[13.5px]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                    {t('Starts At (Optional)')}
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={eventForm.starts_at}
+                    onChange={(e) => setEventForm({ ...eventForm, starts_at: e.target.value })}
+                    className="w-full h-10 px-3 rounded-[10px] bg-surface border border-[var(--border)] text-[var(--text)] text-[12.5px]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                    {t('Ends At (Optional)')}
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={eventForm.ends_at}
+                    onChange={(e) => setEventForm({ ...eventForm, ends_at: e.target.value })}
+                    className="w-full h-10 px-3 rounded-[10px] bg-surface border border-[var(--border)] text-[var(--text)] text-[12.5px]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                    {t('Banner Image (Optional)')}
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--border)] bg-surface hover:border-[var(--accent)] text-[11.5px] font-semibold cursor-pointer">
+                    <i className="ph ph-upload-simple text-sm text-[var(--accent)]"></i>
+                    <span>{t('Upload Photo')}</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        void handleEventBannerUpload(e.target.files?.[0]);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  value={eventForm.image_url.startsWith('data:image/') ? '' : eventForm.image_url}
+                  onChange={(e) => setEventForm({ ...eventForm, image_url: e.target.value })}
+                  placeholder={eventForm.image_url.startsWith('data:image/') ? t('Uploaded banner saved (paste URL to replace)') : '/images/ethiopian_ceremony.jpg or https://...'}
+                  className="w-full h-9 px-3 rounded-[10px] bg-surface border border-[var(--border)] text-[var(--text)] text-[12.5px] font-mono"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--text)] cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={eventForm.is_active}
+                  onChange={(e) => setEventForm({ ...eventForm, is_active: e.target.checked })}
+                  className="w-4 h-4 accent-[var(--accent)]"
+                />
+                <span>{t('Active (visible on storefront during schedule window)')}</span>
+              </label>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-[var(--border)]">
+                <button
+                  type="button"
+                  onClick={() => setIsEventModalOpen(false)}
+                  className="h-10 px-4 rounded-[10px] border border-[var(--border)] text-[13px] font-semibold cursor-pointer"
+                >
+                  {t('Cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEvent}
+                  className="h-10 px-5 rounded-[10px] bg-[var(--accent)] text-[var(--accent-contrast)] text-[13px] font-bold hover:brightness-110 cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingEvent ? t('Saving...') : t('Save')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

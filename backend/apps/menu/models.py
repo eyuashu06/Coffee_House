@@ -109,3 +109,51 @@ class CafeLocation(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.address}, {self.city})"
+
+
+class PromotionalEvent(models.Model):
+    KIND_CHOICES = (
+        ('EVENT', 'Event'),
+        ('DISCOUNT', 'Discount Offer'),
+        ('AD', 'Announcement / Ad'),
+    )
+
+    title = models.CharField(max_length=150)
+    subtitle = models.TextField(blank=True)
+    badge_text = models.CharField(max_length=40, blank=True, help_text='e.g. 20% OFF, LIVE EVENT, WEEKEND SPECIAL')
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='EVENT')
+    discount_percent = models.PositiveIntegerField(
+        default=0,
+        help_text='0 for announcement/event only, or 1–90 for a percentage order discount.',
+    )
+    promo_code = models.CharField(
+        max_length=40,
+        blank=True,
+        help_text='Optional code (e.g. BUNA15). Leave blank to auto-apply when active.',
+    )
+    min_order_etb = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    cta_label = models.CharField(max_length=60, blank=True, default='Order Now')
+    cta_href = models.CharField(max_length=200, blank=True, default='#menu')
+    image_url = models.TextField(blank=True, help_text='Optional banner image URL or compressed image data URI')
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_active', '-created_at']
+
+    def is_live_now(self, now=None):
+        from django.utils import timezone
+        if not self.is_active:
+            return False
+        now = now or timezone.now()
+        if self.starts_at and self.starts_at > now:
+            return False
+        if self.ends_at and self.ends_at < now:
+            return False
+        return True
+
+    def __str__(self):
+        return f"{self.title} ({self.kind})"

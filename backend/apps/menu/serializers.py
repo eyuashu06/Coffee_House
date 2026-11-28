@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, MenuItem, ItemVariant, AddOn, CafeSettings, CafeLocation
+from .models import Category, MenuItem, ItemVariant, AddOn, CafeSettings, CafeLocation, PromotionalEvent
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -157,3 +157,49 @@ class CafeLocationSerializer(serializers.ModelSerializer):
             'opening_hours', 'is_primary', 'is_active', 'display_order',
             'created_at', 'updated_at'
         ]
+
+
+class PromotionalEventSerializer(serializers.ModelSerializer):
+    is_live_now = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PromotionalEvent
+        fields = [
+            'id', 'title', 'subtitle', 'badge_text', 'kind',
+            'discount_percent', 'promo_code', 'min_order_etb',
+            'cta_label', 'cta_href', 'image_url',
+            'starts_at', 'ends_at', 'is_active', 'is_live_now',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'is_live_now', 'created_at', 'updated_at']
+
+    def get_is_live_now(self, obj):
+        return obj.is_live_now()
+
+    def validate_discount_percent(self, value):
+        if value < 0 or value > 90:
+            raise serializers.ValidationError('Discount must be between 0% and 90%.')
+        return value
+
+    def validate_min_order_etb(self, value):
+        if value < 0:
+            raise serializers.ValidationError('Minimum order cannot be negative.')
+        return value
+
+    def validate_promo_code(self, value):
+        return (value or '').strip().upper()
+
+    def validate_image_url(self, value):
+        val = (value or '').strip()
+        if not val:
+            return ''
+        if not (val.startswith('/') or val.startswith('http://') or val.startswith('https://') or val.startswith('data:image/')):
+            raise serializers.ValidationError('Enter a valid image URL or uploaded image.')
+        return val
+
+    def validate(self, attrs):
+        starts_at = attrs.get('starts_at', getattr(self.instance, 'starts_at', None))
+        ends_at = attrs.get('ends_at', getattr(self.instance, 'ends_at', None))
+        if starts_at and ends_at and ends_at <= starts_at:
+            raise serializers.ValidationError({'ends_at': 'End time must be after start time.'})
+        return attrs

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useCafe } from '../context/CafeContext';
 import { apiFetch } from '../lib/api';
 import AuthModal from './AuthModal';
 import PaymentModal from './PaymentModal';
@@ -77,7 +78,9 @@ export default function CartDrawer({
 }: CartDrawerProps) {
   const { user, setUser } = useAuth();
   const { t, tItem, language } = useLanguage();
+  const { events } = useCafe();
   const birr = language === 'am' ? 'ብር' : 'ETB';
+  const [promoCode, setPromoCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
   const [orderError, setOrderError] = useState<string | null>(null);
@@ -144,7 +147,23 @@ export default function CartDrawer({
   const selectedZone = zones.find((zone) => zone.id === deliveryZoneId);
   const deliveryFee =
     orderType === 'DELIVERY' && selectedZone ? Number(selectedZone.delivery_fee_etb) || 0 : 0;
-  const orderTotal = totalAmount + deliveryFee;
+
+  // Match the server-side discount logic: highest eligible active promo (auto-apply or matching promo code).
+  const normalizedCode = promoCode.trim().toUpperCase();
+  const codePromoEvents = events.filter((ev) => ev.discount_percent > 0 && Boolean(ev.promo_code?.trim()));
+  let bestPromo: { title: string; percent: number; amount: number } | null = null;
+  for (const ev of events) {
+    if (!ev.discount_percent || ev.discount_percent <= 0) continue;
+    if (totalAmount < Number(ev.min_order_etb || 0)) continue;
+    const evCode = (ev.promo_code || '').trim().toUpperCase();
+    if (evCode && evCode !== normalizedCode) continue;
+    const saved = Math.round(totalAmount * (ev.discount_percent / 100) * 100) / 100;
+    if (!bestPromo || saved > bestPromo.amount) {
+      bestPromo = { title: ev.title, percent: ev.discount_percent, amount: saved };
+    }
+  }
+  const discountAmount = bestPromo ? bestPromo.amount : 0;
+  const orderTotal = Math.max(0, totalAmount - discountAmount) + deliveryFee;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -207,6 +226,9 @@ export default function CartDrawer({
     }
     if (orderType === 'DINE_IN' && tableNumber.trim()) {
       payload.table_number = tableNumber.trim();
+    }
+    if (normalizedCode) {
+      payload.promo_code = normalizedCode;
     }
 
     try {
@@ -694,11 +716,43 @@ export default function CartDrawer({
           {/* Sticky Bottom Checkout Footer: Total & Pay to Order Button */}
           {cartItems.length > 0 && !orderSuccess && (
             <div className="p-4 sm:p-5 bg-surface-2/95 backdrop-blur-md border-t border-[var(--border)] shrink-0 space-y-3 shadow-[0_-8px_20px_rgba(0,0,0,0.15)] z-20">
+              {codePromoEvents.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      placeholder={t('Promo code (optional)')}
+                      className="flex-1 h-8 px-2.5 rounded-lg bg-surface border border-[var(--border)] text-[var(--text)] text-[11px] font-mono uppercase placeholder:normal-case focus:border-[var(--accent)] focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {codePromoEvents.map((ev) => (
+                      <button
+                        key={ev.id}
+                        type="button"
+                        onClick={() => setPromoCode(ev.promo_code)}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/40 hover:brightness-110 cursor-pointer"
+                      >
+                        {t('Use')} {ev.promo_code} ({ev.discount_percent}% {t('OFF')})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1 text-xs">
                 <div className="flex items-center justify-between text-[var(--muted)]">
                   <span>{t('Subtotal')}:</span>
                   <span>{birr} {totalAmount.toFixed(2)}</span>
                 </div>
+                {discountAmount > 0 && bestPromo && (
+                  <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span>{bestPromo.title} (-{bestPromo.percent}%):</span>
+                    <span>-{birr} {discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 {deliveryFee > 0 && (
                   <div className="flex items-center justify-between text-[var(--muted)]">
                     <span>{t('Delivery')}:</span>

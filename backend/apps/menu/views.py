@@ -4,12 +4,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db import models
 from django.core.cache import cache
-from .models import Category, MenuItem, CafeSettings, CafeLocation
+from .models import Category, MenuItem, CafeSettings, CafeLocation, PromotionalEvent
 from .serializers import (
     CategorySerializer,
     MenuItemSerializer,
     CafeSettingsSerializer,
     CafeLocationSerializer,
+    PromotionalEventSerializer,
 )
 from apps.accounts.permissions import IsManager
 
@@ -198,3 +199,32 @@ class CafeLocationViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
         serializer.save()
+
+
+class PromotionalEventViewSet(viewsets.ModelViewSet):
+    """
+    Create and manage live event ads, seasonal announcements, and percentage
+    discounts for the storefront and checkout.
+    """
+    serializer_class = PromotionalEventSerializer
+    queryset = PromotionalEvent.objects.all()
+
+    def get_queryset(self):
+        from django.utils import timezone
+        qs = PromotionalEvent.objects.all()
+        user = self.request.user
+        is_staff = bool(user and user.is_authenticated and getattr(user, 'role', '') in ['MANAGER', 'ADMIN'])
+        if is_staff and self.request.query_params.get('all') == 'true':
+            return qs.order_by('-is_active', '-created_at')
+        now = timezone.now()
+        return (
+            qs.filter(is_active=True)
+            .filter(models.Q(starts_at__isnull=True) | models.Q(starts_at__lte=now))
+            .filter(models.Q(ends_at__isnull=True) | models.Q(ends_at__gte=now))
+            .order_by('-created_at')
+        )
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsManager()]
+        return [permissions.AllowAny()]

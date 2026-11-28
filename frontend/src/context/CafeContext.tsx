@@ -91,16 +91,41 @@ export interface CafeLocation {
   display_order: number;
 }
 
+export interface PromotionalEvent {
+  id: number;
+  title: string;
+  subtitle: string;
+  badge_text: string;
+  kind: 'EVENT' | 'DISCOUNT' | 'AD';
+  discount_percent: number;
+  promo_code: string;
+  min_order_etb: string;
+  cta_label: string;
+  cta_href: string;
+  image_url: string;
+  starts_at: string | null;
+  ends_at: string | null;
+  is_active: boolean;
+  is_live_now: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface CafeContextType {
   settings: CafeSettings;
   locations: CafeLocation[];
+  events: PromotionalEvent[];
   primaryLocation: CafeLocation | null;
   isLoading: boolean;
   refreshCafeData: () => Promise<void>;
+  fetchAllEvents: () => Promise<PromotionalEvent[]>;
   updateSettings: (data: Partial<CafeSettings>) => Promise<boolean>;
   addLocation: (data: Partial<CafeLocation>) => Promise<boolean>;
   updateLocation: (id: number, data: Partial<CafeLocation>) => Promise<boolean>;
   deleteLocation: (id: number) => Promise<boolean>;
+  createEvent: (data: Partial<PromotionalEvent>) => Promise<PromotionalEvent | null>;
+  updateEvent: (id: number, data: Partial<PromotionalEvent>) => Promise<PromotionalEvent | null>;
+  deleteEvent: (id: number) => Promise<boolean>;
 }
 
 const DEFAULT_SETTINGS: CafeSettings = {
@@ -131,13 +156,15 @@ const CafeContext = createContext<CafeContextType | undefined>(undefined);
 export function CafeProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<CafeSettings>(DEFAULT_SETTINGS);
   const [locations, setLocations] = useState<CafeLocation[]>([DEFAULT_LOCATION]);
+  const [events, setEvents] = useState<PromotionalEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const refreshCafeData = useCallback(async () => {
     try {
-      const [resSettings, resLocations] = await Promise.all([
+      const [resSettings, resLocations, resEvents] = await Promise.all([
         fetch('/api/v1/cafe/settings/').catch(() => null),
         fetch('/api/v1/cafe/locations/').catch(() => null),
+        fetch('/api/v1/cafe/events/').catch(() => null),
       ]);
 
       if (resSettings && resSettings.ok) {
@@ -154,9 +181,28 @@ export function CafeProvider({ children }: { children: React.ReactNode }) {
           setLocations(list);
         }
       }
+
+      if (resEvents && resEvents.ok) {
+        const data = await resEvents.json();
+        const list = Array.isArray(data) ? data : data.results || [];
+        setEvents(list);
+      }
     } catch {
       // Use fallback defaults
     }
+  }, []);
+
+  const fetchAllEvents = useCallback(async (): Promise<PromotionalEvent[]> => {
+    try {
+      const res = await apiFetch('/api/v1/cafe/events/?all=true');
+      if (res.ok) {
+        const data = await res.json();
+        return Array.isArray(data) ? data : data.results || [];
+      }
+    } catch {
+      // ignore
+    }
+    return [];
   }, []);
 
   useEffect(() => {
@@ -230,6 +276,57 @@ export function CafeProvider({ children }: { children: React.ReactNode }) {
     return false;
   }, [refreshCafeData]);
 
+  const createEvent = useCallback(async (data: Partial<PromotionalEvent>): Promise<PromotionalEvent | null> => {
+    try {
+      const res = await apiFetch('/api/v1/cafe/events/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        await refreshCafeData();
+        return created;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }, [refreshCafeData]);
+
+  const updateEvent = useCallback(async (id: number, data: Partial<PromotionalEvent>): Promise<PromotionalEvent | null> => {
+    try {
+      const res = await apiFetch(`/api/v1/cafe/events/${id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        await refreshCafeData();
+        return updated;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }, [refreshCafeData]);
+
+  const deleteEvent = useCallback(async (id: number): Promise<boolean> => {
+    try {
+      const res = await apiFetch(`/api/v1/cafe/events/${id}/`, {
+        method: 'DELETE',
+      });
+      if (res.ok || res.status === 204) {
+        await refreshCafeData();
+        return true;
+      }
+    } catch {
+      // ignore
+    }
+    return false;
+  }, [refreshCafeData]);
+
   const primaryLocation = useMemo(() => {
     return locations.find(l => l.is_primary) || locations[0] || DEFAULT_LOCATION;
   }, [locations]);
@@ -238,24 +335,34 @@ export function CafeProvider({ children }: { children: React.ReactNode }) {
     () => ({
       settings,
       locations,
+      events,
       primaryLocation,
       isLoading,
       refreshCafeData,
+      fetchAllEvents,
       updateSettings,
       addLocation,
       updateLocation,
       deleteLocation,
+      createEvent,
+      updateEvent,
+      deleteEvent,
     }),
     [
       settings,
       locations,
+      events,
       primaryLocation,
       isLoading,
       refreshCafeData,
+      fetchAllEvents,
       updateSettings,
       addLocation,
       updateLocation,
       deleteLocation,
+      createEvent,
+      updateEvent,
+      deleteEvent,
     ]
   );
 

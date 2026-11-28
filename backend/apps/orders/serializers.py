@@ -77,6 +77,8 @@ class OrderSerializer(serializers.ModelSerializer):
     payment_state = serializers.SerializerMethodField()
     # Backend always computes these — not required from frontend
     subtotal_etb = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    discount_etb = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    promo_title = serializers.CharField(read_only=True)
     total_amount_etb = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     delivery_fee_etb = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     # Contact fields are optional — backend fills them from the authenticated user / defaults
@@ -100,6 +102,8 @@ class OrderSerializer(serializers.ModelSerializer):
             'contact_phone',
             'delivery_address',
             'subtotal_etb',
+            'discount_etb',
+            'promo_title',
             'delivery_fee_etb',
             'total_amount_etb',
             'status',
@@ -300,12 +304,19 @@ class OrderSerializer(serializers.ModelSerializer):
 
         # Item subtotals decide the order total (the frontend value is ignored)
         item_subtotals = [line['fields']['subtotal_etb'] for line in prepared_lines]
-        computed_total = sum(item_subtotals, Decimal('0')) + delivery_fee
+        items_subtotal = sum(item_subtotals, Decimal('0'))
 
-        # The item subtotals plus the zone fee are the total. Whatever the browser sent
-        # in total_amount_etb is discarded.
-        validated_data['total_amount_etb'] = computed_total
-        validated_data['subtotal_etb'] = computed_total - delivery_fee
+        # Apply active PromotionalEvent percentage discount (server-side only)
+        requested_code = str(self.initial_data.get('promo_code') or '').strip().upper()
+        discount_etb, promo_title = self._resolve_active_discount(items_subtotal, requested_code)
+
+        # Item subtotals minus discount plus delivery fee are the total.
+        # Whatever the browser sent in total_amount_etb / discount_etb is discarded.
+        discounted_subtotal = max(Decimal('0.00'), items_subtotal - discount_etb)
+        validated_data['subtotal_etb'] = items_subtotal
+        validated_data['discount_etb'] = discount_etb
+        validated_data['promo_title'] = promo_title
+        validated_data['total_amount_etb'] = discounted_subtotal + delivery_fee
 
         order = Order.objects.create(**validated_data)
 
@@ -323,6 +334,33 @@ class OrderSerializer(serializers.ModelSerializer):
                 OrderItemAddOn.objects.create(order_item=order_item, **add_on)
 
         return order
+
+    def _resolve_active_discount(self, items_subtotal, promo_code=''):
+        """
+        Look up currently live PromotionalEvent offers and return the best
+        (discount_etb, promo_title) applicable to this subtotal.
+        """
+        if items_subtotal <= 0:
+            return Decimal('0.00'), ''
+        from apps.menu.models import PromotionalEvent
+        now = timezone.now()
+        best_discount = Decimal('0.00')
+        best_title = ''
+        for promo in PromotionalEvent.objects.filter(is_active=True, discount_percent__gt=0):
+            if not promo.is_live_now(now):
+                continue
+            if items_subtotal < Decimal(str(promo.min_order_etb or 0)):
+                continue
+            code = (promo.promo_code or '').strip().upper()
+            if code and code != promo_code:
+                continue
+            pct = min(90, max(0, int(promo.discount_percent)))
+            amount = (items_subtotal * Decimal(pct) / Decimal('100')).quantize(Decimal('0.01'))
+            if amount > best_discount:
+                best_discount = amount
+                label = f"{promo.title} ({pct}% OFF)"
+                best_title = label[:150]
+        return best_discount, best_title
 
     def _order_prep_minutes_from_lines(self, items_data):
         """Slowest item prep time across the lines that have one set."""

@@ -132,6 +132,8 @@ class Order(models.Model):
 
     # Financial Precision Fields (DecimalField in ETB)
     subtotal_etb = models.DecimalField(max_digits=10, decimal_places=2)
+    discount_etb = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    promo_title = models.CharField(max_length=150, blank=True)
     delivery_fee_etb = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_amount_etb = models.DecimalField(max_digits=10, decimal_places=2)
 

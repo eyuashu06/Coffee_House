@@ -5,6 +5,7 @@ from .views import (
     MenuItemViewSet,
     CafeSettingsView,
     CafeLocationViewSet,
+    PromotionalEventViewSet,
 )
 
 class OptionalSlashRouter(DefaultRouter):
@@ -16,6 +17,7 @@ router = OptionalSlashRouter()
 router.register(r'menu/categories', CategoryViewSet, basename='menu-categories')
 router.register(r'menu/items', MenuItemViewSet, basename='menu-items')
 router.register(r'cafe/locations', CafeLocationViewSet, basename='cafe-locations')
+router.register(r'cafe/events', PromotionalEventViewSet, basename='cafe-events')
 
 urlpatterns = [
     path('', include(router.urls)),

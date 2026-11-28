@@ -1309,6 +1309,17 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Homepage images reset to defaults!': 'የመነሻ ገጽ ፎቶዎች ወደ መነሻቸው ተመልሰዋል!',
   'Failed to reset homepage images.': 'የመነሻ ገጽ ፎቶዎችን ወደ መነሻ መመለስ አልተቻለም።',
   'Three slow pours — abol, tona, and baraka — from our clay jebena.': 'ከሸክላ ጀበናችን በዝግታ የሚቀዳ ሦስት ዙር ቡና — አቦል፣ ጦና እና በረካ።',
+  'Events & Special Offers': 'ዝግጅቶች እና ልዩ ቅናሾች',
+  "What's Happening at Buna Hub": 'በቡና ሀብ ልዩ ዝግጅቶችና ቅናሾች',
+  'Auto-applied at checkout': 'በክፍያ ጊዜ በራስ-ሰር ይቀነሳል',
+  'Promo code (optional)': 'የቅናሽ ኮድ (ካለ)',
+  'Event / offer created!': 'ዝግጅቱ / ቅናሹ ተፈጥሯል!',
+  'Event / offer updated!': 'ዝግጅቱ / ቅናሹ ተሻሽሏል!',
+  'Failed to save event / offer.': 'ዝግጅቱን / ቅናሹን ማስቀመጥ አልተቻለም።',
+  'Event / offer activated!': 'ዝግጅቱ / ቅናሹ ገብሯል!',
+  'Event / offer paused.': 'ዝግጅቱ / ቅናሹ ታግዷል።',
+  'Event / offer deleted.': 'ዝግጅቱ / ቅናሹ ተሰርዟል።',
+  'OFF': 'ቅናሽ',
 };
 
 /**
