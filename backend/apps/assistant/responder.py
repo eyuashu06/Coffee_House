@@ -452,6 +452,13 @@ def handle_reservation_create(text, state, user=None):
         state['date'], state['time'], state['guests'])
 
     if not available:
+        if detail == 'too_far_in_advance':
+            state.pop('date', None)
+            en = ("Reservations can only be booked up to 3 months in advance. "
+                  "Please choose a date within the next 3 months.")
+            am = ("ቦታ ማስያዝ የሚቻለው እስከ 3 ወር ድረስ ብቻ ነው። "
+                  "እባክዎ በሚቀጥሉት 3 ወራት ውስጥ ያለ ቀን ይምረጡ።")
+            return bilingual(en, am), [], state, {'action': 'collect_reservation_details', 'missing': ['date']}
         if detail == 'too_large':
             en = (f"For parties larger than {reservation_service.max_guests()} guests we cannot take an "
                   "online reservation. Please call the Coffee House and we will arrange it for you.")

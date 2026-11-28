@@ -14,7 +14,13 @@ import { formatEthiopianTime } from '../../utils/ethiopianTime';
 import { formatOrderType } from '../../utils/translations';
 
 import EthiopianPhoneInput from '../../components/EthiopianPhoneInput';
-import { useCafe, type CafeLocation } from '../../context/CafeContext';
+import {
+  useCafe,
+  type CafeLocation,
+  type HomepageSlide,
+  DEFAULT_HERO_SLIDES,
+  DEFAULT_DINING_SLIDES,
+} from '../../context/CafeContext';
 import AssistantChat from '../../components/AssistantChat';
 
 interface OrderItem {
@@ -453,6 +459,12 @@ export default function ManagerDashboard() {
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
+  // Homepage Slideshow Editor State
+  const [slidesTab, setSlidesTab] = useState<'hero' | 'dining'>('hero');
+  const [heroSlidesDraft, setHeroSlidesDraft] = useState<HomepageSlide[]>(DEFAULT_HERO_SLIDES);
+  const [diningSlidesDraft, setDiningSlidesDraft] = useState<HomepageSlide[]>(DEFAULT_DINING_SLIDES);
+  const [isSavingSlides, setIsSavingSlides] = useState(false);
+
   useEffect(() => {
     if (cafeSettings) {
       setBrandForm({
@@ -464,6 +476,16 @@ export default function ManagerDashboard() {
         opening_hours: cafeSettings.opening_hours || '',
         ceremony_time: cafeSettings.ceremony_time || '',
       });
+      setHeroSlidesDraft(
+        cafeSettings.hero_slides && cafeSettings.hero_slides.length > 0
+          ? cafeSettings.hero_slides
+          : DEFAULT_HERO_SLIDES
+      );
+      setDiningSlidesDraft(
+        cafeSettings.dining_slides && cafeSettings.dining_slides.length > 0
+          ? cafeSettings.dining_slides
+          : DEFAULT_DINING_SLIDES
+      );
     }
   }, [cafeSettings]);
 
@@ -953,6 +975,117 @@ export default function ManagerDashboard() {
     } else {
       setActionMsg(t('Failed to save settings.'));
     }
+    setTimeout(() => setActionMsg(null), 3500);
+  };
+
+  const compressSlideImage = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1400;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width >= height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(String(reader.result || ''));
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.84));
+        };
+        img.onerror = () => reject(new Error('Could not decode selected image.'));
+        img.src = String(reader.result || '');
+      };
+      reader.onerror = () => reject(new Error('Could not read file.'));
+      reader.readAsDataURL(file);
+    });
+
+  const handleSlideFieldChange = (
+    target: 'hero' | 'dining',
+    index: number,
+    field: keyof HomepageSlide,
+    value: string
+  ) => {
+    const updater = target === 'hero' ? setHeroSlidesDraft : setDiningSlidesDraft;
+    updater((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
+  };
+
+  const handleSlideUpload = async (target: 'hero' | 'dining', index: number, file: File | undefined) => {
+    if (!file) return;
+    try {
+      const dataUrl = await compressSlideImage(file);
+      handleSlideFieldChange(target, index, 'src', dataUrl);
+    } catch {
+      setActionMsg(t('Could not process that image file. Try JPG, PNG, or WEBP.'));
+      setTimeout(() => setActionMsg(null), 3500);
+    }
+  };
+
+  const handleMoveSlide = (target: 'hero' | 'dining', index: number, delta: -1 | 1) => {
+    const updater = target === 'hero' ? setHeroSlidesDraft : setDiningSlidesDraft;
+    updater((prev) => {
+      const nextIndex = index + delta;
+      if (nextIndex < 0 || nextIndex >= prev.length) return prev;
+      const copy = [...prev];
+      const [moved] = copy.splice(index, 1);
+      copy.splice(nextIndex, 0, moved);
+      return copy;
+    });
+  };
+
+  const handleRemoveSlide = (target: 'hero' | 'dining', index: number) => {
+    const updater = target === 'hero' ? setHeroSlidesDraft : setDiningSlidesDraft;
+    updater((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddSlide = (target: 'hero' | 'dining') => {
+    const updater = target === 'hero' ? setHeroSlidesDraft : setDiningSlidesDraft;
+    updater((prev) => [
+      ...prev,
+      {
+        src: '/images/ethiopian_ceremony.jpg',
+        alt: 'Buna Hub cafe photograph',
+        caption: '',
+      },
+    ]);
+  };
+
+  const handleSaveSlides = async () => {
+    const cleanHero = heroSlidesDraft.filter((s) => s.src.trim());
+    const cleanDining = diningSlidesDraft.filter((s) => s.src.trim());
+    setIsSavingSlides(true);
+    const success = await updateSettings({
+      hero_slides: cleanHero,
+      dining_slides: cleanDining,
+    });
+    setIsSavingSlides(false);
+    setActionMsg(success ? t('Homepage images saved!') : t('Failed to save homepage images.'));
+    setTimeout(() => setActionMsg(null), 3500);
+  };
+
+  const handleResetDefaultSlides = async () => {
+    setHeroSlidesDraft(DEFAULT_HERO_SLIDES);
+    setDiningSlidesDraft(DEFAULT_DINING_SLIDES);
+    setIsSavingSlides(true);
+    const success = await updateSettings({
+      hero_slides: [],
+      dining_slides: [],
+    });
+    setIsSavingSlides(false);
+    setActionMsg(success ? t('Homepage images reset to defaults!') : t('Failed to reset homepage images.'));
     setTimeout(() => setActionMsg(null), 3500);
   };
 
@@ -3960,6 +4093,197 @@ export default function ManagerDashboard() {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            {/* HOMEPAGE IMAGES & SLIDESHOWS */}
+            <div className="bg-surface-2 border border-[var(--border)] rounded-[20px] p-6 shadow-sm space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center">
+                      <i className="ph ph-images text-lg"></i>
+                    </div>
+                    <h3 className="font-display text-[20px] text-[var(--text)]">
+                      {t('Homepage Images & Slideshows', 'የመነሻ ገጽ ፎቶዎች')}
+                    </h3>
+                  </div>
+                  <p className="text-[13px] text-[var(--muted)] mt-1">
+                    {t(
+                      'Upload or update the photographs displayed in the Home Hero and Cafe Story slideshows.',
+                      'በመነሻ ገጹ እና በታሪክ ክፍሉ የሚታዩትን ፎቶዎች ይቀይሩ፣ ያክሉ ወይም ይሰርዙ።'
+                    )}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleResetDefaultSlides}
+                    disabled={isSavingSlides}
+                    className="h-9.5 px-3.5 rounded-[12px] border border-[var(--border)] bg-surface text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--accent)] text-[12.5px] font-semibold transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {t('Reset Defaults', 'ወደ መነሻ መልስ')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveSlides}
+                    disabled={isSavingSlides}
+                    className="h-9.5 px-4.5 rounded-[12px] bg-[var(--accent)] text-[var(--accent-contrast)] font-bold text-[13px] flex items-center gap-1.5 hover:brightness-110 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  >
+                    <i className={`ph ${isSavingSlides ? 'ph-spinner animate-spin' : 'ph-floppy-disk'} text-base`}></i>
+                    <span>{isSavingSlides ? t('Saving...') : t('Save Homepage Images', 'ፎቶዎችን አስቀምጥ')}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSlidesTab('hero')}
+                    className={`h-9 px-4 rounded-full text-[13px] font-semibold border transition-all cursor-pointer ${
+                      slidesTab === 'hero'
+                        ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]'
+                        : 'bg-surface text-[var(--muted)] border-[var(--border)] hover:border-[var(--accent)]'
+                    }`}
+                  >
+                    {t('Hero Slideshow', 'ዋናው የመነሻ ስላይድ')} ({heroSlidesDraft.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSlidesTab('dining')}
+                    className={`h-9 px-4 rounded-full text-[13px] font-semibold border transition-all cursor-pointer ${
+                      slidesTab === 'dining'
+                        ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]'
+                        : 'bg-surface text-[var(--muted)] border-[var(--border)] hover:border-[var(--accent)]'
+                    }`}
+                  >
+                    {t('Dining & Story Gallery', 'የካፌው ታሪክ ጋለሪ')} ({diningSlidesDraft.length})
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAddSlide(slidesTab)}
+                  disabled={(slidesTab === 'hero' ? heroSlidesDraft : diningSlidesDraft).length >= 12}
+                  className="h-9 px-3.5 rounded-[10px] border border-[var(--accent)]/50 bg-[var(--accent-soft)]/50 text-[var(--accent)] text-[12.5px] font-bold flex items-center gap-1.5 hover:bg-[var(--accent-soft)] transition-all cursor-pointer disabled:opacity-40"
+                >
+                  <i className="ph ph-plus-circle text-base"></i>
+                  <span>{t('Add Image Slide', 'አዲስ ፎቶ ጨምር')}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(slidesTab === 'hero' ? heroSlidesDraft : diningSlidesDraft).map((slide, idx, arr) => (
+                  <div
+                    key={`${slidesTab}-${idx}`}
+                    className="p-4 rounded-[16px] bg-surface border border-[var(--border)] space-y-3 flex flex-col justify-between"
+                  >
+                    <div className="flex gap-3.5">
+                      <div className="w-28 h-20 rounded-[10px] overflow-hidden border border-[var(--border)] bg-surface-2 shrink-0">
+                        {slide.src ? (
+                          <img
+                            src={slide.src}
+                            alt={slide.alt || `Slide ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[var(--muted)]">
+                            <i className="ph ph-image text-2xl"></i>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--accent)]">
+                            {t('Slide')} #{idx + 1}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSlide(slidesTab, idx, -1)}
+                              disabled={idx === 0}
+                              aria-label="Move slide up"
+                              className="w-7 h-7 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-30 cursor-pointer flex items-center justify-center"
+                            >
+                              <i className="ph ph-arrow-up text-xs"></i>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSlide(slidesTab, idx, 1)}
+                              disabled={idx === arr.length - 1}
+                              aria-label="Move slide down"
+                              className="w-7 h-7 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-30 cursor-pointer flex items-center justify-center"
+                            >
+                              <i className="ph ph-arrow-down text-xs"></i>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSlide(slidesTab, idx)}
+                              disabled={arr.length <= 1}
+                              aria-label="Remove slide"
+                              className="w-7 h-7 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 disabled:opacity-30 cursor-pointer flex items-center justify-center"
+                            >
+                              <i className="ph ph-trash text-xs"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-surface-2 hover:border-[var(--accent)] text-[12px] font-semibold text-[var(--text)] cursor-pointer transition-colors">
+                          <i className="ph ph-upload-simple text-sm text-[var(--accent)]"></i>
+                          <span>{t('Upload Photo', 'ፎቶ ጫን')}</span>
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              void handleSlideUpload(slidesTab, idx, file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                          {t('Image URL / Path')}
+                        </label>
+                        <input
+                          type="text"
+                          value={slide.src.startsWith('data:image/') ? '' : slide.src}
+                          onChange={(e) => handleSlideFieldChange(slidesTab, idx, 'src', e.target.value)}
+                          placeholder={slide.src.startsWith('data:image/') ? t('Uploaded photo saved (paste URL to replace)') : '/images/ethiopian_ceremony.jpg or https://...'}
+                          className="w-full h-9 px-3 rounded-[10px] bg-surface-2 border border-[var(--border)] text-[var(--text)] text-[12.5px] font-mono focus:border-[var(--accent)] focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                          {t('Caption')}
+                        </label>
+                        <input
+                          type="text"
+                          value={slide.caption || ''}
+                          onChange={(e) => handleSlideFieldChange(slidesTab, idx, 'caption', e.target.value)}
+                          placeholder={t('Optional caption shown on slide...')}
+                          className="w-full h-9 px-3 rounded-[10px] bg-surface-2 border border-[var(--border)] text-[var(--text)] text-[12.5px] focus:border-[var(--accent)] focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                          {t('Alt Description')}
+                        </label>
+                        <input
+                          type="text"
+                          value={slide.alt || ''}
+                          onChange={(e) => handleSlideFieldChange(slidesTab, idx, 'alt', e.target.value)}
+                          placeholder={t('Describe the photo...')}
+                          className="w-full h-9 px-3 rounded-[10px] bg-surface-2 border border-[var(--border)] text-[var(--text)] text-[12.5px] focus:border-[var(--accent)] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

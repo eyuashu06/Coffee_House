@@ -18,7 +18,7 @@ import { useCart, readLocalCart, saveLocalCart, clearLocalCart } from '../lib/ca
 import Link from 'next/link';
 import EthiopianPhoneInput from '../components/EthiopianPhoneInput';
 import { formatEthiopianTime } from '../utils/ethiopianTime';
-import { useCafe } from '../context/CafeContext';
+import { useCafe, DEFAULT_HERO_SLIDES, DEFAULT_DINING_SLIDES } from '../context/CafeContext';
 import ProfileDropdown from '../components/ProfileDropdown';
 import NotificationsDropdown from '../components/NotificationsDropdown';
 
@@ -32,11 +32,22 @@ export interface PendingReservationData {
     autoSubmit?: boolean;
 }
 
-const getLocalNowString = (): string => {
-    const now = new Date();
+const MAX_RESERVATION_DAYS = 90;
+
+const formatLocalDateTime = (date: Date): string => {
     const pad = (n: number) => String(n).padStart(2, '0');
-    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
+
+const getLocalNowString = (): string => formatLocalDateTime(new Date());
+
+const getLocalMaxReservationDate = (): Date => {
+    const max = new Date();
+    max.setDate(max.getDate() + MAX_RESERVATION_DAYS);
+    return max;
+};
+
+const getLocalMaxString = (): string => formatLocalDateTime(getLocalMaxReservationDate());
 
 const getPendingReservation = (): PendingReservationData | null => {
     if (typeof window === 'undefined') return null;
@@ -136,6 +147,7 @@ export default function Home() {
     const [bookingCode, setBookingCode] = useState<string | null>(null);
     const [bookingError, setBookingError] = useState<string | null>(null);
     const [minDateTime, setMinDateTime] = useState('');
+    const [maxDateTime, setMaxDateTime] = useState('');
     const isSubmittingReservationRef = useRef<boolean>(false);
     const [isOpenNow, setIsOpenNow] = useState<boolean>(true);
 
@@ -351,10 +363,20 @@ export default function Home() {
                 const chosen = new Date(val);
                 if (!isNaN(chosen.getTime()) && chosen.getTime() < Date.now()) {
                     setBookingError(t('Reservation time cannot be in the past. Please select an upcoming time.'));
-                } else if (bookingError && bookingError.includes(t('Reservation time cannot be in the past'))) {
+                } else if (!isNaN(chosen.getTime()) && chosen.getTime() > getLocalMaxReservationDate().getTime()) {
+                    setBookingError(t('Reservations can only be booked up to 3 months in advance.'));
+                } else if (
+                    bookingError &&
+                    (bookingError.includes(t('Reservation time cannot be in the past')) ||
+                     bookingError.includes(t('Reservations can only be booked up to 3 months in advance.')))
+                ) {
                     setBookingError(null);
                 }
-            } else if (bookingError && bookingError.includes(t('Reservation time cannot be in the past'))) {
+            } else if (
+                bookingError &&
+                (bookingError.includes(t('Reservation time cannot be in the past')) ||
+                 bookingError.includes(t('Reservations can only be booked up to 3 months in advance.')))
+            ) {
                 setBookingError(null);
             }
         }
@@ -473,6 +495,11 @@ export default function Home() {
             setBookingStatus('ERROR');
             return;
         }
+        if (chosen.getTime() > getLocalMaxReservationDate().getTime()) {
+            setBookingError(t('Reservations can only be booked up to 3 months in advance.'));
+            setBookingStatus('ERROR');
+            return;
+        }
         if (Number(bookingData.party_size) > 6) {
             const phone = primaryLocation?.phone || cafeSettings.primary_phone || '+251 11 555 0148';
             setBookingError(`${t('For parties larger than 6, please call us directly at')} ${phone}.`);
@@ -486,10 +513,12 @@ export default function Home() {
     };
 
     useEffect(() => {
-        // Starts from today at current time onwards, not tomorrow
+        // Starts from today at current time onwards, capped to 3 months ahead
         setMinDateTime(getLocalNowString());
+        setMaxDateTime(getLocalMaxString());
         const timer = setInterval(() => {
             setMinDateTime(getLocalNowString());
+            setMaxDateTime(getLocalMaxString());
         }, 60000);
 
         // Restore any saved guest reservation on load
@@ -712,61 +741,27 @@ export default function Home() {
 
     const totalCartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-    const heroSlides: Slide[] = [
-        {
-            src: '/images/ethiopian_ceremony.jpg',
-            alt: 'Traditional Ethiopian buna ceremony with clay jebena, sini cups, and frankincense smoke',
-            caption: t('The traditional buna ceremony, poured from a clay jebena.'),
-        },
-        {
-            src: '/images/ethiopian_burger_cafe_1.jpg',
-            alt: 'Ethiopian diner enjoying gourmet smash burger and crispy fries at Buna Hub',
-            caption: t('Prime artisanal burgers and hand-cut fries fresh from our kitchen.'),
-        },
-        {
-            src: '/images/ethiopian_roasting.jpg',
-            alt: 'Ethiopian woman roasting fresh coffee beans in a traditional pan over hot coals',
-            caption: t('The morning roast, done where everyone can smell it.'),
-        },
-        {
-            src: '/images/ethiopian_pizza_cafe_2.jpg',
-            alt: 'Ethiopian couple sharing freshly baked wood-fired pizza and traditional coffee at Buna Hub',
-            caption: t('Crisp wood-fired pizza shared among friends and family.'),
-        },
-        {
-            src: '/images/ethiopian_cafe.jpg',
-            alt: 'Warm and inviting Ethiopian cafe gathering in Addis Ababa',
-            caption: t('A warm gathering over fresh coffee in Addis Ababa.'),
-        },
-    ];
+    const heroSource =
+        cafeSettings.hero_slides && cafeSettings.hero_slides.length > 0
+            ? cafeSettings.hero_slides
+            : DEFAULT_HERO_SLIDES;
 
-    const diningSlides: Slide[] = [
-        {
-            src: '/images/ethiopian_burger_cafe_1.jpg',
-            alt: 'Young Ethiopian customer enjoying a fresh artisanal cheeseburger and golden fries at Buna Hub Addis Ababa',
-            caption: t('Artisanal smash burgers made fresh with prime local beef.'),
-        },
-        {
-            src: '/images/ethiopian_pizza_cafe_2.jpg',
-            alt: 'Ethiopian couple enjoying freshly baked wood-fired pizza and cafe drinks',
-            caption: t('Sharing freshly baked wood-fired pizza with loved ones.'),
-        },
-        {
-            src: '/images/ethiopian_burger_dining_3.jpg',
-            alt: 'Ethiopian friends laughing and enjoying delicious smash burgers, fries, and iced drinks at a cozy booth',
-            caption: t('Hearty smash burgers and crisp seasoned fries for table gatherings.'),
-        },
-        {
-            src: '/images/ethiopian_pizza_dining_4.jpg',
-            alt: 'Ethiopian friends enjoying wood-fired pizza and vibrant conversation in Addis Ababa',
-            caption: t('Crisp artisan crusts, rich cheese, and great conversations.'),
-        },
-        {
-            src: '/images/ethiopian_cafe_food_5.jpg',
-            alt: 'Smiling Ethiopian diner lifting a slice of wood-fired pizza with melted cheese, burger, and traditional sini coffee cups',
-            caption: t('Fresh cafe kitchen flavors bringing friends together every day.'),
-        },
-    ];
+    const diningSource =
+        cafeSettings.dining_slides && cafeSettings.dining_slides.length > 0
+            ? cafeSettings.dining_slides
+            : DEFAULT_DINING_SLIDES;
+
+    const heroSlides: Slide[] = heroSource.map((s) => ({
+        src: s.src,
+        alt: s.alt || 'Buna Hub cafe photograph',
+        caption: s.caption ? t(s.caption) : undefined,
+    }));
+
+    const diningSlides: Slide[] = diningSource.map((s) => ({
+        src: s.src,
+        alt: s.alt || 'Buna Hub cafe photograph',
+        caption: s.caption ? t(s.caption) : undefined,
+    }));
 
     const navLinks = [
         { href: '#story', label: t('Story') },
@@ -1365,12 +1360,19 @@ export default function Home() {
                                                     id="bk-date"
                                                     type="datetime-local"
                                                     min={minDateTime}
+                                                    max={maxDateTime}
                                                     required
                                                     value={bookingData.date_time}
-                                                    onFocus={() => setMinDateTime(getLocalNowString())}
+                                                    onFocus={() => {
+                                                        setMinDateTime(getLocalNowString());
+                                                        setMaxDateTime(getLocalMaxString());
+                                                    }}
                                                     onChange={(e) => handleBookingFieldChange('date_time', e.target.value)}
                                                     className="field w-full h-12 px-3.5 sm:px-4 text-[15px] sm:text-[16px]"
                                                 />
+                                                <p className="mt-1.5 text-[12px] text-[var(--muted)]">
+                                                    {t('Bookings open up to 3 months ahead')}
+                                                </p>
                                                 {bookingData.date_time && (
                                                     <div className="mt-2.5 p-3 rounded-[12px] bg-[var(--surface-2,var(--surface))] border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[13px]">
                                                         <div className="flex items-center gap-2 text-[var(--text)]">

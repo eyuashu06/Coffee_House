@@ -3,6 +3,68 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { apiFetch } from '../lib/api';
 
+export interface HomepageSlide {
+  src: string;
+  alt: string;
+  caption?: string;
+}
+
+export const DEFAULT_HERO_SLIDES: HomepageSlide[] = [
+  {
+    src: '/images/ethiopian_ceremony.jpg',
+    alt: 'Traditional Ethiopian buna ceremony in Addis Ababa pouring from a clay jebena',
+    caption: 'The traditional buna ceremony, poured from a clay jebena.',
+  },
+  {
+    src: '/images/ethiopian_burger_cafe_1.jpg',
+    alt: 'Artisanal burgers served with cold soft drinks on a wooden board',
+    caption: 'Prime artisanal burgers and hand-cut fries fresh from our kitchen.',
+  },
+  {
+    src: '/images/ethiopian_roasting.jpg',
+    alt: 'Fresh Ethiopian coffee beans roasting over hot coals with clay jebena and incense',
+    caption: 'The morning roast, done where everyone can smell it.',
+  },
+  {
+    src: '/images/ethiopian_pizza_cafe_2.jpg',
+    alt: 'Freshly baked artisan wood-fired pizza on a marble cafe table',
+    caption: 'Crisp wood-fired pizza shared among friends and family.',
+  },
+  {
+    src: '/images/ethiopian_cafe.jpg',
+    alt: 'Friends clinking warm cafe lattes and iced coffee at a wooden table',
+    caption: 'A warm gathering over fresh coffee in Addis Ababa.',
+  },
+];
+
+export const DEFAULT_DINING_SLIDES: HomepageSlide[] = [
+  {
+    src: '/images/ethiopian_cafe_food_5.jpg',
+    alt: 'Traditional painted Ethiopian clay jebena and sini coffee cups on woven basket tray',
+    caption: 'Three slow pours — abol, tona, and baraka — from our clay jebena.',
+  },
+  {
+    src: '/images/ethiopian_burger_cafe_1.jpg',
+    alt: 'Artisanal burgers on a wooden board with chilled soft drinks',
+    caption: 'Artisanal smash burgers made fresh with prime local beef.',
+  },
+  {
+    src: '/images/ethiopian_pizza_cafe_2.jpg',
+    alt: 'Freshly baked Neapolitan wood-fired margherita pizza',
+    caption: 'Sharing freshly baked wood-fired pizza with loved ones.',
+  },
+  {
+    src: '/images/ethiopian_burger_dining_3.jpg',
+    alt: 'Double cheeseburger layered with melted cheddar and crisp greens',
+    caption: 'Hearty smash burgers and crisp seasoned fries for table gatherings.',
+  },
+  {
+    src: '/images/ethiopian_pizza_dining_4.jpg',
+    alt: 'Wood-fired cheese pizza sliced fresh on an oak board with herbs',
+    caption: 'Crisp artisan crusts, rich cheese, and great conversations.',
+  },
+];
+
 export interface CafeSettings {
   id?: number;
   cafe_name: string;
@@ -12,6 +74,8 @@ export interface CafeSettings {
   contact_email: string;
   opening_hours: string;
   ceremony_time: string;
+  hero_slides?: HomepageSlide[];
+  dining_slides?: HomepageSlide[];
 }
 
 export interface CafeLocation {

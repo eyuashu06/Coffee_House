@@ -117,8 +117,36 @@ class CafeSettingsSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'cafe_name', 'tagline', 'description',
             'primary_phone', 'contact_email', 'opening_hours',
-            'ceremony_time', 'updated_at'
+            'ceremony_time', 'hero_slides', 'dining_slides', 'updated_at'
         ]
+
+    @staticmethod
+    def _clean_slides(value):
+        if value in (None, ''):
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError('Slides must be a JSON array.')
+        if len(value) > 12:
+            raise serializers.ValidationError('Maximum 12 slides per slideshow.')
+        cleaned = []
+        for idx, slide in enumerate(value):
+            if not isinstance(slide, dict):
+                raise serializers.ValidationError(f'Slide #{idx + 1} must be an object.')
+            src = str(slide.get('src') or '').strip()
+            if not src:
+                raise serializers.ValidationError(f'Slide #{idx + 1} is missing an image URL or upload.')
+            if not (src.startswith('/') or src.startswith('http://') or src.startswith('https://') or src.startswith('data:image/')):
+                raise serializers.ValidationError(f'Slide #{idx + 1} has an invalid image source.')
+            alt = str(slide.get('alt') or '').strip()[:240] or 'Buna Hub cafe photograph'
+            caption = str(slide.get('caption') or '').strip()[:280]
+            cleaned.append({'src': src, 'alt': alt, 'caption': caption})
+        return cleaned
+
+    def validate_hero_slides(self, value):
+        return self._clean_slides(value)
+
+    def validate_dining_slides(self, value):
+        return self._clean_slides(value)
 
 
 class CafeLocationSerializer(serializers.ModelSerializer):

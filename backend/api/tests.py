@@ -90,6 +90,18 @@ class ReservationAvailabilityTests(TestCase):
         res = self.client.post('/api/v1/reservations/', self._payload(date_time=past.isoformat()), format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_far_future_year_beyond_three_months_is_rejected(self):
+        far_future = timezone.localtime(timezone.now() + timedelta(days=120)).replace(
+            hour=14, minute=0, second=0, microsecond=0,
+        )
+        res = self.client.post('/api/v1/reservations/', self._payload(date_time=far_future.isoformat()), format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('3 months', ' '.join(res.data['date_time']))
+
+        year_2031 = far_future.replace(year=2031)
+        res_2031 = self.client.post('/api/v1/reservations/', self._payload(date_time=year_2031.isoformat()), format='json')
+        self.assertEqual(res_2031.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_malformed_datetime_is_rejected(self):
         res = self.client.post('/api/v1/reservations/', self._payload(date_time='next tuesday'), format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)

@@ -32,6 +32,12 @@ export default function Slideshow({
 
   const count = slides.length;
 
+  useEffect(() => {
+    if (count > 0 && index >= count) {
+      setIndex(0);
+    }
+  }, [count, index]);
+
   const go = useCallback(
     (next: number) => setIndex(((next % count) + count) % count),
     [count]

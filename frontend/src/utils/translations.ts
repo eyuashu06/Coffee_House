@@ -1302,6 +1302,13 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Once preparing, contact support to cancel': 'ትዕዛዙ መዘጋጀት ከጀመረ በኋላ ለመሰረዝ እባክዎ ድጋፍ ሰጪን ያግኙ',
   'Contact support to cancel': 'ለመሰረዝ ድጋፍ ሰጪን ያግኙ',
   'Cancel': 'ሰርዝ',
+  'Reservations can only be booked up to 3 months in advance.': 'ቦታ ማስያዝ የሚቻለው እስከ 3 ወር ድረስ ብቻ ነው።',
+  'Bookings open up to 3 months ahead': 'ቦታ ማስያዝ እስከ 3 ወር ድረስ ክፍት ነው',
+  'Homepage images saved!': 'የመነሻ ገጽ ፎቶዎች ተቀምጠዋል!',
+  'Failed to save homepage images.': 'የመነሻ ገጽ ፎቶዎችን ማስቀመጥ አልተቻለም።',
+  'Homepage images reset to defaults!': 'የመነሻ ገጽ ፎቶዎች ወደ መነሻቸው ተመልሰዋል!',
+  'Failed to reset homepage images.': 'የመነሻ ገጽ ፎቶዎችን ወደ መነሻ መመለስ አልተቻለም።',
+  'Three slow pours — abol, tona, and baraka — from our clay jebena.': 'ከሸክላ ጀበናችን በዝግታ የሚቀዳ ሦስት ዙር ቡና — አቦል፣ ጦና እና በረካ።',
 };
 
 /**

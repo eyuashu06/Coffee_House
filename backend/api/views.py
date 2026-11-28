@@ -11,6 +11,7 @@ from .serializers import CategorySerializer, CoffeeItemSerializer, OrderSerializ
 from .rag_engine import CoffeeSommelierRAG
 from apps.assistant.reservations import (
     check_availability,
+    max_advance_days,
     max_guests,
     suggest_alternative_times,
 )
@@ -373,6 +374,12 @@ class TableReservationViewSet(viewsets.ModelViewSet):
                 status=drf_status.HTTP_400_BAD_REQUEST,
             )
 
+        if when > dj_timezone.now() + timedelta(days=max_advance_days()):
+            return DRFResponse(
+                {'date_time': ['Reservations can only be booked up to 3 months in advance.']},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+
         ok, reason = check_availability(
             when.date().isoformat(), when.strftime('%H:%M'), party_size,
         )
@@ -380,6 +387,7 @@ class TableReservationViewSet(viewsets.ModelViewSet):
             message = {
                 'too_large': f'We seat up to {max_guests()} guests per table. '
                              'Please book two tables or contact us for a group.',
+                'too_far_in_advance': 'Reservations can only be booked up to 3 months in advance.',
                 'fully_booked': 'That slot is fully booked.',
                 'invalid_datetime': 'That date and time could not be read.',
                 'past_date': 'That time has already passed. Pick a slot in the future.',

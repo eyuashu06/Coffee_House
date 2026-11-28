@@ -79,6 +79,8 @@ class CafeSettings(models.Model):
     contact_email = models.EmailField(default='selam@bunahub.et')
     opening_hours = models.CharField(max_length=100, default='1:00 – 3:00')
     ceremony_time = models.CharField(max_length=100, default='9:00 (ከቀኑ 9:00)')
+    hero_slides = models.JSONField(default=list, blank=True)
+    dining_slides = models.JSONField(default=list, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

@@ -22,6 +22,7 @@ ACTIVE_STATUSES = ['PENDING', 'CONFIRMED']
 DEFAULT_MAX_GUESTS = 10
 DEFAULT_TOTAL_TABLES = 4
 DEFAULT_SLOT_MINUTES = 90
+DEFAULT_MAX_ADVANCE_DAYS = 90
 
 
 def max_guests():
@@ -34,6 +35,10 @@ def total_tables():
 
 def slot_minutes():
     return int(getattr(settings, 'ASSISTANT_RESERVATION_SLOT_MINUTES', DEFAULT_SLOT_MINUTES))
+
+
+def max_advance_days():
+    return int(getattr(settings, 'ASSISTANT_RESERVATION_MAX_ADVANCE_DAYS', DEFAULT_MAX_ADVANCE_DAYS))
 
 
 def parse_date_time(date_str, time_str):
@@ -88,6 +93,8 @@ def check_availability(date_str, time_str, guests):
         return False, 'invalid_datetime'
     if when < timezone.now() - timedelta(minutes=1):
         return False, 'past_date'
+    if when > timezone.now() + timedelta(days=max_advance_days()):
+        return False, 'too_far_in_advance'
     if guests and guests > max_guests():
         return False, 'too_large'
 
@@ -160,6 +167,8 @@ def create_reservation(name, phone, date_str, time_str, guests, user=None):
         return None, 'invalid_datetime'
     if when < timezone.now():
         return None, 'past_date'
+    if when > timezone.now() + timedelta(days=max_advance_days()):
+        return None, 'too_far_in_advance'
     if guests > max_guests():
         return None, 'too_large'
 
