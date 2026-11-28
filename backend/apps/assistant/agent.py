@@ -32,7 +32,7 @@ import re
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = 'gemini-2.0-flash'
+DEFAULT_MODEL = 'gemini-2.5-flash'
 MAX_TOOL_ROUNDS = 6
 MAX_HISTORY_TURNS = 10
 
@@ -789,7 +789,7 @@ def run_agent(query, user=None, session=None, staged=None, language='en', reques
     }
 
     models_to_try = [model]
-    for fallback in ('gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-flash-8b'):
+    for fallback in ('gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'):
         if fallback not in models_to_try:
             models_to_try.append(fallback)
 

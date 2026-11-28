@@ -9,7 +9,7 @@ hallucination attempts, out-of-scope questions and error safety.
 from datetime import timedelta
 from decimal import Decimal
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -374,8 +374,9 @@ class AgentToolSafetyTests(AssistantTestBase):
         from apps.assistant.agent import execute_tool
 
         # Booking works for a guest once a phone number is supplied.
+        future_date = (timezone.localtime() + timedelta(days=2)).date().isoformat()
         result = execute_tool('create_reservation', {
-            'date': '2030-01-01', 'time': '18:00', 'guests': 2, 'name': 'Ghost',
+            'date': future_date, 'time': '18:00', 'guests': 2, 'name': 'Ghost',
             'phone': '0911000003'}, self.ctx)
         self.assertTrue(result.get('created'))
         self.assertTrue(TableReservation.objects.filter(name='Ghost').exists())
@@ -1020,6 +1021,7 @@ class MemoryTests(AssistantTestBase):
         self.assertNotIn('Secret Person', r['answer_en'])
 
 
+@override_settings(ASSISTANT_USE_LLM=False)
 class LegacyEndpointTests(AssistantTestBase):
     """The deprecated /api/v1/sommelier/ path must obey the same sign-in gate."""
 
@@ -1056,6 +1058,7 @@ class LegacyEndpointTests(AssistantTestBase):
         self.assertEqual(TableReservation.objects.filter(user=user).count(), 1)
 
 
+@override_settings(ASSISTANT_USE_LLM=False)
 class ApiSafetyTests(AssistantTestBase):
     def setUp(self):
         super().setUp()
