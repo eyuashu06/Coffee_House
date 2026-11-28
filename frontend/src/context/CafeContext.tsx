@@ -21,6 +21,11 @@ export const DEFAULT_HERO_SLIDES: HomepageSlide[] = [
     caption: 'Prime artisanal burgers and hand-cut fries fresh from our kitchen.',
   },
   {
+    src: '/images/ethiopian_gathering_pizza.jpg',
+    alt: 'Ethiopian friends gathered around a cafe table sharing fresh pizza and crispy fries',
+    caption: 'Friends gathered together enjoying fresh pizza and crispy fries at the cafe.',
+  },
+  {
     src: '/images/ethiopian_roasting.jpg',
     alt: 'Fresh Ethiopian coffee beans roasting over hot coals with clay jebena and incense',
     caption: 'The morning roast, done where everyone can smell it.',
@@ -38,6 +43,11 @@ export const DEFAULT_HERO_SLIDES: HomepageSlide[] = [
 ];
 
 export const DEFAULT_DINING_SLIDES: HomepageSlide[] = [
+  {
+    src: '/images/ethiopian_gathering_pizza.jpg',
+    alt: 'Ethiopian friends gathered together sharing freshly baked pizza and golden fries',
+    caption: 'Friends gathered together enjoying fresh pizza and crispy fries at the cafe.',
+  },
   {
     src: '/images/ethiopian_cafe_food_5.jpg',
     alt: 'Traditional painted Ethiopian clay jebena and sini coffee cups on woven basket tray',

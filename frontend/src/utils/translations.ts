@@ -1309,6 +1309,7 @@ export const itemDescriptionTranslations: Record<string, string> = {
   'Homepage images reset to defaults!': 'የመነሻ ገጽ ፎቶዎች ወደ መነሻቸው ተመልሰዋል!',
   'Failed to reset homepage images.': 'የመነሻ ገጽ ፎቶዎችን ወደ መነሻ መመለስ አልተቻለም።',
   'Three slow pours — abol, tona, and baraka — from our clay jebena.': 'ከሸክላ ጀበናችን በዝግታ የሚቀዳ ሦስት ዙር ቡና — አቦል፣ ጦና እና በረካ።',
+  'Friends gathered together enjoying fresh pizza and crispy fries at the cafe.': 'ጓደኛሞች በካፌው አንድ ላይ ተሰባስበው ትኩስ ፒዛ እና ጥብስ ድንች ሲቋደሱ።',
   'Events & Special Offers': 'ዝግጅቶች እና ልዩ ቅናሾች',
   "What's Happening at Buna Hub": 'በቡና ሀብ ልዩ ዝግጅቶችና ቅናሾች',
   'Auto-applied at checkout': 'በክፍያ ጊዜ በራስ-ሰር ይቀነሳል',
