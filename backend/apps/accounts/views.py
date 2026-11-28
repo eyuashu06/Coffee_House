@@ -436,9 +436,11 @@ class PhoneOTPSendView(APIView):
         is_debug = getattr(settings, 'DEBUG', False) or getattr(settings, 'TESTING', False)
         gw_error_code = None
         if isinstance(sms_details, dict):
+            err_val = sms_details.get('error')
+            det_val = sms_details.get('detail')
             gw_error_code = (
-                sms_details.get('error', {}).get('code')
-                or sms_details.get('detail', {}).get('code')
+                (err_val.get('code') if isinstance(err_val, dict) else None)
+                or (det_val.get('code') if isinstance(det_val, dict) else None)
             )
 
         if is_debug or not sms_sent:

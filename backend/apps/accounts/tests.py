@@ -539,3 +539,18 @@ class PhoneLoginTests(TestCase):
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_phone_otp_send_handles_string_error_from_gateway(self):
+        from unittest import mock
+
+        with mock.patch(
+            'apps.accounts.views.send_otp_sms',
+            return_value=(False, {'error': 'network offline'}),
+        ):
+            res = self.client.post('/api/v1/auth/phone-otp/send/', {
+                'phone': '+251912345679',
+                'name': 'Abebe Bikila',
+            }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data['success'])
+        self.assertIn('debug_otp', res.data)
+

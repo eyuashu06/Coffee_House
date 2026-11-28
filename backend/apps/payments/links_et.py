@@ -424,7 +424,9 @@ def verify_receipt_image(
     # Upstream was not attempted or provider needs full URL
     provider = detected.get('provider', 'none')
     ref = detected.get('reference')
-    reason = upstream.get('reason') or data.get('error', {}).get('message') or 'Could not auto-verify upstream'
+    raw_err = data.get('error')
+    err_msg = raw_err.get('message') if isinstance(raw_err, dict) else (str(raw_err) if raw_err else None)
+    reason = upstream.get('reason') or err_msg or 'Could not auto-verify upstream'
 
     provider_name = PROVIDER_DISPLAY_NAMES.get(provider, provider.title())
     msg_en = f"Detected {provider_name} receipt ({ref or 'Reference unreadable'}). Manager will review."
